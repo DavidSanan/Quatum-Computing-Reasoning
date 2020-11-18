@@ -11,6 +11,8 @@ locale vars =
   fixes domain :: "'v \<Rightarrow> 'b set"
   fixes get_value :: "'s \<Rightarrow> 'v  \<Rightarrow> 'b"
   fixes set_value ::"'s \<Rightarrow> 'v \<Rightarrow> 'b \<Rightarrow> 's"
+  fixes nat_to_typ ::"nat \<Rightarrow> 'b"
+  fixes typ_to_nat ::"'b \<Rightarrow> nat"
   fixes conv::"('v \<Rightarrow> 'b) \<Rightarrow> 'v set \<Rightarrow> 's"
                  
   assumes "finite variables"
@@ -43,10 +45,6 @@ definition not_modify_v::"('s \<Rightarrow> 's) \<Rightarrow> 'v \<Rightarrow> b
 
 lemma modify_neg:"modify_v f v =  ( \<not> (not_modify_v f v))" 
   unfolding modify_v_def not_modify_v_def by auto
-
-
-
-
 
 end
 

@@ -1,8 +1,9 @@
-session Quantum = "HOL-Library" + 
+session Quantum = QHLProver + 
   options [timeout=600]
   sessions
-  "HOL-Statespace"
-  "HOL-Eisbach"
+   Jordan_Normal_Form
+   "HOL-Statespace"
+   "HOL-Eisbach"
   theories
     QSyntax
  
