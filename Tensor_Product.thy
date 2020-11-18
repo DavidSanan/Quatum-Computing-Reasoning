@@ -1,3 +1,10 @@
+(* Title:     Quantum-Semantics/Tensor_Product.thy
+   Author:    David Sanan, Nanyang Technological University 
+   Copyright   2020
+   License:     BSD
+*)
+
+
 theory Tensor_Product
   imports Deep_Learning.Tensor_Matricization QHLProver.Matrix_Limit
 begin

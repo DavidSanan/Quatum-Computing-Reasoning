@@ -1,3 +1,10 @@
+(* Title:     Quantum-Semantics/QSyntax.thy
+   Author:    David Sanan, Nanyang Technological University 
+   Copyright   2020
+   License:     BSD
+*)
+
+
 theory QSyntax
   imports HOL.Complex vars HOL.Orderings  QHLProver.Partial_State
 begin                                             

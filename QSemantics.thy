@@ -1,3 +1,9 @@
+(* Title:     Quantum-Semantics/QSemantics.thy
+   Author:    David Sanan, Nanyang Technological University 
+   Copyright   2020
+   License:     BSD
+*)
+
 theory QSemantics
   imports QSyntax vars "HOL-Library.Permutations" "List_Inversions.List_Inversions" "Tensor_Permutation"
 begin

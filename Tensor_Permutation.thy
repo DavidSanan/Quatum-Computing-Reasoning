@@ -1,3 +1,10 @@
+(* Title:     Quantum-Semantics/Tensor_permutation.thy
+   Author:    David Sanan, Nanyang Technological University 
+   Copyright   2020
+   License:     BSD
+*)
+
+
 theory Tensor_Permutation
   imports "HOL-Library.Permutations" "Jordan_Normal_Form.Matrix" "HOL-Word.Word"
 begin

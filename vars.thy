@@ -1,3 +1,10 @@
+(* Title:     Quantum-Semantics/vars.thy
+   Author:    David Sanan, Nanyang Technological University 
+   Copyright   2020
+   License:     BSD
+*)
+
+
 theory vars
   imports HOL.Complex
 begin
