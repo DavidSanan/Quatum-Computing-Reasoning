@@ -30,13 +30,12 @@ definition apply_matrix_sep :: "'q::linorder set \<Rightarrow> ('q, complex) QSt
            let v = QState_vector qs in
            let t = sorted_list_of_set  sep_vars in
            let l = sorted_list_of_set (var_d - sep_vars) in
-           let vs = sorted_list_of_set sep_vars in
+           let vs = sorted_list_of_set var_d in
            let vs' = (t@l) in
-           let m = partial_state2.ptensor_mat (list_dims sep_vars @list_dims (var_d - sep_vars)) 
-                                        (lin_set sep_vars) (lin_sets (top_lin_set sep_vars) (var_d - sep_vars))
+           let m = partial_state.tensor_mat (list_dims var_d)  {0..<card sep_vars}  
                                         (M::complex mat) (1\<^sub>m (2^(card (var_d - sep_vars)))) in
-           let q = change_base vs v vs' in
-               change_base vs' (m *\<^sub>v q) vs
+           let q = v.\<^sub>vs \<^sub>\<leadsto> \<^sub>vs' in
+               (m *\<^sub>v q).\<^sub>vs' \<^sub>\<leadsto> \<^sub>vs
         "
 
 definition alloc_vars :: "'q::linorder set \<Rightarrow> ('q, complex) QState \<Rightarrow> complex vec \<Rightarrow> complex vec"
@@ -53,12 +52,9 @@ definition dispose_vars:: " 'q::linorder set \<Rightarrow> ('q, complex) QState 
    let t = sorted_list_of_set sep_vars in
    let l =  sorted_list_of_set (vars_dom - sep_vars) in
    let qv' = t @ l in
-   let qn =  change_base qv v qv' in 
+   let qn =  v.\<^sub>qv \<^sub>\<leadsto> \<^sub>qv' in 
    let vars_dom' = vars_dom \<union> sep_vars in
-    {q. (\<exists>q2. qn = partial_state2.ptensor_vec 
-                     ((list_dims vars_dom')@list_dims sep_vars)
-                     (lin_set vars_dom') (lin_sets (top_lin_set vars_dom') sep_vars ) 
-                      q q2)}"
+    {q. (\<exists>q2. qn = partial_state.tensor_vec (list_dims vars_dom) {0..<card sep_vars} q q2)}"
 
 definition measure_vars::"nat \<Rightarrow>  'q::linorder set \<Rightarrow> ('q, complex) QState  \<Rightarrow> (real\<times>complex vec)"
   where "measure_vars k  sep_vars qs \<equiv>
@@ -69,13 +65,12 @@ definition measure_vars::"nat \<Rightarrow>  'q::linorder set \<Rightarrow> ('q,
     let t = (sorted_list_of_set vars) in
     let qv = (sorted_list_of_set vars_dom) in
     let qv' = l @ t in 
-    let qn = change_base qv v qv' in
-    let mk = partial_state2.ptensor_mat (list_dims sep_vars @ list_dims vars)
-                 (lin_set sep_vars) (lin_sets (top_lin_set sep_vars) vars) (1\<^sub>k (2^(length l))) (1\<^sub>m (2^(length t))) in
+    let qn = v.\<^sub>qv \<^sub>\<leadsto> \<^sub>qv'  in
+    let mk = partial_state.tensor_mat (list_dims vars_dom) {0..<card sep_vars} (1\<^sub>k (2^(length l))) (1\<^sub>m (2^(length t))) in
     let qn' =  mk  *\<^sub>v qn in 
     let \<delta>k =  Re (((mat_adjoint (mat_of_rows (dim_vec v) [v]) *\<^sub>v qn') $ 0) div vec_norm qn') in    
     let qnprod = ((sqrt \<delta>k)::complex) \<cdot>\<^sub>v qn' in
-       (\<delta>k, change_base qv' qnprod qv)" 
+       (\<delta>k, qnprod.\<^sub>qv' \<^sub>\<leadsto> \<^sub>qv)" 
 
 inductive QSemantics::"'v set \<Rightarrow> ('v,'b,'s,'q::linorder) QConf \<Rightarrow> ('v,'b,'s,'q) QConf \<Rightarrow> bool" 
   ("_ \<turnstile> _ \<rightarrow> _" [81,81] 80) for \<Gamma>::"'v set" 
@@ -87,9 +82,8 @@ inductive QSemantics::"'v set \<Rightarrow> ('v,'b,'s,'q::linorder) QConf \<Righ
          \<Gamma> \<turnstile> (QMod M q, (\<delta>,\<sigma>,(\<vv>,\<qq>))) \<rightarrow> (Skip, (\<delta>, \<sigma>,(\<vv>,QState(QState_vars \<qq>, list_of_vec  \<qq>'))))"
 
  | Alloc:"q' \<notin> (dom_q_vars \<vv>) \<Longrightarrow> q'_addr \<in> new_q_addr (e \<sigma>) \<vv> \<Longrightarrow> 
-          \<vv>' = \<vv>(q' := q'_addr)  \<Longrightarrow> length (v \<sigma>) = (e \<sigma>) \<Longrightarrow> \<sigma>' = set_value \<sigma> q (nat_to_typ q') \<Longrightarrow>          
-          \<qq>' = alloc_vars q'_addr \<qq> (vec_of_list (v \<sigma>)) \<Longrightarrow>
-          \<Gamma> \<turnstile> (Alloc q e v, (\<delta>,\<sigma>,(\<vv>,\<qq>))) \<rightarrow> (Skip, (\<delta>, \<sigma>',(\<vv>',QState(Q_domain \<vv>', list_of_vec  \<qq>'))))"
+          \<vv>' = \<vv>(q' := q'_addr)  \<Longrightarrow> length (v \<sigma>) = (e \<sigma>) \<Longrightarrow> \<sigma>' = set_value \<sigma> q (nat_to_typ q') \<Longrightarrow>                    
+          \<Gamma> \<turnstile> (Alloc q e v, (\<delta>,\<sigma>,(\<vv>,\<qq>))) \<rightarrow> (Skip, (\<delta>, \<sigma>',(\<vv>',\<qq> + QState (q'_addr,(v \<sigma>)) )))"
 
  | CondTrueQ:"\<sigma>\<in>b  \<Longrightarrow> \<Gamma> \<turnstile> (IF b c1 c2, (\<delta>,\<sigma>,\<Q>)) \<rightarrow> (c1, (\<delta>,\<sigma>,\<Q>))"
 
@@ -105,17 +99,19 @@ inductive QSemantics::"'v set \<Rightarrow> ('v,'b,'s,'q::linorder) QConf \<Righ
 
 | SeqSkipc: "\<Gamma>\<turnstile> (Skip;C2,\<sigma>) \<rightarrow> (C2, \<sigma>)"
 
-| Dispose: "\<vv> (q \<sigma>) \<noteq> {} \<Longrightarrow> \<vv>' = \<vv>((q \<sigma>):={}) \<Longrightarrow> q1 ## q2  \<Longrightarrow> 
-            \<vv> (q \<sigma>) = QState_vars \<qq> \<Longrightarrow> \<qq> =   \<qq>1 +  \<qq>2 \<Longrightarrow>
-            \<qq>' \<in> dispose_vars (\<vv> (q \<sigma>)) \<qq> \<Longrightarrow>
-             \<Gamma> \<turnstile> (Dispose q, (\<delta>,\<sigma>,(\<vv>,\<qq>))) \<rightarrow> (Skip,(\<delta>,\<sigma>,(\<vv>',QState(Q_domain \<vv>', list_of_vec  \<qq>'))))"
+| Dispose: "\<vv> (q \<sigma>) \<noteq> {} \<Longrightarrow> \<vv>' = \<vv>((q \<sigma>):={}) \<Longrightarrow> \<qq>1 ## \<qq>2  \<Longrightarrow> 
+            \<vv> (q \<sigma>) = QState_vars \<qq>2 \<Longrightarrow> \<qq> =   \<qq>1 +  \<qq>2 \<Longrightarrow>            
+             \<Gamma> \<turnstile> (Dispose q, (\<delta>,\<sigma>,(\<vv>,\<qq>))) \<rightarrow> (Skip,(\<delta>,\<sigma>,(\<vv>',\<qq>1)))"
 
-| Measure: "q \<sigma> \<subseteq> (Q_domain \<vv>) \<Longrightarrow> 
+| Measure: "q \<sigma> \<subseteq> (QState_vars \<qq>) \<Longrightarrow> 
             (\<delta>k, \<qq>') = measure_vars k (q \<sigma>) \<qq> \<Longrightarrow>
             \<delta>k > 0 \<Longrightarrow> \<delta>' = \<delta> * \<delta>k \<Longrightarrow> 
-            \<Gamma> \<turnstile> (Measure v q, (\<delta>,\<sigma>,(\<vv>,\<qq>))) \<rightarrow> (Skip,(\<delta>',\<sigma>,(\<vv>',\<qq>')))" 
+            \<Gamma> \<turnstile> (Measure v q, (\<delta>,\<sigma>,(\<vv>,\<qq>))) \<rightarrow> (Skip,(\<delta>',\<sigma>,(\<vv>,QState(Q_domain \<vv>', list_of_vec  \<qq>'))))" 
  
-
+(* | Dispose: "\<vv> (q \<sigma>) \<noteq> {} \<Longrightarrow> \<vv>' = \<vv>((q \<sigma>):={}) \<Longrightarrow> \<qq>1 ## \<qq>2  \<Longrightarrow> 
+            \<vv> (q \<sigma>) = QState_vars \<qq>2 \<Longrightarrow> \<qq> =   \<qq>1 +  \<qq>2 \<Longrightarrow>
+            \<qq>' \<in> dispose_vars (\<vv> (q \<sigma>)) \<qq> \<Longrightarrow>
+             \<Gamma> \<turnstile> (Dispose q, (\<delta>,\<sigma>,(\<vv>,\<qq>))) \<rightarrow> (Skip,(\<delta>,\<sigma>,(\<vv>',QState(Q_domain \<vv>', list_of_vec  \<qq>'))))" *)
 
 end
 

@@ -521,13 +521,31 @@ proof-
 qed
 
 
+lemma comm_plus_QState_vector:
+  assumes a0:"QState_vars x  \<inter> QState_vars y = {}"
+  shows "snd (plus_QState_vector x y) = snd (plus_QState_vector y x)"
+proof-
+  let ?s = "QState_vars x \<union> QState_vars y"
+  let ?x = "QState_vector x" and ?y = "QState_vector y"
+  let ?vx = "QState_vars x" and  ?vy = "QState_vars y"
+  let ?svx = "sorted_list_of_set ?vx" and ?svy = "sorted_list_of_set ?vy"
+  let ?tpxy = "partial_state.tensor_vec (list_dims ?s) {0..<card ?vx} ?x ?y"
+  let ?tpyx = "partial_state.tensor_vec (list_dims ?s) {0..<card ?vy} ?y ?x"
+  show ?thesis sorry
+qed
+
 lemma plus_comm:"disj_QState x y \<Longrightarrow> plus_QState x y = plus_QState y x"
 proof-
   assume "disj_QState x y"
-  then have "QState_vars x  \<inter> QState_vars y = {}"
+  then have disj:"QState_vars x  \<inter> QState_vars y = {}"
     unfolding disj_QState_def by auto
-  show "plus_QState x y = plus_QState y x"
-    sorry
+  have "QState_vars (plus_QState x y)  = QState_vars (plus_QState y x)"
+    by (metis QState_vars_Plus fst_conv inf_commute plus_QState_vector_def sup_commute)
+  moreover have "snd (plus_QState_vector x y) = snd (plus_QState_vector y x)"
+    using comm_plus_QState_vector disj by auto
+  then have  "QState_list  (plus_QState x y) = QState_list (plus_QState y x)"    
+    by (simp add: QState_list_Plus disj inf_commute)     
+  ultimately show "plus_QState x y = plus_QState y x" using q_state_eq by auto
 qed
 
 lemma plus_assoc:" \<lbrakk>disj_QState x y; disj_QState y z; disj_QState x z\<rbrakk>
@@ -550,10 +568,9 @@ definition plus_QState: "s1 + s2 \<equiv> plus_QState s1 s2"
 definition sep_disj_QState: "s1 ## s2 \<equiv> disj_QState s1 s2"
 instance 
   apply standard
-  apply (simp add: zero_QState sep_disj_QState)
-        apply transfer'  apply auto         
-       apply (simp add: zero_QState sep_disj_QState) 
-       apply transfer apply auto 
+  apply (simp add: zero_QState sep_disj_QState)        
+        apply (simp add: QState_vars_empty disj_QState_def)   
+       apply (simp add: disj_QState_def inf_commute sep_disj_QState)
       apply (auto simp add: zero_QState  plus_QState Let_def intro:plus_idem)[1]
      apply (auto simp add: sep_disj_QState plus_QState intro:plus_comm)[1]
     apply (auto simp add: sep_disj_QState plus_QState intro:plus_assoc)[1]
