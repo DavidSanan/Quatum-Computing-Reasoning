@@ -1,2 +1,4 @@
 # modify the following path to where your afp folder is located
+#../AFP/thys
 /home/david/tools/afp/thys
+Actions
