@@ -1,21 +1,104 @@
 theory Q_State
-  imports HOL.Complex vars HOL.Orderings  
+imports HOL.Complex vars HOL.Orderings  
           Deep_Learning.Tensor_Matricization Separation_Algebra.Separation_Algebra
           QHLProver.Partial_State Tensor_Permutation HOL.Finite_Set
 begin               
+\<comment>\<open>Function to obtain the index of variables in the vector\<close>
+definition to_nat_set::"'q::linorder set \<Rightarrow> ('q \<Rightarrow> nat)"
+  where "to_nat_set s \<equiv> (\<lambda>q. the (find_index q (sorted_list_of_set s)))"
+                                       
 
-definition list_dims::"'q set \<Rightarrow> nat list"
-  where "list_dims qvars \<equiv> replicate (card qvars) 2"
 
-definition top_lin_set::"'q set \<Rightarrow> nat" where
+lemma 
+  unique_nat_q:"finite s \<Longrightarrow> q \<in> s \<Longrightarrow> (\<exists>!i. to_nat_set s q = i) \<and> to_nat_set s q < card s"
+proof-
+  assume a0:"q \<in> s" and a1:"finite s"
+  then have h:"q \<in> set (sorted_list_of_set s)" by auto
+  moreover have q:"distinct (sorted_list_of_set s)" by auto
+  ultimately show "(\<exists>!i. to_nat_set s q = i) \<and> to_nat_set s q < card s"
+    unfolding to_nat_set_def using distinct_xs_index_a[OF q h]
+    by (metis a1 distinct_card option.sel set_sorted_list_of_set)        
+qed
+
+lemma 
+  distinct_nat_q:
+  assumes a0:"finite s" and a1:"q1 \<in> s" and
+     a2:"q2 \<in> s" and "q1\<noteq>q2"
+   shows "to_nat_set s q1 \<noteq> to_nat_set s q2"
+proof-
+  have h:"q1 \<in> set (sorted_list_of_set s)" using a0 a1 by auto
+  moreover have q:"distinct (sorted_list_of_set s)" by auto
+  ultimately show ?thesis
+    unfolding to_nat_set_def using distinct_xs_index_a[OF q h]
+      find_index_equiv_less_i
+    by (metis a0 a2 assms(4) distinct_xs_index_a option.distinct(1) 
+          option.expand set_sorted_list_of_set)    
+qed
+
+
+lemma to_nat_set_lt:
+  assumes a0:"q1 < q2" and a1:"q1 \<in> s" and a2:"q2 \<in> s" and
+     a3:"finite s"
+   shows "to_nat_set s q1 < to_nat_set s q2"
+proof-
+  let ?sl = "sorted_list_of_set s"
+  obtain i where f1:"?sl ! i = q1 \<and> i < length ?sl " 
+    using a1 a3
+    by (metis in_set_conv_nth set_sorted_list_of_set)
+  moreover obtain j where f2:"?sl ! j = q2 \<and> j < length ?sl "
+    using a2 a3
+    by (metis in_set_conv_nth set_sorted_list_of_set)
+  moreover have f3:"\<forall>i j. i \<le> j \<longrightarrow> j < length (?sl) \<longrightarrow> 
+                     ?sl ! i \<le> ?sl ! j"
+    using sorted_nth_mono sorted_sorted_list_of_set by blast
+  ultimately have "i<j"
+    using not_less  a0 leD
+    by metis
+  then show ?thesis unfolding to_nat_set_def
+    by (metis a1 a2 a3 distinct_sorted_list_of_set distinct_xs_index_b f1 f2 
+        find_index_distinct option.sel set_sorted_list_of_set)
+qed
+
+definition set_vars::"'q::linorder set \<Rightarrow> 'q::linorder set \<Rightarrow> nat set"
+  where "set_vars vs s \<equiv> to_nat_set vs ` s"
+
+lemma set_vars_empty:
+  assumes a0:"s1 \<inter> s2 = {}" and a1:"finite s1" and a2:"finite s2"
+  shows "set_vars (s1 \<union> s2) s1 \<inter> set_vars (s1 \<union> s2) s2 = {}"
+proof-
+  have t:"finite (s1 \<union> s2)" using a1 a2 by auto
+  show ?thesis 
+    using a0 distinct_nat_q[OF t]
+    unfolding set_vars_def by auto
+qed
+
+lemma "finite s \<Longrightarrow> x \<in> s \<Longrightarrow>
+       (ind_in_set s) x =  to_nat_set s x"
+  unfolding ind_in_set_def to_nat_set_def
+  
+  apply rule
+  sorry
+
+  value "to_nat_set {0::nat, 1,2,8,10,15} ` {2,10}"
+  value "ind_in_set {0::nat, 1,2,8,10,15} ` {2,10} "
+
+
+(* definition top_lin_set::"'q set \<Rightarrow> nat" where
   "top_lin_set qset \<equiv> if qset = {} then 1 else card qset"
-
-definition lin_set::"'q set \<Rightarrow> nat set"
+*)
+(* definition lin_set::"'q set \<Rightarrow> nat set"
   where "lin_set qset \<equiv> if qset = {} then {0} else {0 ..< (card qset)}"
 
 definition lin_sets::"nat \<Rightarrow> 'q set \<Rightarrow> nat set"
   where "lin_sets n q_vars' \<equiv> if q_vars' = {} then  {n}
                                    else  {n ..< card (q_vars')+n}"
+*)
+
+definition list_dims::"'q set \<Rightarrow> nat list"
+  where "list_dims qvars \<equiv> replicate (card qvars) 2"
+
+definition dims :: "nat list \<Rightarrow> nat set \<Rightarrow> nat list" where
+  "dims tv vs = nths tv vs"
 
 \<comment>\<open> Lemmas on ptensor_vec \<close>
 
@@ -159,10 +242,13 @@ lemma idempoten_qstate:
   assumes 
     a1:"dim_vec (v::('a::comm_ring_1) vec) = (2::nat) ^ card d" and a2:"finite d"
   shows "partial_state.tensor_vec (list_dims d)  {0::nat..<card d} v (vCons (1) vNil) = v"
-  unfolding list_dims_def using idempoten_qstate1[OF a1] idempoten_qstate2[OF  a1 a2]
+  unfolding list_dims_def
+  using idempoten_qstate1[OF a1] idempoten_qstate2[OF  a1 a2]
   using a2 by blast
 
 
+definition mapping::"'q set \<Rightarrow> 'q set \<Rightarrow> nat set \<times> nat set"
+  where "mapping s1 s2 \<equiv>({},{})"
 
 typedef (overloaded) ('q,'a::comm_ring_1)
   QState = "{(s,v)| (s::'q set) (v::'a list).                                   
@@ -296,7 +382,7 @@ definition plus_QState_vector::"('q::linorder,'a::comm_ring_1) QState \<Rightarr
           v = partial_state.tensor_vec 
                      dims {0..<card d1} l1 l2;
           a = ((sorted_list_of_set d1)@(sorted_list_of_set d2));
-          b = sorted_list_of_set s in (s, list_of_vec (v.\<^sub>a \<^sub>\<leadsto> \<^sub>b))"
+          b = sorted_list_of_set s in (s,  (list_of_vec v).\<^sub>a \<^sub>\<leadsto> \<^sub>b)"
 
 lemma QState_vars_empty:"QState_vars (QState ({}, [1])) = {}"
   by (metis (no_types) QState_id_fst_empty uqstate_fst)
@@ -328,10 +414,10 @@ proof-
   moreover have  "sorted_list_of_set (QState_vars a)@sorted_list_of_set (QState_vars ?v0) = 
               sorted_list_of_set (QState_vars a)"
     by (simp add: vars_v0)
-  then have  "QState_vector a = (QState_vector a).\<^sub>?a \<^sub>\<leadsto> \<^sub>?b"
+  then have  "QState_list a = (QState_list a).\<^sub>?a \<^sub>\<leadsto> \<^sub>?b"
     using eq_vector_same_permutation
-    by (metis card_vars_a finite_vars_a distinct_card 
-        distinct_sorted_list_of_set sorted_list_of_set(1))    
+    by (metis QState_rel1' distinct_card distinct_sorted_list_of_set 
+          finite_vars_a set_sorted_list_of_set)    
   then show ?thesis unfolding plus_QState_vector_def Let_def
      using s v0 tensor_prod   apply transfer'
      by (simp add: list_vec )
@@ -403,7 +489,7 @@ lemma plus_QState_vector_wf':
           a6:"v = partial_state.tensor_vec ds  {0..<card d1} l1 l2" and
           a7:"a = ((sorted_list_of_set d1)@(sorted_list_of_set d2))" and
           a8:"b = sorted_list_of_set s" 
-        shows "length (list_of_vec (v.\<^sub>a \<^sub>\<leadsto> \<^sub>b)) =  (2^(card s))"
+        shows "length (((list_of_vec v).\<^sub>a \<^sub>\<leadsto> \<^sub>b)) =  (2^(card s))"
 proof-
   have "dim_vec v = (2^(card s))" using dim_vec_plus_2_pow_s[OF a0 a1 a2 a3 a4 a5 a6 a9] by auto
   moreover have "distinct a"
@@ -519,7 +605,43 @@ proof-
   }
   ultimately show ?thesis by auto 
 qed
+typedef natsub = "{x. x<(10::nat)}"
+  by (meson mem_Collect_eq zero_less_numeral)
+  
 
+value "digit_decode [2,2] (nths (digit_encode [2,2,2,2] 4) {2,3})"
+
+lemma
+  assumes a0:"dim_vec (vx::('a::comm_ring_1) vec) = (2::nat) ^ card varx" and
+          a1:"dim_vec (vy::('a::comm_ring_1) vec) = (2::nat) ^ card vary" and
+          a2:"finite vary" and a3:"varx = {}"
+shows"list_of_vec
+     (partial_state.tensor_vec (list_dims (varx \<union> vary)) {0..<card (vary)} vy vx) =
+    list_of_vec
+     (partial_state.tensor_vec (list_dims (varx \<union> vary)) {0..<card (varx)} vx vy) . 
+                      \<^sub>(sorted_list_of_set varx @ sorted_list_of_set vary) \<^sub>\<leadsto>  
+                      \<^sub>(sorted_list_of_set vary @ sorted_list_of_set varx)"
+proof-
+  interpret st1:partial_state "(list_dims (varx \<union> vary))" .
+
+  have "partial_state.tensor_vec (list_dims (varx \<union> vary)) {0..<card (vary)} vy vx = vx"
+    using a0 a1 a2 a3 idempoten_qstate
+  show ?thesis sorry
+qed 
+
+lemma 
+  assumes a0:"dim_vec (vx::('a::comm_ring_1) vec) = (2::nat) ^ card varx" and
+          a1:"dim_vec (vy::('a::comm_ring_1) vec) = (2::nat) ^ card vary" and
+          a2:"finite varx" and a3:"finite vary"
+shows"list_of_vec
+     (partial_state.tensor_vec (list_dims (varx \<union> vary)) {0..<card (vary)} vy vx) =
+    list_of_vec
+     (partial_state.tensor_vec (list_dims (varx \<union> vary)) {0..<card (varx)} vx vy) . 
+                      \<^sub>(sorted_list_of_set varx @ sorted_list_of_set vary) \<^sub>\<leadsto>  
+                      \<^sub>(sorted_list_of_set vary @ sorted_list_of_set varx)"
+proof-
+  show ?thesis sorry
+qed 
 
 lemma comm_plus_QState_vector:
   assumes a0:"QState_vars x  \<inter> QState_vars y = {}"
@@ -528,10 +650,21 @@ proof-
   let ?s = "QState_vars x \<union> QState_vars y"
   let ?x = "QState_vector x" and ?y = "QState_vector y"
   let ?vx = "QState_vars x" and  ?vy = "QState_vars y"
-  let ?svx = "sorted_list_of_set ?vx" and ?svy = "sorted_list_of_set ?vy"
+  let ?svx = "sorted_list_of_set ?vx" and ?svy = "sorted_list_of_set ?vy" and
+      ?svs = "sorted_list_of_set ?s"
+  let ?svxy = "?svx @ ?svy" and  ?svyx = "?svy @ ?svx"
   let ?tpxy = "partial_state.tensor_vec (list_dims ?s) {0..<card ?vx} ?x ?y"
   let ?tpyx = "partial_state.tensor_vec (list_dims ?s) {0..<card ?vy} ?y ?x"
-  show ?thesis sorry
+  have  list:"(list_of_vec ?tpyx) = (list_of_vec ?tpxy). \<^sub>?svxy \<^sub>\<leadsto> \<^sub>?svyx" sorry
+  then have  "(list_of_vec ?tpxy). \<^sub>?svxy \<^sub>\<leadsto> \<^sub>?svs  = (list_of_vec ?tpyx). \<^sub>?svyx \<^sub>\<leadsto> \<^sub>?svs" 
+    using ordering_permutation_eq_orientation
+    by (smt QState_rel3' add.commute assms list dim_vec_plus_2_pow_s 
+           distinct_append distinct_card distinct_sorted_list_of_set length_append 
+             length_list_of_vec plus_QState_set_wf 
+            set_append sorted_list_of_set(1) sup_commute)
+    
+  then show ?thesis unfolding plus_QState_vector_def Let_def
+    by (metis sup_commute)
 qed
 
 lemma plus_comm:"disj_QState x y \<Longrightarrow> plus_QState x y = plus_QState y x"
