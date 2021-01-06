@@ -6,7 +6,7 @@
 
 
 theory QSyntax
-  imports HOL.Complex vars HOL.Orderings  QHLProver.Partial_State  Q_State
+  imports HOL.Complex vars HOL.Orderings   Q_State
 begin                                             
 
 subsection \<open>Syntax\<close>
@@ -30,44 +30,44 @@ the quibits. Since the quantum state is the result of the tensor product
 of the different variables, the vector dimension is the product of the size of each
 variable\<close> 
 
-type_synonym 'q q_vars = "(nat \<Rightarrow> 'q set)"
-type_synonym 'q qstate = "'q q_vars \<times> ('q, complex) QState"
-type_synonym 'q qheap = "'q set \<times> complex vec"
-type_synonym ('s,'q) state = "real \<times> 's \<times> 'q qstate"
+type_synonym q_vars = "(nat \<Rightarrow>nat set)"
+type_synonym  qstate = "q_vars \<times> (nat, complex) QState"
+type_synonym qheap = "nat set \<times> complex vec"
+type_synonym 's state = "real \<times> 's \<times>  qstate"
 type_synonym 's pred = "'s \<Rightarrow> bool" 
 type_synonym 's assn = "'s set"
-type_synonym ('s,'q) expr_q = "'s \<Rightarrow> 'q set"
-type_synonym ('s) expr_c = "'s \<Rightarrow> complex"
-type_synonym ('s) expr_nat = "'s \<Rightarrow> nat"
-type_synonym ('s) expr_t = "'s \<Rightarrow> nat"
-type_synonym ('s,'q) expr_a = "'s \<Rightarrow> 'q"
+type_synonym 's expr_q = "'s \<Rightarrow> nat set"
+type_synonym 's expr_c = "'s \<Rightarrow> complex"
+type_synonym 's expr_nat = "'s \<Rightarrow> nat"
+type_synonym 's expr_t = "'s \<Rightarrow> nat"
+type_synonym 's expr_a = "'s \<Rightarrow> nat"
 type_synonym ('s,'b) expr = "'s \<Rightarrow> 'b"
 
 
-datatype ('a,'b,'s,'q::linorder) com = 
+datatype ('a,'b,'s) com = 
     Skip
   | SMod "'s \<Rightarrow> 's"
-  | QMod "complex Matrix.mat" "('s,'q) expr_q"
-  | IF "'s assn" "('a,'b,'s,'q) com" "('a, 'b,'s,'q) com"
-  | While "'s assn" "('a, 'b,'s,'q) com"
-  | Seq "('a, 'b,'s,'q) com" "('a, 'b,'s,'q) com"  ("_;/ _" [60, 61] 60)
-  | Measure "'a"   "('s,'q) expr_q" ("_:=meassure / _" [60, 61] 60)
+  | QMod "complex Matrix.mat" "'s expr_q"
+  | IF "'s assn" "('a,'b,'s) com" "('a, 'b,'s) com"
+  | While "'s assn" "('a, 'b,'s) com"
+  | Seq "('a, 'b,'s) com" "('a, 'b,'s) com"  ("_;/ _" [60, 61] 60)
+  | Measure "'a"   "'s expr_q" ("_:=meassure / _" [60, 61] 60)
   | Alloc "'a"  "('s,nat) expr"  "('s,complex list) expr"  ("_:=alloc/[_/]/(_/)" [60, 61] 60)
   | Dispose "'s expr_nat" 
 
-type_synonym ('v,'b,'s,'q) QConf = "('v,'b,'s,'q) com \<times> ('s,'q) state"
+type_synonym ('v,'b,'s) QConf = "('v,'b,'s) com \<times> 's state"
 
-definition Q_domain::"'q::linorder q_vars \<Rightarrow> 'q set" 
+definition Q_domain::"q_vars \<Rightarrow> nat set" 
   where "Q_domain q_vars \<equiv> \<Union> (q_vars ` UNIV)"
 
-definition ket_dim ::"'q::linorder q_vars \<Rightarrow> nat"
+definition ket_dim ::"q_vars \<Rightarrow> nat"
   where "ket_dim q_vars \<equiv>  card (Q_domain q_vars)"
 
-definition new_q_addr::"nat \<Rightarrow> 'q::linorder q_vars \<Rightarrow> ('q set) set"
+definition new_q_addr::"nat \<Rightarrow> q_vars \<Rightarrow> (nat set) set"
   where "new_q_addr n q_dom \<equiv> {s.  card s = n \<and> (Min s > Max (Q_domain q_dom))}"           
 
 lemma all_gt: "finite s' \<Longrightarrow> finite s \<Longrightarrow> 
-       Min s > Max s' \<Longrightarrow> (e::'q::linorder) \<in> s \<Longrightarrow> e' \<in> s' \<Longrightarrow> e > e'"
+       Min s > Max s' \<Longrightarrow> e \<in> s \<Longrightarrow> e' \<in> s' \<Longrightarrow> e > e'"
   using Max_less_iff less_le_trans by fastforce
 
 lemma neq_q_addr_finites:"n\<noteq>0 \<Longrightarrow> S \<in> new_q_addr n q_dom \<Longrightarrow> finite S"
@@ -103,16 +103,16 @@ qed
 definition list_dims::"'q::linorder set \<Rightarrow> nat list"
   where "list_dims qvars \<equiv> replicate (card qvars) 2" *)
 
-definition dom_q_vars::"'q::linorder q_vars \<Rightarrow> nat set"
+definition dom_q_vars::"q_vars \<Rightarrow> nat set"
   where "dom_q_vars q_vars \<equiv> Set.filter (\<lambda>e. q_vars e\<noteq>{}) UNIV"
                                                   
-definition dims_heap::"'q::linorder q_vars \<Rightarrow> nat list"
+definition dims_heap::"q_vars \<Rightarrow> nat list"
   where "dims_heap q_vars \<equiv> (list_dims o Q_domain) q_vars"
 
-definition qvars_lin_set::"'q::linorder q_vars \<Rightarrow> nat set"
+definition qvars_lin_set::"q_vars \<Rightarrow> nat set"
   where "qvars_lin_set q_vars \<equiv> {0 ..< (ket_dim q_vars)}"
 
-definition qvars_lin_sets::"'q::linorder q_vars \<Rightarrow> 'q::linorder q_vars \<Rightarrow> nat set"
+definition qvars_lin_sets::"q_vars \<Rightarrow> q_vars \<Rightarrow> nat set"
   where "qvars_lin_sets q_vars q_vars' \<equiv> {(ket_dim q_vars) ..< (ket_dim q_vars')}"
 
 (* definition top_lin_set::"'q set \<Rightarrow> nat" where
@@ -135,7 +135,7 @@ definition lin_sets::"'q::linorder set \<Rightarrow> 'q::linorder set \<Rightarr
 definition sorted_list_from_set::"'q::linorder set \<Rightarrow> 'q::linorder list"
   where "sorted_list_from_set s \<equiv> THE l. strict_sorted l \<and> set l = s"
 
-definition to_heap::"'q::linorder qstate \<Rightarrow> ('q,complex) QState"
+definition to_heap::"qstate \<Rightarrow> (nat,complex) QState"
   where "to_heap q \<equiv> snd q"
 
 
@@ -150,7 +150,7 @@ context vars
 begin
 
 
-lemma "(l::('a, 'b,'s, 'q::linorder) com) = l"
+lemma "(l::('a, 'b,'s) com) = l"
   by auto
 
 end
