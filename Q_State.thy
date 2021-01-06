@@ -1,8 +1,9 @@
 theory Q_State
-imports HOL.Complex vars HOL.Orderings  
+  imports HOL.Complex vars HOL.Orderings  
           Deep_Learning.Tensor_Matricization Separation_Algebra.Separation_Algebra
           QHLProver.Partial_State Tensor_Permutation HOL.Finite_Set
 begin               
+<<<<<<< HEAD
 \<comment>\<open>Function to obtain the index of variables in the vector\<close>
 definition to_nat_set::"'q::linorder set \<Rightarrow> ('q \<Rightarrow> nat)"
   where "to_nat_set s \<equiv> (\<lambda>q. the (find_index q (sorted_list_of_set s)))"
@@ -74,17 +75,22 @@ qed
 
   value "to_nat_set {0::nat, 1,2,8,10,15} ` {2,10}"
   value "ind_in_set {0::nat, 1,2,8,10,15} ` {2,10} "
+=======
+>>>>>>> parent of 3175e41... Update QSemantics.thy, Q_State.thy, and 2 more files... Commutativity based on permutations almost proven.
 
+definition list_dims::"'q set \<Rightarrow> nat list"
+  where "list_dims qvars \<equiv> replicate (card qvars) 2"
 
-(* definition top_lin_set::"'q set \<Rightarrow> nat" where
+definition top_lin_set::"'q set \<Rightarrow> nat" where
   "top_lin_set qset \<equiv> if qset = {} then 1 else card qset"
-*)
-(* definition lin_set::"'q set \<Rightarrow> nat set"
+
+definition lin_set::"'q set \<Rightarrow> nat set"
   where "lin_set qset \<equiv> if qset = {} then {0} else {0 ..< (card qset)}"
 
 definition lin_sets::"nat \<Rightarrow> 'q set \<Rightarrow> nat set"
   where "lin_sets n q_vars' \<equiv> if q_vars' = {} then  {n}
                                    else  {n ..< card (q_vars')+n}"
+<<<<<<< HEAD
 *)
 
 definition list_dims::"'q set \<Rightarrow> nat list"
@@ -92,6 +98,8 @@ definition list_dims::"'q set \<Rightarrow> nat list"
 
 definition dims :: "'a list \<Rightarrow> nat set \<Rightarrow> 'a list" where
   "dims tv vs = nths tv vs"
+=======
+>>>>>>> parent of 3175e41... Update QSemantics.thy, Q_State.thy, and 2 more files... Commutativity based on permutations almost proven.
 
 \<comment>\<open> Lemmas on ptensor_vec \<close>
 
@@ -255,14 +263,17 @@ qed
 lemma idempoten_qstate:
   assumes 
     a1:"dim_vec (v::('a::comm_ring_1) vec) = (2::nat) ^ card d" and a2:"finite d"
+<<<<<<< HEAD
   shows "partial_state2.ptensor_vec (list_dims d)  d {} v (vCons (1) vNil) = v"
   unfolding list_dims_def
   using idempoten_qstate1[OF a1] idempoten_qstate2[OF  a1 a2] sorry
+=======
+  shows "partial_state.tensor_vec (list_dims d)  {0::nat..<card d} v (vCons (1) vNil) = v"
+  unfolding list_dims_def using idempoten_qstate1[OF a1] idempoten_qstate2[OF  a1 a2]
+>>>>>>> parent of 3175e41... Update QSemantics.thy, Q_State.thy, and 2 more files... Commutativity based on permutations almost proven.
   using a2 by blast
 
 
-definition mapping::"'q set \<Rightarrow> 'q set \<Rightarrow> nat set \<times> nat set"
-  where "mapping s1 s2 \<equiv>({},{})"
 
 typedef (overloaded) ('a::comm_ring_1)
   QState = "{(s,v)| (s::nat set) (v::'a list).                                   
@@ -403,8 +414,12 @@ definition plus_QState_vector::"('a::comm_ring_1) QState \<Rightarrow> 'a QState
           v = partial_state.tensor_vec 
                      dims {0..<card d1} l1 l2;
           a = ((sorted_list_of_set d1)@(sorted_list_of_set d2));
+<<<<<<< HEAD
           b = sorted_list_of_set s in (s,  (list_of_vec v).\<^sub>a \<^sub>\<leadsto> \<^sub>b)"
 *)
+=======
+          b = sorted_list_of_set s in (s, list_of_vec (v.\<^sub>a \<^sub>\<leadsto> \<^sub>b))"
+>>>>>>> parent of 3175e41... Update QSemantics.thy, Q_State.thy, and 2 more files... Commutativity based on permutations almost proven.
 
 lemma QState_vars_empty:"QState_vars (QState ({}, [1])) = {}"
   by (metis (no_types) QState_id_fst_empty uqstate_fst)
@@ -436,10 +451,10 @@ proof-
   moreover have  "sorted_list_of_set (QState_vars a)@sorted_list_of_set (QState_vars ?v0) = 
               sorted_list_of_set (QState_vars a)"
     by (simp add: vars_v0)
-  then have  "QState_list a = (QState_list a).\<^sub>?a \<^sub>\<leadsto> \<^sub>?b"
+  then have  "QState_vector a = (QState_vector a).\<^sub>?a \<^sub>\<leadsto> \<^sub>?b"
     using eq_vector_same_permutation
-    by (metis QState_rel1' distinct_card distinct_sorted_list_of_set 
-          finite_vars_a set_sorted_list_of_set)    
+    by (metis card_vars_a finite_vars_a distinct_card 
+        distinct_sorted_list_of_set sorted_list_of_set(1))    
   then show ?thesis unfolding plus_QState_vector_def Let_def
      using s v0 tensor_prod   apply transfer'
      by (simp add: list_vec )
@@ -511,7 +526,7 @@ lemma plus_QState_vector_wf':
           a6:"v = partial_state.tensor_vec ds  {0..<card d1} l1 l2" and
           a7:"a = ((sorted_list_of_set d1)@(sorted_list_of_set d2))" and
           a8:"b = sorted_list_of_set s" 
-        shows "length (((list_of_vec v).\<^sub>a \<^sub>\<leadsto> \<^sub>b)) =  (2^(card s))"
+        shows "length (list_of_vec (v.\<^sub>a \<^sub>\<leadsto> \<^sub>b)) =  (2^(card s))"
 proof-
   have "dim_vec v = (2^(card s))" using dim_vec_plus_2_pow_s[OF a0 a1 a2 a3 a4 a5 a6 a9] by auto
   moreover have "distinct a"
@@ -627,43 +642,7 @@ proof-
   }
   ultimately show ?thesis by auto 
 qed
-typedef natsub = "{x. x<(10::nat)}"
-  by (meson mem_Collect_eq zero_less_numeral)
-  
 
-value "digit_decode [2,2] (nths (digit_encode [2,2,2,2] 4) {2,3})"
-
-lemma
-  assumes a0:"dim_vec (vx::('a::comm_ring_1) vec) = (2::nat) ^ card varx" and
-          a1:"dim_vec (vy::('a::comm_ring_1) vec) = (2::nat) ^ card vary" and
-          a2:"finite vary" and a3:"varx = {}"
-shows"list_of_vec
-     (partial_state.tensor_vec (list_dims (varx \<union> vary)) {0..<card (vary)} vy vx) =
-    list_of_vec
-     (partial_state.tensor_vec (list_dims (varx \<union> vary)) {0..<card (varx)} vx vy) . 
-                      \<^sub>(sorted_list_of_set varx @ sorted_list_of_set vary) \<^sub>\<leadsto>  
-                      \<^sub>(sorted_list_of_set vary @ sorted_list_of_set varx)"
-proof-
-  interpret st1:partial_state "(list_dims (varx \<union> vary))" .
-
-  have "partial_state.tensor_vec (list_dims (varx \<union> vary)) {0..<card (vary)} vy vx = vx"
-    using a0 a1 a2 a3 idempoten_qstate
-  show ?thesis sorry
-qed 
-
-lemma 
-  assumes a0:"dim_vec (vx::('a::comm_ring_1) vec) = (2::nat) ^ card varx" and
-          a1:"dim_vec (vy::('a::comm_ring_1) vec) = (2::nat) ^ card vary" and
-          a2:"finite varx" and a3:"finite vary"
-shows"list_of_vec
-     (partial_state.tensor_vec (list_dims (varx \<union> vary)) {0..<card (vary)} vy vx) =
-    list_of_vec
-     (partial_state.tensor_vec (list_dims (varx \<union> vary)) {0..<card (varx)} vx vy) . 
-                      \<^sub>(sorted_list_of_set varx @ sorted_list_of_set vary) \<^sub>\<leadsto>  
-                      \<^sub>(sorted_list_of_set vary @ sorted_list_of_set varx)"
-proof-
-  show ?thesis sorry
-qed 
 
 (* lemma comm_plus_QState_vector:
   assumes a0:"QState_vars x  \<inter> QState_vars y = {}"
@@ -672,11 +651,10 @@ proof-
   let ?s = "QState_vars x \<union> QState_vars y"
   let ?x = "QState_vector x" and ?y = "QState_vector y"
   let ?vx = "QState_vars x" and  ?vy = "QState_vars y"
-  let ?svx = "sorted_list_of_set ?vx" and ?svy = "sorted_list_of_set ?vy" and
-      ?svs = "sorted_list_of_set ?s"
-  let ?svxy = "?svx @ ?svy" and  ?svyx = "?svy @ ?svx"
+  let ?svx = "sorted_list_of_set ?vx" and ?svy = "sorted_list_of_set ?vy"
   let ?tpxy = "partial_state.tensor_vec (list_dims ?s) {0..<card ?vx} ?x ?y"
   let ?tpyx = "partial_state.tensor_vec (list_dims ?s) {0..<card ?vy} ?y ?x"
+<<<<<<< HEAD
   have  list:"(list_of_vec ?tpyx) = (list_of_vec ?tpxy). \<^sub>?svxy \<^sub>\<leadsto> \<^sub>?svyx" sorry
   then have  "(list_of_vec ?tpxy). \<^sub>?svxy \<^sub>\<leadsto> \<^sub>?svs  = (list_of_vec ?tpyx). \<^sub>?svyx \<^sub>\<leadsto> \<^sub>?svs" 
     using ordering_permutation_eq_orientation 
@@ -698,6 +676,10 @@ proof-
   then show ?thesis unfolding plus_QState_vector_def Let_def
     by (metis sup_commute)
 qed *)
+=======
+  show ?thesis sorry
+qed
+>>>>>>> parent of 3175e41... Update QSemantics.thy, Q_State.thy, and 2 more files... Commutativity based on permutations almost proven.
 
 lemma plus_comm:"disj_QState x y \<Longrightarrow> plus_QState x y = plus_QState y x"
 proof-

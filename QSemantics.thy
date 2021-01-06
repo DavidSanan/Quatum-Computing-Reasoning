@@ -38,13 +38,13 @@ definition apply_matrix_sep :: "'q::linorder set \<Rightarrow> ('q, complex) QSt
                (m *\<^sub>v q).\<^sub>vs' \<^sub>\<leadsto> \<^sub>vs
         "
 
-(* definition alloc_vars :: "'q::linorder set \<Rightarrow> ('q, complex) QState \<Rightarrow> complex vec \<Rightarrow> complex vec"
+definition alloc_vars :: "'q::linorder set \<Rightarrow> ('q, complex) QState \<Rightarrow> complex vec \<Rightarrow> complex vec"
   where "alloc_vars sep_vars qs v \<equiv>            
            partial_state2.ptensor_vec (list_dims (QState_vars qs)@list_dims sep_vars)
                   (lin_set (QState_vars qs)) (lin_sets (top_lin_set ((QState_vars qs))) sep_vars)
-                  ( QState_vector qs) v" *)
+                  ( QState_vector qs) v"
 
-(* definition dispose_vars:: " 'q::linorder set \<Rightarrow> ('q, complex) QState \<Rightarrow> complex vec set"
+definition dispose_vars:: " 'q::linorder set \<Rightarrow> ('q, complex) QState \<Rightarrow> complex vec set"
   where "dispose_vars sep_vars qs \<equiv> 
    let vars_dom = QState_vars qs in
    let v =   QState_vector qs in
@@ -54,7 +54,7 @@ definition apply_matrix_sep :: "'q::linorder set \<Rightarrow> ('q, complex) QSt
    let qv' = t @ l in
    let qn =  v.\<^sub>qv \<^sub>\<leadsto> \<^sub>qv' in 
    let vars_dom' = vars_dom \<union> sep_vars in
-    {q. (\<exists>q2. qn = partial_state.tensor_vec (list_dims vars_dom) {0..<card sep_vars} q q2)}" *)
+    {q. (\<exists>q2. qn = partial_state.tensor_vec (list_dims vars_dom) {0..<card sep_vars} q q2)}"
 
 definition measure_vars::"nat \<Rightarrow>  'q::linorder set \<Rightarrow> ('q, complex) QState  \<Rightarrow> (real\<times>complex vec)"
   where "measure_vars k  sep_vars qs \<equiv>
