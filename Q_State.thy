@@ -1,9 +1,8 @@
 theory Q_State
-  imports HOL.Complex vars HOL.Orderings  
+imports HOL.Complex vars HOL.Orderings  
           Deep_Learning.Tensor_Matricization Separation_Algebra.Separation_Algebra
           QHLProver.Partial_State Tensor_Permutation HOL.Finite_Set
 begin               
-<<<<<<< HEAD
 \<comment>\<open>Function to obtain the index of variables in the vector\<close>
 definition to_nat_set::"'q::linorder set \<Rightarrow> ('q \<Rightarrow> nat)"
   where "to_nat_set s \<equiv> (\<lambda>q. the (find_index q (sorted_list_of_set s)))"
@@ -73,33 +72,33 @@ proof-
     unfolding set_vars_def by auto
 qed
 
+lemma "finite s \<Longrightarrow> x \<in> s \<Longrightarrow>
+       (ind_in_set s) x =  to_nat_set s x"
+  unfolding ind_in_set_def to_nat_set_def
+  
+  apply rule
+  sorry
+
   value "to_nat_set {0::nat, 1,2,8,10,15} ` {2,10}"
   value "ind_in_set {0::nat, 1,2,8,10,15} ` {2,10} "
-=======
->>>>>>> parent of 3175e41... Update QSemantics.thy, Q_State.thy, and 2 more files... Commutativity based on permutations almost proven.
 
-definition list_dims::"'q set \<Rightarrow> nat list"
-  where "list_dims qvars \<equiv> replicate (card qvars) 2"
 
-definition top_lin_set::"'q set \<Rightarrow> nat" where
+(* definition top_lin_set::"'q set \<Rightarrow> nat" where
   "top_lin_set qset \<equiv> if qset = {} then 1 else card qset"
-
-definition lin_set::"'q set \<Rightarrow> nat set"
+*)
+(* definition lin_set::"'q set \<Rightarrow> nat set"
   where "lin_set qset \<equiv> if qset = {} then {0} else {0 ..< (card qset)}"
 
 definition lin_sets::"nat \<Rightarrow> 'q set \<Rightarrow> nat set"
   where "lin_sets n q_vars' \<equiv> if q_vars' = {} then  {n}
                                    else  {n ..< card (q_vars')+n}"
-<<<<<<< HEAD
 *)
 
 definition list_dims::"'q set \<Rightarrow> nat list"
   where "list_dims qvars \<equiv> replicate (card qvars) 2"
 
-definition dims :: "'a list \<Rightarrow> nat set \<Rightarrow> 'a list" where
+definition dims :: "nat list \<Rightarrow> nat set \<Rightarrow> nat list" where
   "dims tv vs = nths tv vs"
-=======
->>>>>>> parent of 3175e41... Update QSemantics.thy, Q_State.thy, and 2 more files... Commutativity based on permutations almost proven.
 
 \<comment>\<open> Lemmas on ptensor_vec \<close>
 
@@ -126,26 +125,10 @@ lemma digit_decode_non_vars:"digit_decode (nths (replicate (card d1) 2) (- {0..<
   using nths_set_gt_list_length
   by (metis digit_decode.simps(1) length_digit_encode length_replicate)
 
-lemma f1:"nths (digit_encode (nths (replicate (card d1) 2) d1) i) (- ind_in_set d1 ` d1) = []"
-proof -
-  have "length (nths (nths (replicate (card d1) 2) d1) (- ind_in_set d1 ` d1)) = 0"
-    using nths_reencode_eq_comp[of d1 d1 "(replicate (card d1) 2)",simplified] by auto    
-  then have 
-     "length (nths (digit_encode (nths (replicate (card d1) 2) d1) i) (- ind_in_set d1 ` d1)) = 0"    
-    by (simp add: length_digit_encode length_nths')           
-  then show ?thesis by auto
-qed
-
-lemma digit_decode_non_vars1:"digit_decode 
-    (nths (nths (replicate (card d1) 2) d1) (- ind_in_set d1 ` d1))
-    (nths (digit_encode (nths (replicate (card d1) 2) d1) i) (- ind_in_set d1 ` d1)) = 0"   
-  using f1
-  by (simp add: nths_reencode_eq_comp)
-
 lemma digit_decode_vars:
    "i< (2::nat) ^ card (d1) \<Longrightarrow> 
-    digit_decode (nths (nths (replicate (card d1) 2) (d1 \<union> {})) (ind_in_set (d1 \<union> {}) ` d1))
-     (nths (digit_encode (nths (replicate (card d1) 2) (d1 \<union> {})) i) (ind_in_set (d1 \<union> {}) ` d1))  = i"  
+    digit_decode (nths (replicate (card d1) 2) {0..<card d1})
+                 (nths (digit_encode (replicate (card d1) 2) i) {0..<card d1}) = i"  
   by (simp add: length_digit_encode nths_all)
   
 lemma list_of_neutral:"list_of_vec (vCons 1 vNil) = [1::'a::comm_ring_1]"
@@ -162,27 +145,22 @@ lemma idempoten_qstate1:
     a0:"dim_vec (v::('a::comm_ring_1) vec) = (2::nat) ^ card (d1)" and
     a1:"i < dim_vec v"
   shows 
-     "partial_state2.ptensor_vec (replicate (card d1) (2::nat))
-             d1 {} v (vCons 1 vNil) $ i = 
+     "partial_state.tensor_vec (replicate (card d1) (2::nat))
+             {0::nat..<card  d1} v (vCons 1 vNil) $ i = 
          v $ i"
 proof-
-  interpret ps2:partial_state2 "(replicate (card d1) (2::nat))" d1 "{}" apply standard by auto
-  let  ?d0 = "digit_decode (nths ps2.dims0 (- ps2.vars1'))
-                 (nths (digit_encode ps2.dims0 i) (- ps2.vars1'))"
-  have vcons_0:"vCons 1 vNil $ ?d0 = 1" unfolding ps2.dims0_def ps2.vars0_def ps2.vars1'_def 
-    by  (auto simp add: digit_decode_non_vars1)
-  moreover have  "digit_decode (nths ps2.dims0 ps2.vars1') (nths (digit_encode ps2.dims0 i) ps2.vars1') = i"
-    unfolding ps2.dims0_def ps2.vars0_def ps2.vars1'_def 
-    sorry
-  moreover have "prod_list (nths (replicate (card d1) 2) d1) = (2::nat) ^ card (d1)" 
-    sorry by auto
-  ultimately show ?thesis unfolding ps2.ptensor_vec_def 
+  interpret ps2:partial_state "(replicate (card d1) (2::nat))" "{0::nat..<card  d1}" .
+  let  ?d0 = "digit_decode (nths (replicate (card d1) 2) (- {0..<card d1}))
+                  (nths (digit_encode (replicate (card d1) 2) i) (- {0..<card d1}))"
+  have vcons_0:"vCons 1 vNil $ ?d0 = 1" by  (auto simp add: digit_decode_non_vars)
+  moreover have  "digit_decode (nths (replicate (card d1) 2) {0..<card d1})
+                 (nths (digit_encode (replicate (card d1) 2) i) {0..<card d1}) = i" 
+    using digit_decode_vars a0 a1 by auto
+  moreover have " (prod_list (replicate (card d1) 2)) = (2::nat) ^ card (d1)" by auto
+  ultimately show ?thesis unfolding ps2.tensor_vec_def 
       partial_state.tensor_vec_def state_sig.d_def partial_state.encode1_def 
-      partial_state.encode2_def partial_state.dims1_def partial_state.dims2_def ps2.dims0_def
-                                ps2.vars0_def                         
-    using a1 a0   apply clarsimp
-    using digit_decode_non_vars1 partial_state2.intro partial_state2.vars0_def partial_state2.vars1'_def 
-    by auto 
+      partial_state.encode2_def partial_state.dims1_def partial_state.dims2_def     
+    using a1 a0   apply clarsimp  by (auto simp add: vcons_0)
     
 qed
 
@@ -263,20 +241,17 @@ qed
 lemma idempoten_qstate:
   assumes 
     a1:"dim_vec (v::('a::comm_ring_1) vec) = (2::nat) ^ card d" and a2:"finite d"
-<<<<<<< HEAD
-  shows "partial_state2.ptensor_vec (list_dims d)  d {} v (vCons (1) vNil) = v"
-  unfolding list_dims_def
-  using idempoten_qstate1[OF a1] idempoten_qstate2[OF  a1 a2] sorry
-=======
   shows "partial_state.tensor_vec (list_dims d)  {0::nat..<card d} v (vCons (1) vNil) = v"
-  unfolding list_dims_def using idempoten_qstate1[OF a1] idempoten_qstate2[OF  a1 a2]
->>>>>>> parent of 3175e41... Update QSemantics.thy, Q_State.thy, and 2 more files... Commutativity based on permutations almost proven.
+  unfolding list_dims_def
+  using idempoten_qstate1[OF a1] idempoten_qstate2[OF  a1 a2]
   using a2 by blast
 
 
+definition mapping::"'q set \<Rightarrow> 'q set \<Rightarrow> nat set \<times> nat set"
+  where "mapping s1 s2 \<equiv>({},{})"
 
-typedef (overloaded) ('a::comm_ring_1)
-  QState = "{(s,v)| (s::nat set) (v::'a list).                                   
+typedef (overloaded) ('q,'a::comm_ring_1)
+  QState = "{(s,v)| (s::'q set) (v::'a list).                                   
               length v = (2^(card s)) \<and> finite s \<and>
               (s = {} \<longrightarrow> ((v!0) = (1::'a)))}"
   morphisms uQState Abs_QState  
@@ -284,7 +259,7 @@ typedef (overloaded) ('a::comm_ring_1)
 
 setup_lifting type_definition_QState
 
-definition tensor_mat_ord::"'a QState \<Rightarrow> nat set \<Rightarrow> 'a::comm_ring_1 mat \<Rightarrow> 'a QState set"
+definition tensor_mat_ord::"('q,'a)QState \<Rightarrow> 'q set \<Rightarrow> 'a::comm_ring_1 mat \<Rightarrow> ('q,'a)QState set"
   where "tensor_mat_ord Q q M \<equiv> {}"
 
 lemma QState_rel1:"length(snd(uQState x)) = 2 ^ card (fst(uQState x))"  
@@ -295,7 +270,7 @@ proof -
   then show ?thesis using uQState  by (auto simp add:  split_beta)    
 qed
 
-lemma QState_rel2:"fst (uQState (x::('a::comm_ring_1) QState )) = {} \<longrightarrow> 
+lemma QState_rel2:"fst (uQState (x::('q,'a::comm_ring_1) QState )) = {} \<longrightarrow> 
                   (((snd (uQState x)) ! 0) = 1)"
 proof -
   have "\<exists>B v. uQState x = (B, v) \<and> length v = (2 ^ card B) \<and> 
@@ -304,24 +279,24 @@ proof -
   then show ?thesis using uQState  by (auto simp add:  split_beta)       
 qed
 
-lemma QState_rel3:"finite (fst (uQState (x::('a::comm_ring_1) QState )))"
+lemma QState_rel3:"finite (fst (uQState (x::('q,'a::comm_ring_1) QState )))"
   apply transfer by auto
  
-lift_definition QState_vars :: "('a::comm_ring_1) QState \<Rightarrow> nat set" is fst .
-lift_definition QState_list :: "('a::comm_ring_1) QState \<Rightarrow> 'a::comm_ring_1 list" is snd .
-lift_definition QState_vector::"('a::comm_ring_1) QState \<Rightarrow> 'a::comm_ring_1 vec" is "\<lambda>s. vec_of_list (snd s)" .
-lift_definition QState :: "nat set \<times> 'a::comm_ring_1 list \<Rightarrow> 'a QState" is  
+lift_definition QState_vars :: "('q,'a::comm_ring_1) QState \<Rightarrow> 'q set" is fst .
+lift_definition QState_list :: "('q,'a::comm_ring_1) QState \<Rightarrow> 'a::comm_ring_1 list" is snd .
+lift_definition QState_vector::"('q,'a::comm_ring_1) QState \<Rightarrow> 'a::comm_ring_1 vec" is "\<lambda>s. vec_of_list (snd s)" .
+lift_definition QState :: "'q set \<times> 'a::comm_ring_1 list \<Rightarrow> ('q,'a)QState" is  
   "\<lambda>s. (if fst s = {} \<and> snd s = [1] then (fst s, snd s)
        else (if finite (fst s) \<and> fst s \<noteq> {} \<and> length (snd s) = 2 ^ (card (fst s)) then (fst s, snd s)
        else ({}, [1])))"  by auto
 
-lift_definition Conc :: " 'a QState \<Rightarrow> nat set \<times> 'a::comm_ring_1 vec" is
+lift_definition Conc :: " ('q,'a) QState \<Rightarrow> 'q set \<times> 'a::comm_ring_1 vec" is
   "\<lambda>s. (QState_vars s, QState_vector s)" .
 
 lemma uqstate_fst:"fst (uQState a) = QState_vars a" apply transfer' by auto
 lemma uqstate_snd:"snd (uQState a) = QState_list a" apply transfer' by auto
 
-lemma QState_rel3':"finite (QState_vars (x::('a::comm_ring_1) QState ))"
+lemma QState_rel3':"finite (QState_vars (x::('q,'a::comm_ring_1) QState ))"
   apply transfer by auto
 
 lemma QState_rel1':"length(QState_list x) = 2 ^ card (QState_vars x)"
@@ -398,15 +373,8 @@ value "nths [2::nat,2,2] {(4::nat),5}"
 value "(digit_encode [2,2,2,2] 9)"
 value "nths (digit_encode [2,2,2,2] 9) {3}"
 value "digit_decode [2] (nths (digit_encode [2,2,2,2] 9) {3})"
-
-definition plus_QState_vector::"('a::comm_ring_1) QState \<Rightarrow> 'a QState \<Rightarrow>nat set \<times> 'a list"
-  where "plus_QState_vector q1 q2 \<equiv> 
-     let d1 = (QState_vars q1); d2 = (QState_vars q2); 
-          s = d1 \<union> d2; l1 = QState_vector q1; l2 = QState_vector q2;
-          dims = list_dims s in
-          (s, list_of_vec(partial_state2.ptensor_vec dims d1 d2 l1 l2))"
-
-(* definition plus_QState_vector::"('a::comm_ring_1) QState \<Rightarrow> 'a QState \<Rightarrow>nat set \<times> 'a list"
+  
+definition plus_QState_vector::"('q::linorder,'a::comm_ring_1) QState \<Rightarrow> ('q,'a::comm_ring_1) QState \<Rightarrow>'q set \<times> 'a::comm_ring_1 list"
   where "plus_QState_vector q1 q2 \<equiv> 
      let d1 = (QState_vars q1); d2 = (QState_vars q2); 
           s = d1 \<union> d2; l1 = QState_vector q1; l2 = QState_vector q2;
@@ -414,12 +382,7 @@ definition plus_QState_vector::"('a::comm_ring_1) QState \<Rightarrow> 'a QState
           v = partial_state.tensor_vec 
                      dims {0..<card d1} l1 l2;
           a = ((sorted_list_of_set d1)@(sorted_list_of_set d2));
-<<<<<<< HEAD
           b = sorted_list_of_set s in (s,  (list_of_vec v).\<^sub>a \<^sub>\<leadsto> \<^sub>b)"
-*)
-=======
-          b = sorted_list_of_set s in (s, list_of_vec (v.\<^sub>a \<^sub>\<leadsto> \<^sub>b))"
->>>>>>> parent of 3175e41... Update QSemantics.thy, Q_State.thy, and 2 more files... Commutativity based on permutations almost proven.
 
 lemma QState_vars_empty:"QState_vars (QState ({}, [1])) = {}"
   by (metis (no_types) QState_id_fst_empty uqstate_fst)
@@ -428,7 +391,7 @@ lemma QState_vars_empty:"QState_vars (QState ({}, [1])) = {}"
 lemma plus_QState_vector_a_idem:
   "snd (plus_QState_vector a (QState ({}, [1]))) = QState_list a"  
 proof-
-  let ?v0 = "QState ({}, [1])::('a) QState"  
+  let ?v0 = "QState ({}, [1])::('b, 'a) QState"  
   let ?s0 = "sorted_list_of_set (QState_vars ?v0)"
   let ?b = "sorted_list_of_set (QState_vars a)"
   let ?a = "?b @ ?s0" 
@@ -437,7 +400,7 @@ proof-
   moreover have finite_vars_a:"finite (QState_vars a)"
     by (simp add: QState_rel3')
   ultimately have 
-    tensor_prod:"partial_state2.ptensor_vec (list_dims (QState_vars a))  (QState_vars a) {}
+    tensor_prod:"partial_state.tensor_vec (list_dims (QState_vars a))  {0::nat..<card ((QState_vars a))} 
                                 (QState_vector a) (vCons (1) vNil) = QState_vector a"
     using idempoten_qstate by fastforce
   have  vars_v0:"QState_vars ?v0 = {}"
@@ -451,22 +414,22 @@ proof-
   moreover have  "sorted_list_of_set (QState_vars a)@sorted_list_of_set (QState_vars ?v0) = 
               sorted_list_of_set (QState_vars a)"
     by (simp add: vars_v0)
-  then have  "QState_vector a = (QState_vector a).\<^sub>?a \<^sub>\<leadsto> \<^sub>?b"
+  then have  "QState_list a = (QState_list a).\<^sub>?a \<^sub>\<leadsto> \<^sub>?b"
     using eq_vector_same_permutation
-    by (metis card_vars_a finite_vars_a distinct_card 
-        distinct_sorted_list_of_set sorted_list_of_set(1))    
+    by (metis QState_rel1' distinct_card distinct_sorted_list_of_set 
+          finite_vars_a set_sorted_list_of_set)    
   then show ?thesis unfolding plus_QState_vector_def Let_def
      using s v0 tensor_prod   apply transfer'
      by (simp add: list_vec )
 qed
 
-definition plus_QState:: "('a::comm_ring_1) QState \<Rightarrow> 'a QState \<Rightarrow> 'a QState"
+definition plus_QState:: "('q::linorder,'a::comm_ring_1) QState \<Rightarrow> ('q,'a::comm_ring_1) QState \<Rightarrow> ('q,'a::comm_ring_1) QState"
   where "plus_QState q1 q2 \<equiv> 
     let d1 = (QState_vars q1); d2 = (QState_vars q2) in
       if (d1 \<inter> d2 \<noteq> {}) then QState ({},[1])
       else QState (plus_QState_vector q1 q2)"
 
-definition disj_QState::"('a::comm_ring_1) QState \<Rightarrow> 'a QState \<Rightarrow> bool"
+definition disj_QState::"('q,'a::comm_ring_1) QState \<Rightarrow> ('q,'a::comm_ring_1) QState \<Rightarrow> bool"
   where "disj_QState q1 q2 \<equiv> QState_vars q1 \<inter> QState_vars q2 = {}"
 
 (* lift_definition disj_QState :: "('q,'a::comm_ring_1) QState \<Rightarrow> ('q,'a::comm_ring_1) QState \<Rightarrow> bool" is
@@ -526,7 +489,7 @@ lemma plus_QState_vector_wf':
           a6:"v = partial_state.tensor_vec ds  {0..<card d1} l1 l2" and
           a7:"a = ((sorted_list_of_set d1)@(sorted_list_of_set d2))" and
           a8:"b = sorted_list_of_set s" 
-        shows "length (list_of_vec (v.\<^sub>a \<^sub>\<leadsto> \<^sub>b)) =  (2^(card s))"
+        shows "length (((list_of_vec v).\<^sub>a \<^sub>\<leadsto> \<^sub>b)) =  (2^(card s))"
 proof-
   have "dim_vec v = (2^(card s))" using dim_vec_plus_2_pow_s[OF a0 a1 a2 a3 a4 a5 a6 a9] by auto
   moreover have "distinct a"
@@ -544,7 +507,7 @@ lemma plus_QState_vector_wf: assumes a0: "QState_vars q1 \<inter> QState_vars q2
   shows "length (snd (plus_QState_vector q1 q2)) =
         2 ^ card (fst (plus_QState_vector q1 q2))"
   unfolding plus_QState_vector_def Let_def using a0
-  apply clarsimp apply (frule plus_QState_vector_wf')  sorry
+  apply clarsimp apply (frule plus_QState_vector_wf')  
   by force+
 
 lemma plus_QState_vector_empty_vars_one_wf:
@@ -642,32 +605,59 @@ proof-
   }
   ultimately show ?thesis by auto 
 qed
+typedef natsub = "{x. x<(10::nat)}"
+  by (meson mem_Collect_eq zero_less_numeral)
+  
 
+value "digit_decode [2,2] (nths (digit_encode [2,2,2,2] 4) {2,3})"
 
-(* lemma comm_plus_QState_vector:
+lemma
+  assumes a0:"dim_vec (vx::('a::comm_ring_1) vec) = (2::nat) ^ card varx" and
+          a1:"dim_vec (vy::('a::comm_ring_1) vec) = (2::nat) ^ card vary" and
+          a2:"finite vary" and a3:"varx = {}"
+shows"list_of_vec
+     (partial_state.tensor_vec (list_dims (varx \<union> vary)) {0..<card (vary)} vy vx) =
+    list_of_vec
+     (partial_state.tensor_vec (list_dims (varx \<union> vary)) {0..<card (varx)} vx vy) . 
+                      \<^sub>(sorted_list_of_set varx @ sorted_list_of_set vary) \<^sub>\<leadsto>  
+                      \<^sub>(sorted_list_of_set vary @ sorted_list_of_set varx)"
+proof-
+  interpret st1:partial_state "(list_dims (varx \<union> vary))" .
+
+  have "partial_state.tensor_vec (list_dims (varx \<union> vary)) {0..<card (vary)} vy vx = vx"
+    using a0 a1 a2 a3 idempoten_qstate
+  show ?thesis sorry
+qed 
+
+lemma 
+  assumes a0:"dim_vec (vx::('a::comm_ring_1) vec) = (2::nat) ^ card varx" and
+          a1:"dim_vec (vy::('a::comm_ring_1) vec) = (2::nat) ^ card vary" and
+          a2:"finite varx" and a3:"finite vary"
+shows"list_of_vec
+     (partial_state.tensor_vec (list_dims (varx \<union> vary)) {0..<card (vary)} vy vx) =
+    list_of_vec
+     (partial_state.tensor_vec (list_dims (varx \<union> vary)) {0..<card (varx)} vx vy) . 
+                      \<^sub>(sorted_list_of_set varx @ sorted_list_of_set vary) \<^sub>\<leadsto>  
+                      \<^sub>(sorted_list_of_set vary @ sorted_list_of_set varx)"
+proof-
+  show ?thesis sorry
+qed 
+
+lemma comm_plus_QState_vector:
   assumes a0:"QState_vars x  \<inter> QState_vars y = {}"
   shows "snd (plus_QState_vector x y) = snd (plus_QState_vector y x)"
 proof-
   let ?s = "QState_vars x \<union> QState_vars y"
   let ?x = "QState_vector x" and ?y = "QState_vector y"
   let ?vx = "QState_vars x" and  ?vy = "QState_vars y"
-  let ?svx = "sorted_list_of_set ?vx" and ?svy = "sorted_list_of_set ?vy"
+  let ?svx = "sorted_list_of_set ?vx" and ?svy = "sorted_list_of_set ?vy" and
+      ?svs = "sorted_list_of_set ?s"
+  let ?svxy = "?svx @ ?svy" and  ?svyx = "?svy @ ?svx"
   let ?tpxy = "partial_state.tensor_vec (list_dims ?s) {0..<card ?vx} ?x ?y"
   let ?tpyx = "partial_state.tensor_vec (list_dims ?s) {0..<card ?vy} ?y ?x"
-<<<<<<< HEAD
   have  list:"(list_of_vec ?tpyx) = (list_of_vec ?tpxy). \<^sub>?svxy \<^sub>\<leadsto> \<^sub>?svyx" sorry
   then have  "(list_of_vec ?tpxy). \<^sub>?svxy \<^sub>\<leadsto> \<^sub>?svs  = (list_of_vec ?tpyx). \<^sub>?svyx \<^sub>\<leadsto> \<^sub>?svs" 
-    using ordering_permutation_eq_orientation 
-          dim_vec_plus_2_pow_s QState_rel3' plus_QState_set_wf
-    apply auto sorry
-    by (smt QState_rel3' add.commute assms dim_vec_plus_2_pow_s distinct_append 
-            distinct_card distinct_sorted_list_of_set length_append 
-            length_list_of_vec ordering_permutation_eq_orientation 
-            plus_QState_set_wf set_append set_sorted_list_of_set sup_commute) sorry
-    by (smt QState_rel3' add.commute assms  
-            distinct_append distinct_card distinct_sorted_list_of_set 
-           length_append length_list_of_vec plus_QState_set_wf 
-           set_append sorted_list_of_set(1) sup_commute)
+    using ordering_permutation_eq_orientation
     by (smt QState_rel3' add.commute assms list dim_vec_plus_2_pow_s 
            distinct_append distinct_card distinct_sorted_list_of_set length_append 
              length_list_of_vec plus_QState_set_wf 
@@ -675,11 +665,7 @@ proof-
     
   then show ?thesis unfolding plus_QState_vector_def Let_def
     by (metis sup_commute)
-qed *)
-=======
-  show ?thesis sorry
 qed
->>>>>>> parent of 3175e41... Update QSemantics.thy, Q_State.thy, and 2 more files... Commutativity based on permutations almost proven.
 
 lemma plus_comm:"disj_QState x y \<Longrightarrow> plus_QState x y = plus_QState y x"
 proof-
@@ -689,7 +675,7 @@ proof-
   have "QState_vars (plus_QState x y)  = QState_vars (plus_QState y x)"
     by (metis QState_vars_Plus fst_conv inf_commute plus_QState_vector_def sup_commute)
   moreover have "snd (plus_QState_vector x y) = snd (plus_QState_vector y x)"
-    using state_sig.ptensor_vec_comm[OF disj] unfolding plus_QState_vector_def Let_def apply auto  by auto
+    using comm_plus_QState_vector disj by auto
   then have  "QState_list  (plus_QState x y) = QState_list (plus_QState y x)"    
     by (simp add: QState_list_Plus disj inf_commute)     
   ultimately show "plus_QState x y = plus_QState y x" using q_state_eq by auto
@@ -708,7 +694,7 @@ lemma plus_dis_dist2:" \<lbrakk>disj_QState x (plus_QState y z); disj_QState y z
 
 
 
-instantiation QState :: (comm_ring_1) sep_algebra
+instantiation QState :: (linorder,comm_ring_1) sep_algebra
 begin
 definition zero_QState: "0 \<equiv> QState ({},[1])"
 definition plus_QState: "s1 + s2 \<equiv> plus_QState s1 s2" 
