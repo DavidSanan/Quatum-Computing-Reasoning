@@ -95,14 +95,18 @@ definition dims :: "'a list \<Rightarrow> nat set \<Rightarrow> 'a list" where
 
 \<comment>\<open> Lemmas on ptensor_vec \<close>
 
-lemma tensor_neutral:"partial_state.tensor_vec [] {} (vCons (1::'a::comm_ring_1) vNil) (vCons 1 vNil) = vCons 1 vNil "
+
+lemma tensor_neutral:     
+      shows "list_of_vec
+             (partial_state2.ptensor_vec [] {} {} (vec_of_list [1])
+               (vec_of_list [1])) = [1::'a::comm_ring_1]"
 proof-
- interpret ps2:partial_state "[]" "{}" .
-   
-  show ?thesis  unfolding ps2.tensor_vec_def unfolding  
+  interpret ps2:partial_state2 "[]" "{}" "{}" apply standard by auto
+  show ?thesis  unfolding ps2.ptensor_vec_def unfolding  
    ind_in_set_def partial_state.tensor_vec_def  state_sig.d_def 
    partial_state.encode1_def partial_state.dims1_def 
-    partial_state.encode2_def partial_state.dims2_def  by auto
+    partial_state.encode2_def partial_state.dims2_def ps2.dims0_def ps2.vars0_def 
+    by auto
 qed
 
 lemma nths_set_gt_list_length:"nths l (- {0..<length l}) = []"
@@ -113,46 +117,41 @@ proof -
     by (meson length_greater_0_conv nth_mem)
 qed
 
-lemma digit_decode_non_vars:"digit_decode (nths (replicate (card d1) 2) (- {0..<card d1}))
-                  (nths (digit_encode (replicate (card d1) 2) i) (- {0..<card d1})) = 0"
-  using nths_set_gt_list_length
-  by (metis digit_decode.simps(1) length_digit_encode length_replicate)
-
-lemma f1:"nths (digit_encode (nths (replicate (card d1) 2) d1) i) (- ind_in_set d1 ` d1) = []"
-proof -
+lemma digit_decode_non_vars:"digit_decode 
+    (nths (nths (replicate (card d1) 2) d1) (- ind_in_set d1 ` d1))
+    (nths (digit_encode (nths (replicate (card d1) 2) d1) i) (- ind_in_set d1 ` d1)) = 0"   
+proof-
   have "length (nths (nths (replicate (card d1) 2) d1) (- ind_in_set d1 ` d1)) = 0"
     using nths_reencode_eq_comp[of d1 d1 "(replicate (card d1) 2)",simplified] by auto    
   then have 
      "length (nths (digit_encode (nths (replicate (card d1) 2) d1) i) (- ind_in_set d1 ` d1)) = 0"    
     by (simp add: length_digit_encode length_nths')           
-  then show ?thesis by auto
+  then show ?thesis 
+    by (simp add: nths_reencode_eq_comp)
 qed
 
-lemma digit_decode_non_vars1:"digit_decode 
-    (nths (nths (replicate (card d1) 2) d1) (- ind_in_set d1 ` d1))
-    (nths (digit_encode (nths (replicate (card d1) 2) d1) i) (- ind_in_set d1 ` d1)) = 0"   
-  using f1
-  by (simp add: nths_reencode_eq_comp)
 
 lemma digit_decode_vars:
-   "i< (2::nat) ^ card (d1) \<Longrightarrow> 
+   "i< (2::nat) ^ card (d1) \<Longrightarrow> d1 = {0..< card(d1)}  \<Longrightarrow>
     digit_decode (nths (nths (replicate (card d1) 2) (d1 \<union> {})) (ind_in_set (d1 \<union> {}) ` d1))
-     (nths (digit_encode (nths (replicate (card d1) 2) (d1 \<union> {})) i) (ind_in_set (d1 \<union> {}) ` d1))  = i"  
-  by (simp add: length_digit_encode nths_all)
-  
+     (nths (digit_encode (nths (replicate (card d1) 2) (d1 \<union> {})) i) (ind_in_set (d1 \<union> {}) ` d1))  = i"
+  by (metis atLeast0LessThan digit_decode_encode_lt finite_atLeastLessThan 
+            length_digit_encode length_replicate lessThan_iff nths_all 
+            prod_list_replicate state_sig.ind_in_set_id sup_bot.right_neutral)  
+                                                             
 lemma list_of_neutral:"list_of_vec (vCons 1 vNil) = [1::'a::comm_ring_1]"
   unfolding vCons_def by auto  
 
 lemma list_ptensor_neutral:"list_of_vec
-       (partial_state.tensor_vec [] {}
+       (partial_state2.ptensor_vec [] {} {}
        (vCons (1::'a) vNil) (vCons (1::'a::comm_ring_1) vNil)) =
        [1::'a::comm_ring_1]"
-  by (auto simp add: tensor_neutral list_of_neutral)
+  using tensor_neutral by auto
 
 lemma idempoten_qstate1: 
   assumes 
     a0:"dim_vec (v::('a::comm_ring_1) vec) = (2::nat) ^ card (d1)" and
-    a1:"i < dim_vec v"
+    a1:"i < dim_vec v" and a2:"d1 = {0..<card (d1)}"
   shows 
      "partial_state2.ptensor_vec (replicate (card d1) (2::nat))
              d1 {} v (vCons 1 vNil) $ i = 
@@ -160,22 +159,19 @@ lemma idempoten_qstate1:
 proof-
   interpret ps2:partial_state2 "(replicate (card d1) (2::nat))" d1 "{}" apply standard by auto
   let  ?d0 = "digit_decode (nths ps2.dims0 (- ps2.vars1'))
-                 (nths (digit_encode ps2.dims0 i) (- ps2.vars1'))"
-  have vcons_0:"vCons 1 vNil $ ?d0 = 1" unfolding ps2.dims0_def ps2.vars0_def ps2.vars1'_def 
-    by  (auto simp add: digit_decode_non_vars1)
-  moreover have  "digit_decode (nths ps2.dims0 ps2.vars1') (nths (digit_encode ps2.dims0 i) ps2.vars1') = i"
-    unfolding ps2.dims0_def ps2.vars0_def ps2.vars1'_def 
-    sorry
-  moreover have "prod_list (nths (replicate (card d1) 2) d1) = (2::nat) ^ card (d1)" 
-    sorry by auto
+                 (nths (digit_encode ps2.dims0 i) (- ps2.vars1'))" 
+  have  "digit_decode (nths ps2.dims0 ps2.vars1') (nths (digit_encode ps2.dims0 i) ps2.vars1') = i"
+    unfolding ps2.dims0_def ps2.vars0_def ps2.vars1'_def using a0 a1 digit_decode_vars[OF _ a2]  
+    by  auto    
+  moreover have "prod_list (nths (replicate (card d1) 2) d1) = (2::nat) ^ card (d1)"
+    by (metis a2 atLeast0LessThan 
+         length_replicate lessThan_iff nths_all prod_list_replicate)
   ultimately show ?thesis unfolding ps2.ptensor_vec_def 
       partial_state.tensor_vec_def state_sig.d_def partial_state.encode1_def 
       partial_state.encode2_def partial_state.dims1_def partial_state.dims2_def ps2.dims0_def
                                 ps2.vars0_def                         
-    using a1 a0   apply clarsimp
-    using digit_decode_non_vars1 partial_state2.intro partial_state2.vars0_def partial_state2.vars1'_def 
-    by auto 
-    
+    using a1 a0   apply clarsimp unfolding ps2.vars0_def ps2.vars1'_def
+    by (simp add: digit_decode_non_vars)   
 qed
 
 lemma nths_a_as1:
@@ -235,30 +231,26 @@ next
     by blast
 qed
 
-
-lemma idempoten_qstate2: 
-  assumes 
-    a1:"dim_vec v = (2::nat) ^ card d " and a2:"finite d"
-  shows "dim_vec
-     (partial_state.tensor_vec (replicate (card d) 2)
-       {0::nat..<card  d} v (vCons 1 vNil)) =
-      dim_vec v"
+lemma idempoten_qstate2:
+  assumes a1:"dim_vec v = (2::nat) ^ card d " and a2:"d = {0..<card d}"
+  shows "dim_vec (partial_state2.ptensor_vec (replicate (card d) 2) d {} v (vCons 1 vNil)) =
+   dim_vec v"
 proof-
-  interpret ps2:partial_state "(replicate (card d) (2::nat))" 
-                               "{0::nat..<card d}" .
-  show ?thesis unfolding ps2.tensor_vec_def  
-      partial_state.tensor_vec_def state_sig.d_def partial_state.encode1_def 
-      partial_state.encode2_def partial_state.dims1_def vCons_def 
-    using a1 by auto
+  interpret ps2:partial_state2 "(replicate (card d) (2::nat))" 
+                               "{0::nat..<card d}" "{}" apply standard by auto
+  show ?thesis unfolding vCons_def        
+    using  ps2.ptensor_vec_dim a1 a2 
+    unfolding  ps2.d1_def ps2.d2_def ps2.dims1_def ps2.dims2_def ps2.dims_product 
+    by (metis atLeast0LessThan length_replicate lessThan_iff mult.right_neutral
+        nths_all nths_empty prod_list.Nil prod_list_replicate )
 qed
 
 lemma idempoten_qstate:
   assumes 
-    a1:"dim_vec (v::('a::comm_ring_1) vec) = (2::nat) ^ card d" and a2:"finite d"
+    a1:"dim_vec (v::('a::comm_ring_1) vec) = (2::nat) ^ card d" and a2:"d = {0..<card d}"
   shows "partial_state2.ptensor_vec (list_dims d)  d {} v (vCons (1) vNil) = v"
   unfolding list_dims_def
-  using idempoten_qstate1[OF a1] idempoten_qstate2[OF  a1 a2] sorry
-  using a2 by blast
+  using idempoten_qstate1[OF a1 _ a2]  idempoten_qstate2[OF  a1 a2] by auto
 
 
 definition mapping::"'q set \<Rightarrow> 'q set \<Rightarrow> nat set \<times> nat set"
@@ -390,10 +382,12 @@ value "digit_decode [2] (nths (digit_encode [2,2,2,2] 9) {3})"
 
 definition plus_QState_vector::"('a::comm_ring_1) QState \<Rightarrow> 'a QState \<Rightarrow>nat set \<times> 'a list"
   where "plus_QState_vector q1 q2 \<equiv> 
-     let d1 = (QState_vars q1); d2 = (QState_vars q2); 
+     let d1 = ind_in_set ((QState_vars q1) \<union> (QState_vars q2)) ` (QState_vars q1); 
+         d2 = ind_in_set ((QState_vars q1) \<union> (QState_vars q2)) ` (QState_vars q2); 
           s = d1 \<union> d2; l1 = QState_vector q1; l2 = QState_vector q2;
           dims = list_dims s in
-          (s, list_of_vec(partial_state2.ptensor_vec dims d1 d2 l1 l2))"
+          ((QState_vars q1) \<union> (QState_vars q2), list_of_vec(partial_state2.ptensor_vec dims d1 d2 l1 l2))"
+
 
 (* definition plus_QState_vector::"('a::comm_ring_1) QState \<Rightarrow> 'a QState \<Rightarrow>nat set \<times> 'a list"
   where "plus_QState_vector q1 q2 \<equiv> 
@@ -417,32 +411,23 @@ proof-
   let ?s0 = "sorted_list_of_set (QState_vars ?v0)"
   let ?b = "sorted_list_of_set (QState_vars a)"
   let ?a = "?b @ ?s0" 
+  let ?v = "ind_in_set (QState_vars a) ` (QState_vars a)"
+  let ?v1 = "ind_in_set (QState_vars a) ` {}"
+  let ?s = "list_dims ?v"
   have card_vars_a:"dim_vec (QState_vector a) = 2^card (QState_vars a)"
     by (simp add: QState_rel1' QState_vector.rep_eq uqstate_snd)
   moreover have finite_vars_a:"finite (QState_vars a)"
     by (simp add: QState_rel3')
+  moreover have v1:"?v = {0..<card (QState_vars a)}" and v2:"?v1 = {}"
+    using finite_vars_a state_sig.ind_in_set_id
+    by auto     
   ultimately have 
-    tensor_prod:"partial_state2.ptensor_vec (list_dims (QState_vars a))  (QState_vars a) {}
+    tensor_prod:"partial_state2.ptensor_vec (list_dims {0..<card (QState_vars a)})  
+                                {0..<card (QState_vars a)} {}
                                 (QState_vector a) (vCons (1) vNil) = QState_vector a"
-    using idempoten_qstate by fastforce
-  have  vars_v0:"QState_vars ?v0 = {}"
-    by (simp add: QState_vars.rep_eq fst_uQState_empty)
-  have  v0:"QState_vector ?v0 = vCons (1::'a::comm_ring_1) vNil"
-    by (simp add: QState_vector.rep_eq snd_uQState_empty)
-  have  s:"(QState_vars a) \<union> (QState_vars ?v0) = (QState_vars a)"
-    by (simp add: QState_vars_id)
-  then have  "sorted_list_of_set ((QState_vars a) \<union> (QState_vars ?v0)) = sorted_list_of_set (QState_vars a)"
-    by metis
-  moreover have  "sorted_list_of_set (QState_vars a)@sorted_list_of_set (QState_vars ?v0) = 
-              sorted_list_of_set (QState_vars a)"
-    by (simp add: vars_v0)
-  then have  "QState_list a = (QState_list a).\<^sub>?a \<^sub>\<leadsto> \<^sub>?b"
-    using eq_vector_same_permutation
-    by (metis QState_rel1' distinct_card distinct_sorted_list_of_set 
-          finite_vars_a set_sorted_list_of_set)    
+    by (fastforce intro:idempoten_qstate)
   then show ?thesis unfolding plus_QState_vector_def Let_def
-     using s v0 tensor_prod   apply transfer'
-     by (simp add: list_vec )
+     using  v1  apply transfer' by (auto simp add: list_vec)          
 qed
 
 definition plus_QState:: "('a::comm_ring_1) QState \<Rightarrow> 'a QState \<Rightarrow> 'a QState"
@@ -477,59 +462,74 @@ lemma prod_list_card_d_empty_one:" d\<noteq>{} \<Longrightarrow>
   by (metis atLeast0LessThan length_replicate lessI lessThan_iff 
            less_trans nths_all prod_list_replicate)
 
+lemma card_ind_in_set:
+   assumes a0: "(v1::nat set) \<inter> v2 = {}" and
+           a1:"finite v1"
+   shows "card (ind_in_set (v1 \<union> v2) ` v1) = card v1"
+proof-  
+  have f1: "finite (ind_in_set (v1 \<union> v2) ` v1)"
+    using a1 by blast
+  moreover have  "v1 \<subseteq> v1"
+    by simp
+  ultimately show ?thesis
+    by (metis a1 card_atLeastLessThan diff_zero state_sig.ind_in_set_assoc 
+              state_sig.ind_in_set_id sup_ge1) 
+qed
 
 lemma dim_vec_plus_2_pow_s:
-  assumes a0:"d1 = QState_vars q1" and a1:"d2 = QState_vars q2" and
+  assumes a0:"d1 = ind_in_set (QState_vars q1 \<union> QState_vars q2) ` QState_vars q1" and 
+          a1:"d2 = ind_in_set (QState_vars q1 \<union> QState_vars q2) ` QState_vars q2" and
           a2:"s = d1 \<union> d2" and a3:"l1 = QState_vector q1" and a4:"l2 = QState_vector q2" and
           a5:"ds = list_dims s" and
-          a6:"v = partial_state.tensor_vec 
-                     ds  {0..<card d1} l1 l2"  and a7:"d1 \<inter> d2 = {}"
-  shows "dim_vec v = (2^(card s))"
+          a6:"v = partial_state2.ptensor_vec ds  d1 d2 l1 l2"  and 
+          a7:"QState_vars q1 \<inter> QState_vars q2 = {}"
+  shows "dim_vec v = (2^(card ((QState_vars q1) \<union> (QState_vars q2))))"
 proof-
-  interpret ps2:partial_state ds  "{0..<card d1}" .
-  have "dim_vec l1 = 2^card d1" 
-    using a0  QState_rel1'[of q1] a3 apply transfer' by auto
-  moreover have "dim_vec l2 = 2^card d2" 
-    using a1  QState_rel1'[of q2] a4 apply transfer' by auto
-  moreover have "finite d2"
+  have "finite (QState_vars q1)" and "finite (QState_vars q2)"
+    using QState_rel3' by auto
+  have int_d1_d2:"d1 \<inter> d2 = {}" using a0 a1 a7
+    by (smt disjoint_iff_not_equal image_iff state_sig.ind_in_set_inj subset_eq 
+          sup_commute sup_ge1)
+  have "d1 \<subseteq> {0..<card ((QState_vars q1) \<union> (QState_vars q2))}"
+    by (metis a0 image_mono plus_QState_set_wf state_sig.ind_in_set_id sup_ge1)   
+  have "d2 \<subseteq> {0..<card ((QState_vars q1) \<union> (QState_vars q2))}"
+    by (metis a1 image_mono le_sup_iff order_refl plus_QState_set_wf state_sig.ind_in_set_id)       
+  interpret ps2:partial_state2 ds  d1 d2  apply standard using int_d1_d2 by auto  
+  have "finite d2"
     by (simp add: QState_rel3' a1)
-  moreover have "finite d1" by (simp add: QState_rel3' a0)
+  moreover have "finite d1" by (simp add: QState_rel3' a0) 
   ultimately have "dim_vec v = prod_list ds"
-    using a6  a5 a7 a2 unfolding ps2.tensor_vec_def   
-  partial_state.tensor_vec_def  state_sig.d_def 
-   partial_state.encode1_def partial_state.dims1_def 
-    partial_state.encode2_def partial_state.dims2_def by auto
-  thus ?thesis using a5 unfolding list_dims_def by auto
+    using a6  a5 a7 a2 unfolding ps2.ptensor_vec_def partial_state.tensor_vec_def   
+      state_sig.d_def 
+   partial_state.encode1_def partial_state.dims1_def ps2.dims0_def ps2.vars0_def
+    partial_state.encode2_def partial_state.dims2_def list_dims_def
+    apply auto
+    by (metis (no_types, lifting) a0 a1 atLeast0LessThan 
+        card_atLeastLessThan diff_zero image_Un 
+        length_replicate lessThan_iff nths_all plus_QState_set_wf 
+        prod_list_replicate state_sig.ind_in_set_id) 
+  moreover have "card s = card ((QState_vars q1) \<union> (QState_vars q2))"
+    by (metis a0 a1 a2 card_atLeastLessThan diff_zero image_Un 
+     plus_QState_set_wf state_sig.ind_in_set_id)
+  ultimately show ?thesis using a5 unfolding list_dims_def by auto
 qed    
   
 
 lemma plus_QState_vector_wf':
-  assumes a9:"d1 \<inter> d2 = {}" and
-          a0:"d1 = (QState_vars q1)" and a1:"d2 = (QState_vars q2)" and
+  assumes a9:"QState_vars q1 \<inter> QState_vars q2 = {}" and
+          a0:"d1 = ind_in_set (QState_vars q1 \<union> QState_vars q2) ` QState_vars q1" and 
+          a1:"d2 = ind_in_set (QState_vars q1 \<union> QState_vars q2) ` QState_vars q2" and
           a2:"s = d1 \<union> d2" and a3:"l1 = QState_vector q1" and a4:"l2 = QState_vector q2" and
           a5:"ds = list_dims s" and
-          a6:"v = partial_state.tensor_vec ds  {0..<card d1} l1 l2" and
-          a7:"a = ((sorted_list_of_set d1)@(sorted_list_of_set d2))" and
-          a8:"b = sorted_list_of_set s" 
-        shows "length (((list_of_vec v).\<^sub>a \<^sub>\<leadsto> \<^sub>b)) =  (2^(card s))"
-proof-
-  have "dim_vec v = (2^(card s))" using dim_vec_plus_2_pow_s[OF a0 a1 a2 a3 a4 a5 a6 a9] by auto
-  moreover have "distinct a"
-    using QState_rel3' a0 a1 a7 a9 set_sorted_list_of_set by auto
-  moreover have "length a = length b"
-    by (metis QState_rel3' a0 a1 a2 a7 a8 a9 card_Un_disjoint distinct_card 
-              distinct_sorted_list_of_set finite_UnI length_append set_sorted_list_of_set)
-  moreover have "set a = set b"
-    by (simp add: QState_rel3' a0 a1 a2 a7 a8)
-  ultimately show ?thesis using change_orientation_length
-    by (metis length_list_of_vec)
-qed        
+          a6:"v = partial_state2.ptensor_vec ds  d1 d2 l1 l2" 
+        shows "dim_vec v =  2 ^ card (QState_vars q1 \<union> QState_vars q2)"
+  using dim_vec_plus_2_pow_s[OF a0 a1 a2 a3 a4 a5 a6 a9] by auto
 
 lemma plus_QState_vector_wf: assumes a0: "QState_vars q1 \<inter> QState_vars q2 = {}"
   shows "length (snd (plus_QState_vector q1 q2)) =
         2 ^ card (fst (plus_QState_vector q1 q2))"
   unfolding plus_QState_vector_def Let_def using a0
-  apply clarsimp apply (frule plus_QState_vector_wf')  sorry
+  apply clarsimp  apply (frule plus_QState_vector_wf')  
   by force+
 
 lemma plus_QState_vector_empty_vars_one_wf:
@@ -544,7 +544,7 @@ proof-
   ultimately show ?thesis 
     unfolding plus_QState_vector_def Let_def list_dims_def  
     apply auto apply transfer'
-    by (simp add: eq_vector_same_permutation tensor_neutral)
+    using tensor_neutral by auto 
 qed                                             
 
  
@@ -608,14 +608,13 @@ proof-
   {
     assume a00:"QState_vars a = {}"
     have ?thesis
-      by (metis (no_types, lifting) QState_empty QState_refl 
-          QState_vars_Plus QState_vars_id a00 fst_conv plus_QState_vector_def) 
+      by (metis (no_types) QState_empty QState_list_Plus QState_refl a00 plus_QState_vector_a_idem) 
   }
   moreover {
     let ?n = "QState ({},[1])"
     assume a00:"QState_vars a \<noteq>{}"
-    have "fst (plus_QState_vector a ?n) = QState_vars a"
-      by (metis QState_vars_id fst_conv plus_QState_vector_def)
+    have "fst (plus_QState_vector a ?n) = QState_vars a" 
+      by (simp add: QState_vars_id plus_QState_vector_def)
     moreover have "snd (plus_QState_vector a ?n) = QState_list a"
       by (simp add: plus_QState_vector_a_idem)
     moreover have "QState_vars (plus_QState a ?n) = fst (plus_QState_vector a ?n) "

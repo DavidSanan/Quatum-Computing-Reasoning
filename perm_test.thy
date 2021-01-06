@@ -1,5 +1,5 @@
 theory perm_test
-  imports Tensor_Permutation
+  imports  Q_State
 
 begin
 definition pex::"nat \<Rightarrow> nat"
@@ -22,12 +22,30 @@ definition tensor_vec :: "nat set \<Rightarrow> nat set \<Rightarrow> 'a::times 
     let tv = list_dims (s1 \<union> s2) in 
      Matrix.vec (prod_list tv) (\<lambda>i. (v1 $ (encode tv s1 i)) * (v2 $ (encode tv (-s1) i)))"
 
+definition tensor_vec_qp :: "nat list \<Rightarrow> nat set \<Rightarrow> 'a::times vec \<Rightarrow> 'a vec \<Rightarrow> 'a vec" where
+  "tensor_vec_qp d s1 v1 v2 \<equiv>      
+     Matrix.vec (prod_list d) (\<lambda>i. (v1 $ (encode d s1 i)) * (v2 $ (encode d (-s1) i)))"
+
+definition tensor_vec_vars::"nat list \<Rightarrow> nat set \<Rightarrow> nat set \<Rightarrow> 'a::times vec \<Rightarrow> 'a vec \<Rightarrow> 'a vec" where
+  "tensor_vec_vars d s1 s2 v1 v2 \<equiv>  
+     let vars0 = s1 \<union> s2; 
+         s1' = (ind_in_set vars0) ` s1 in     
+     tensor_vec_qp (nths d vars0) s1' v1 v2"
+
 definition tensor_mat :: "nat set \<Rightarrow> nat set \<Rightarrow> 'a::comm_ring_1 mat \<Rightarrow> 'a mat \<Rightarrow> 'a mat" where
   "tensor_mat s1 s2 m1 m2 \<equiv> 
    let tv = list_dims (s1 \<union> s2) in
     Matrix.mat (prod_list tv) (prod_list tv) 
     (\<lambda>(i,j).
        m1 $$ (encode tv s1 i, encode tv s1 j) * m2 $$ (encode tv (-s1) i, encode tv (-s1) j))"
+
+value "(nths [2::nat,2,2,2] {0::nat,3,2})"
+value "list_of_vec (tensor_vec_vars [] {} {} (vec_of_list [1::nat]) (vec_of_list [1]))"
+value "list_of_vec (tensor_vec_vars [2,2,2,2] {0} {2,3,1} (vec_of_list [0::nat, 1])  (vec_of_list [0::nat, 1, 2,3,4,5,6,7]))"
+value "(ind_in_set  {0::nat,1,2}) `  {0,1,2}"
+value "list_of_vec (tensor_vec_vars [2,2,2,2] {0,1,2} {} (vec_of_list [0::nat, 1, 2,3,4,5,6,7]) (vCons 1 vNil))"
+
+end
 
 value "mat_to_list (mat_of_rows_list 2 [[1::nat,2],[1,1]])"
 value "mat_to_list (mat_of_rows_list 2 [[1::nat,2],[2,2]])"
