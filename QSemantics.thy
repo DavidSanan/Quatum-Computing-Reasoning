@@ -143,7 +143,7 @@ where
 \<comment>\<open>Dispose dispose will fail if it is not possible to find such states \<qq>',  \<qq>''\<close>
 
 
-| Dispose_F: "\<nexists>\<qq>' \<qq>'. \<vv> (q \<sigma>) \<noteq> {} \<and> \<vv> (q \<sigma>) = QState_vars \<qq>'' \<and> 
+| Dispose_F: "\<nexists>\<qq>' \<qq>''. \<vv> (q \<sigma>) \<noteq> {} \<and> \<vv> (q \<sigma>) = QState_vars \<qq>'' \<and> 
                \<qq> =   \<qq>' +  \<qq>'' \<and> \<qq>' ## \<qq>'' \<Longrightarrow>
                \<Gamma> \<turnstile> (Dispose q, Normal (\<delta>,\<sigma>,(\<vv>,\<qq>))) \<rightarrow> (Skip,Fault)"
 
