@@ -31,7 +31,7 @@ of the different variables, the vector dimension is the product of the size of e
 variable\<close> 
 
 type_synonym q_vars = "(nat \<Rightarrow>nat set)"
-type_synonym  qstate = "q_vars \<times> (nat, complex) QState"
+type_synonym  qstate = "q_vars \<times> (complex) QState"
 type_synonym qheap = "nat set \<times> complex vec"
 type_synonym 's state = "real \<times> 's \<times>  qstate"
 type_synonym 's pred = "'s \<Rightarrow> bool" 
@@ -43,6 +43,7 @@ type_synonym 's expr_t = "'s \<Rightarrow> nat"
 type_synonym 's expr_a = "'s \<Rightarrow> nat"
 type_synonym ('s,'b) expr = "'s \<Rightarrow> 'b"
 
+datatype 's XQState = Normal "'s state" | Fault 
 
 datatype ('a,'b,'s) com = 
     Skip
@@ -55,7 +56,11 @@ datatype ('a,'b,'s) com =
   | Alloc "'a"  "('s,nat) expr"  "('s,complex list) expr"  ("_:=alloc/[_/]/(_/)" [60, 61] 60)
   | Dispose "'s expr_nat" 
 
-type_synonym ('v,'b,'s) QConf = "('v,'b,'s) com \<times> 's state"
+
+
+type_synonym ('v,'b,'s) QConf = "('v,'b,'s) com \<times> 's XQState"
+
+
 
 definition Q_domain::"q_vars \<Rightarrow> nat set" 
   where "Q_domain q_vars \<equiv> \<Union> (q_vars ` UNIV)"
@@ -135,8 +140,8 @@ definition lin_sets::"'q::linorder set \<Rightarrow> 'q::linorder set \<Rightarr
 definition sorted_list_from_set::"'q::linorder set \<Rightarrow> 'q::linorder list"
   where "sorted_list_from_set s \<equiv> THE l. strict_sorted l \<and> set l = s"
 
-definition to_heap::"qstate \<Rightarrow> (nat,complex) QState"
-  where "to_heap q \<equiv> snd q"
+definition to_heap::"qstate \<Rightarrow> (complex) QState"
+  where "to_heap q \<equiv> (snd q)"
 
 
 

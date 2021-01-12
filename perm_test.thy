@@ -32,6 +32,24 @@ definition tensor_vec_vars::"nat list \<Rightarrow> nat set \<Rightarrow> nat se
          s1' = (ind_in_set vars0) ` s1 in     
      tensor_vec_qp (nths d vars0) s1' v1 v2"
 
+definition plus_QState_vector::"('a::comm_ring_1) QState \<Rightarrow> 'a QState \<Rightarrow>nat set \<times> 'a list"
+  where "plus_QState_vector q1 q2 \<equiv> 
+     let d1 = ind_in_set ((QState_vars q1) \<union> (QState_vars q2)) ` (QState_vars q1); 
+         d2 = ind_in_set ((QState_vars q1) \<union> (QState_vars q2)) ` (QState_vars q2); 
+          s = d1 \<union> d2; l1 = QState_vector q1; l2 = QState_vector q2;
+          dims = list_dims s in
+          ((QState_vars q1) \<union> (QState_vars q2), list_of_vec(tensor_vec_vars dims d1 d2 l1 l2))"
+
+value "plus_QState_vector (QState({2},[1::int,2])) (QState({0,1},[1::int,2,3,4]))"
+
+value "plus_QState_vector (QState({3},[1::int,2])) 
+                          (QState(plus_QState_vector (QState({2},[5::int,7])) (QState({0,1},[11::int,12,29,37]))))"
+
+value "plus_QState_vector (QState(plus_QState_vector (QState ({3},[1::int,2])) (QState({2},[5::int,7])))) 
+                          (QState({0,1},[11::int,12,29,37]))"
+
+
+
 definition tensor_mat :: "nat set \<Rightarrow> nat set \<Rightarrow> 'a::comm_ring_1 mat \<Rightarrow> 'a mat \<Rightarrow> 'a mat" where
   "tensor_mat s1 s2 m1 m2 \<equiv> 
    let tv = list_dims (s1 \<union> s2) in

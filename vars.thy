@@ -15,6 +15,7 @@ text \<open>Datatype for quantum programs\<close>
 
 locale vars =  
   fixes variables :: "'v set"
+  fixes types :: "'v \<Rightarrow> 't"
   fixes domain :: "'v \<Rightarrow> 'b set"
   fixes get_value :: "'s \<Rightarrow> 'v  \<Rightarrow> 'b"
   fixes set_value ::"'s \<Rightarrow> 'v \<Rightarrow> 'b \<Rightarrow> 's"
