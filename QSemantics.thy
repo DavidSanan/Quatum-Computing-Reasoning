@@ -78,7 +78,7 @@ definition measure_vars::"nat \<Rightarrow>  nat set \<Rightarrow> (complex) QSt
     let \<delta>k =  Re (((mat_adjoint (mat_of_rows (dim_vec v) [v]) *\<^sub>v qn') $ 0) div vec_norm qn') in    
     let qnprod = ((sqrt \<delta>k)::complex) \<cdot>\<^sub>v qn' in
        (\<delta>k, qnprod)" 
-                                                             
+
 inductive QSemantics::"'v set \<Rightarrow> ('v,'b,'s) QConf \<Rightarrow> ('v,'b,'s) QConf \<Rightarrow> bool" 
   ("_ \<turnstile> _ \<rightarrow> _" [81,81] 80) for \<Gamma>::"'v set" 
 where 
