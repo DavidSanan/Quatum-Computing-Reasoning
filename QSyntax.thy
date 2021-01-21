@@ -6,7 +6,7 @@
 
 
 theory QSyntax
-  imports HOL.Complex vars HOL.Orderings   Q_State
+  imports HOL.Complex vars HOL.Orderings   Q_State vars
 begin                                             
 
 subsection \<open>Syntax\<close>
@@ -36,29 +36,50 @@ type_synonym qheap = "nat set \<times> complex vec"
 type_synonym 's state = "real \<times> 's \<times>  qstate"
 type_synonym 's pred = "'s \<Rightarrow> bool" 
 type_synonym 's assn = "'s set"
-type_synonym 's expr_q = "'s \<Rightarrow> nat set"
+type_synonym 's expr_q = "'s\<times>q_vars \<Rightarrow> nat set"
 type_synonym 's expr_c = "'s \<Rightarrow> complex"
 type_synonym 's expr_nat = "'s \<Rightarrow> nat"
 type_synonym 's expr_t = "'s \<Rightarrow> nat"
 type_synonym 's expr_a = "'s \<Rightarrow> nat"
 type_synonym ('s,'b) expr = "'s \<Rightarrow> 'b"
 
+definition get_prob ::"'s state \<Rightarrow> real"
+  where "get_prob \<sigma> = fst \<sigma>"
+
+definition get_qstate ::"'s state \<Rightarrow> qstate"
+  where "get_qstate \<sigma> = snd (snd \<sigma>)"
+
+definition get_stack::"'s state \<Rightarrow> 's"
+  where "get_stack \<sigma> = fst (snd \<sigma>)"
+
+definition set_prob ::"'s state \<Rightarrow> real \<Rightarrow> 's state"
+  where "set_prob \<sigma> v = (v, get_stack \<sigma>, get_qstate \<sigma>)"
+
+definition set_qstate ::"'s state \<Rightarrow> qstate \<Rightarrow> 's state"
+  where "set_qstate \<sigma> v = (get_prob \<sigma>, get_stack \<sigma>, v)"
+
+definition set_stack::"'s state \<Rightarrow> 's \<Rightarrow> 's state"
+  where "set_stack \<sigma> v = (get_prob \<sigma>, v, get_qstate \<sigma>)"
+
+
+declare [[show_sorts]]
+
 datatype 's XQState = Normal "'s state" | Fault 
 
-datatype ('a,'b,'s) com = 
+datatype ('a, 's) com = 
     Skip
   | SMod "'s \<Rightarrow> 's"
   | QMod "complex Matrix.mat" "'s expr_q"
-  | IF "'s assn" "('a,'b,'s) com" "('a, 'b,'s) com"
-  | While "'s assn" "('a, 'b,'s) com"
-  | Seq "('a, 'b,'s) com" "('a, 'b,'s) com"  ("_;/ _" [60, 61] 60)
+  | IF "'s assn" "('a, 's) com" "('a, 's) com"
+  | While "'s assn" "('a, 's) com"
+  | Seq "('a, 's) com" "('a, 's) com"  ("_;;/ _" [60, 61] 60)
   | Measure "'a"   "'s expr_q" ("_:=meassure / _" [60, 61] 60)
   | Alloc "'a"  "('s,nat) expr"  "('s,complex list) expr"  ("_:=alloc/[_/]/(_/)" [60, 61] 60)
-  | Dispose "'s expr_nat" 
+  | Dispose "('s,nat) expr" 
 
 
 
-type_synonym ('v,'b,'s) QConf = "('v,'b,'s) com \<times> 's XQState"
+type_synonym ('v,'b,'s) QConf = "('v,'s) com \<times> 's XQState"
 
 
 
@@ -68,32 +89,33 @@ definition Q_domain::"q_vars \<Rightarrow> nat set"
 definition ket_dim ::"q_vars \<Rightarrow> nat"
   where "ket_dim q_vars \<equiv>  card (Q_domain q_vars)"
 
-definition new_q_addr::"nat \<Rightarrow> q_vars \<Rightarrow> (nat set) set"
-  where "new_q_addr n q_dom \<equiv> {s.  card s = n \<and> (Min s > Max (Q_domain q_dom))}"           
+
+definition new_q_addr::"('s \<Rightarrow> nat) \<Rightarrow> 's state \<Rightarrow> (nat set) set"
+  where "new_q_addr f \<sigma>  \<equiv> {s.  card s = (f (get_stack \<sigma>)) \<and> (Min s > Max (Q_domain (fst (get_qstate \<sigma>))))}"  
 
 lemma all_gt: "finite s' \<Longrightarrow> finite s \<Longrightarrow> 
        Min s > Max s' \<Longrightarrow> e \<in> s \<Longrightarrow> e' \<in> s' \<Longrightarrow> e > e'"
   using Max_less_iff less_le_trans by fastforce
 
-lemma neq_q_addr_finites:"n\<noteq>0 \<Longrightarrow> S \<in> new_q_addr n q_dom \<Longrightarrow> finite S"
+lemma neq_q_addr_finites:"f (get_stack \<sigma>)\<noteq>0 \<Longrightarrow> S \<in> new_q_addr f \<sigma> \<Longrightarrow> finite S"
   unfolding new_q_addr_def
   using card_infinite by force
 
 lemma new_q_addr_gt_old_q_addr:
-  "n\<noteq>0 \<Longrightarrow> finite (Q_domain q_dom) \<Longrightarrow> 
-   S \<in> new_q_addr n q_dom \<Longrightarrow> e \<in> S \<Longrightarrow>
-   e' \<in> (Q_domain q_dom) \<Longrightarrow> e > e'"
+  "f (get_stack \<sigma>)\<noteq>0 \<Longrightarrow> finite (Q_domain (fst (get_qstate \<sigma>))) \<Longrightarrow> 
+   S \<in> new_q_addr f \<sigma> \<Longrightarrow> e \<in> S \<Longrightarrow>
+   e' \<in> (Q_domain (fst (get_qstate \<sigma>))) \<Longrightarrow> e > e'"
   unfolding new_q_addr_def using all_gt 
   by (metis (mono_tags, lifting) card_infinite mem_Collect_eq)
 
 lemma new_q_addr_ortho_old_q_addr:
-  assumes a0:"n\<noteq>0" and a1:"finite (Q_domain q_dom)" and a2:"S \<in> new_q_addr n q_dom" 
-  shows "S \<subseteq> -(Q_domain q_dom)"
+  assumes a0:"f (get_stack \<sigma>)\<noteq>0" and a1:"finite  (Q_domain (fst (get_qstate \<sigma>)))" and a2:"S \<in> new_q_addr f \<sigma>" 
+  shows "S \<subseteq> - (Q_domain (fst (get_qstate \<sigma>)))"
 proof - 
-  have f4: "card S = n \<and> Max (Q_domain q_dom) < Min S"
+  have f4: "card S = f (get_stack \<sigma>) \<and> Max (Q_domain (fst (get_qstate \<sigma>))) < Min S"
     using a2 unfolding new_q_addr_def  by fastforce
   then have "card S \<noteq> 0"
-    using a0 by meson
+    using a0 by simp
   then have "finite S"
     by (meson card_infinite)
   then show ?thesis
@@ -151,11 +173,11 @@ definition projection1::"nat \<Rightarrow> nat \<Rightarrow> 'a::comm_ring_1 mat
 
 locale h = vars + partial_state2 
 
-context vars 
+context h 
 begin
 
 
-lemma "(l::('a, 'b,'s) com) = l"
+lemma "(l::('a, 's) com) = l"
   by auto
 
 end

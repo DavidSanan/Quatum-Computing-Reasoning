@@ -5,20 +5,26 @@
 *)
 
 theory QSemantics
-  imports QSyntax vars "HOL-Library.Permutations" "List_Inversions.List_Inversions"
+  imports QSyntax vars 
 begin
 
 subsection \<open>Syntax\<close>
 
 text \<open>Semantics for quantum programs\<close>
 
-lemma "(1,2) \<in> inversions [0::nat,7,3,4] \<and> (1,3)\<in>inversions [0::nat,7,3,4]"
-  by (simp add: inversions.simps) 
-  
+primrec redex:: "('a,'b,'s) com \<Rightarrow> ('a,'b,'s) com"
+where
+"redex Skip = Skip" |
+"redex (SMod f) = (SMod f)" |
+"redex (QMod m e) = (QMod m e)" |
+"redex (Seq c\<^sub>1 c\<^sub>2) = redex c\<^sub>1" |
+"redex (IF b c\<^sub>1 c\<^sub>2) = (IF b c\<^sub>1 c\<^sub>2)" |
+"redex (While b c) = (While b c)" |
+"redex (Measure v q) = Measure v q" |
+"redex (Alloc v e l) = Alloc v e l" |
+"redex (Dispose e) = Dispose e"
 
 
-context vars
-begin
 
 (* m = partial_state2.ptensor_mat (dims_heap \<vv>) (q \<sigma>) ((Q_domain \<vv>)-(q \<sigma>)) (M::complex mat) (1\<^sub>m (card ((Q_domain \<vv>) - (q \<sigma>))))*)
 (* abbreviation "tensor_vec \<equiv> partial_state2.ptensor_vec" *)
@@ -79,23 +85,27 @@ definition measure_vars::"nat \<Rightarrow>  nat set \<Rightarrow> (complex) QSt
     let qnprod = ((sqrt \<delta>k)::complex) \<cdot>\<^sub>v qn' in
        (\<delta>k, qnprod)" 
 
-inductive QSemantics::"'v set \<Rightarrow> ('v,'b,'s) QConf \<Rightarrow> ('v,'b,'s) QConf \<Rightarrow> bool" 
-  ("_ \<turnstile> _ \<rightarrow> _" [81,81] 80) for \<Gamma>::"'v set" 
-where 
+context vars
+begin
+
+inductive QStep::"('v,'b,'s) QConf \<Rightarrow> ('v,'b,'s) QConf \<Rightarrow> bool" 
+  ("\<turnstile> _ \<rightarrow> _" [81,81] 80)  
+  where 
+  Skip : "\<turnstile> (Skip, Normal \<sigma>) \<rightarrow> (Skip, Normal \<sigma>)" 
 \<comment>\<open>SMod  modifies the stack of non-qubits variables \<sigma> with f \<sigma>, where f is a 
   function modifying the stack\<close>
-   StackMod:"\<Gamma> \<turnstile> (SMod f, Normal (\<delta>,\<sigma>,\<Q>)) \<rightarrow> (Skip, Normal (\<delta>,f \<sigma>,\<Q>))"
+ | StackMod: "\<turnstile> (SMod f, Normal (\<delta>,\<sigma>,\<Q>)) \<rightarrow> (Skip, Normal (\<delta>,f \<sigma>,\<Q>))"
 
 \<comment>\<open>QMod modifies the set of qubits of the Quantum State given by q \<sigma> with the 
   transformation matrix M, any qubit not included in q \<sigma> remains the same\<close>
 
-| QMod:"(q \<sigma>)\<noteq>{} \<Longrightarrow> (q \<sigma>) \<subseteq> (QState_vars \<qq>) \<Longrightarrow> 
+ | QMod:"(q \<sigma>)\<noteq>{} \<Longrightarrow> (q \<sigma>) \<subseteq> (QState_vars \<qq>) \<Longrightarrow> 
          \<qq>' = matrix_sep (q \<sigma>) \<qq> m \<Longrightarrow>
-         \<Gamma> \<turnstile> (QMod M q, Normal (\<delta>,\<sigma>,(\<vv>,\<qq>))) \<rightarrow> (Skip, Normal (\<delta>, \<sigma>,(\<vv>,QState(QState_vars \<qq>, list_of_vec  \<qq>'))))"
+         \<turnstile> (QMod M q, Normal (\<delta>,\<sigma>,(\<vv>,\<qq>))) \<rightarrow> (Skip, Normal (\<delta>, \<sigma>,(\<vv>,QState(QState_vars \<qq>, list_of_vec  \<qq>'))))"
 
 \<comment>\<open>QMod fails if the set of qubits to be modified is not included in the quantum state\<close>
-| QMod_F:"\<not> ((q \<sigma>) \<subseteq> (QState_vars \<qq>)) \<Longrightarrow>          
-         \<Gamma> \<turnstile> (QMod M q, Normal (\<delta>,\<sigma>,(\<vv>,\<qq>))) \<rightarrow> (Skip, Fault)"
+ | QMod_F:"\<not> ((q \<sigma>) \<subseteq> (QState_vars \<qq>)) \<Longrightarrow>          
+          \<turnstile> (QMod M q, Normal (\<delta>,\<sigma>,(\<vv>,\<qq>))) \<rightarrow> (Skip, Fault)"
 
 \<comment>\<open>Alloc takes a normal variable "q" representing the variable where the index to the qubits is store
    an function e from the state \<sigma> to a natural number representing the number of qubits to allocate
@@ -103,73 +113,73 @@ where
 
 
   We will require that a program is well formed, meaning that the types are correct.
-  A call to Alloc is well formed if the type of q is a natural number\<close>
+  A call to Alloc is well formed if the ty"'s state"pe of q is a natural number\<close>
 
-| Alloc:"q' \<notin> (dom_q_vars \<vv>) \<Longrightarrow> q'_addr \<in> new_q_addr (e \<sigma>) \<vv> \<Longrightarrow>
+ | Alloc:"q' \<notin> (dom_q_vars \<vv>) \<Longrightarrow> q'_addr \<in> new_q_addr (e \<sigma>) \<vv> \<Longrightarrow>
           \<vv>' = \<vv>(q' := q'_addr)  \<Longrightarrow> length (v \<sigma>) = (e \<sigma>) \<Longrightarrow> \<sigma>' = set_value \<sigma> q (nat_to_typ q') \<Longrightarrow>                    
-          \<Gamma> \<turnstile> (Alloc q e v, Normal (\<delta>,\<sigma>,(\<vv>,\<qq>))) \<rightarrow> (Skip, Normal (\<delta>, \<sigma>',(\<vv>',\<qq> + QState (q'_addr,(v \<sigma>)) )))"
+          \<turnstile> (Alloc q e v, Normal (\<delta>,\<sigma>,(\<vv>,\<qq>))) \<rightarrow> (Skip, Normal (\<delta>, \<sigma>',(\<vv>',\<qq> + QState (q'_addr,(v \<sigma>)) )))"
 
 \<comment>\<open>Alloc will fail if the length of the initial value is not equal to the number of qubits allocated \<close>
 
 
  | Alloc_F:"length (v \<sigma>) \<noteq> (e \<sigma>) \<Longrightarrow>                    
-          \<Gamma> \<turnstile> (Alloc q e v, Normal (\<delta>,\<sigma>,(\<vv>,\<qq>))) \<rightarrow> (Skip, Fault)"
+          \<turnstile> (Alloc q e v, Normal (\<delta>,\<sigma>,(\<vv>,\<qq>))) \<rightarrow> (Skip, Fault)"
 
 \<comment>\<open>the conditional, while, and seq statements follow the standard definitions\<close>
 
-| CondTrueQ:"\<sigma>\<in>b  \<Longrightarrow> \<Gamma> \<turnstile> (IF b c1 c2, Normal (\<delta>,\<sigma>,\<Q>)) \<rightarrow> (c1, Normal (\<delta>,\<sigma>,\<Q>))"
+ | CondTrue:"\<sigma>\<in>b  \<Longrightarrow> \<turnstile> (IF b c1 c2, Normal (\<delta>,\<sigma>,\<Q>)) \<rightarrow> (c1, Normal (\<delta>,\<sigma>,\<Q>))"
 
- | CondFalseQ:"\<sigma>\<notin>b  \<Longrightarrow> \<Gamma> \<turnstile> (IF b c1 c2, Normal (\<delta>,\<sigma>,\<Q>)) \<rightarrow> (c2, Normal (\<delta>,\<sigma>,\<Q>))"
+ | CondFalse:"\<sigma>\<notin>b  \<Longrightarrow> \<turnstile> (IF b c1 c2, Normal (\<delta>,\<sigma>,\<Q>)) \<rightarrow> (c2, Normal (\<delta>,\<sigma>,\<Q>))"
 
- | WhileTruec: "s\<in>b \<Longrightarrow> 
-                \<Gamma>\<turnstile> (While b c,Normal (\<delta>,\<sigma>,\<Q>)) \<rightarrow> (Seq c (While b c), Normal (\<delta>,\<sigma>,\<Q>))"
+ | WhileTrue: "\<sigma>\<in>b \<Longrightarrow> 
+                \<turnstile> (While b c,Normal (\<delta>,\<sigma>,\<Q>)) \<rightarrow> (Seq c (While b c), Normal (\<delta>,\<sigma>,\<Q>))"
 
- | WhileFalsec: "s\<notin>b \<Longrightarrow> 
-                 \<Gamma>\<turnstile> (While b c, Normal (\<delta>,\<sigma>,\<Q>)) \<rightarrow> (Skip, Normal (\<delta>,\<sigma>,\<Q>))"
+ | WhileFalse: "\<sigma>\<notin>b \<Longrightarrow> 
+                 \<turnstile> (While b c, Normal (\<delta>,\<sigma>,\<Q>)) \<rightarrow> (Skip, Normal (\<delta>,\<sigma>,\<Q>))"
 
-| Seqc:"\<lbrakk>\<Gamma> \<turnstile> (C1, \<sigma>) \<rightarrow> (C1', \<sigma>')\<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> (C1;C2, \<sigma>) \<rightarrow> (C1'C2, \<sigma>')"
+ | Seq:"\<lbrakk>\<turnstile> (C1, \<sigma>) \<rightarrow> (C1', \<sigma>')\<rbrakk> \<Longrightarrow> \<turnstile> (Seq C1 C2, \<sigma>) \<rightarrow> (C1'C2, \<sigma>')"
 
-| SeqSkipc: "\<Gamma>\<turnstile> (Skip;C2,\<sigma>) \<rightarrow> (C2, \<sigma>)"
+| SeqSkip: "\<turnstile> (Seq Skip C2,\<sigma>) \<rightarrow> (C2, \<sigma>)"
 
 \<comment>\<open>Dispose takes an expression from the stack to a natural number and removes those qubits
   from the quantum state if they are not entangled with the rest of qubits in the current
   Quantum state. The entanglement condition is that it is possible to find a vector \<qq>1 such that
   \<qq> =  \<qq>' +  \<qq>''\<close>
 
-| Dispose: "\<vv> (q \<sigma>) \<noteq> {} \<Longrightarrow> \<vv>' = \<vv>((q \<sigma>):={}) \<Longrightarrow> \<qq>' ## \<qq>''  \<Longrightarrow> 
+ | Dispose: "\<vv> (q \<sigma>) \<noteq> {} \<Longrightarrow> \<vv>' = \<vv>((q \<sigma>):={}) \<Longrightarrow> \<qq>' ## \<qq>''  \<Longrightarrow> 
             \<vv> (q \<sigma>) = QState_vars \<qq>'' \<Longrightarrow> \<qq> =   \<qq>' +  \<qq>'' \<Longrightarrow>            
-             \<Gamma> \<turnstile> (Dispose q, Normal (\<delta>,\<sigma>,(\<vv>,\<qq>))) \<rightarrow> (Skip,Normal (\<delta>,\<sigma>,(\<vv>',\<qq>')))"
+             \<turnstile> (Dispose q, Normal (\<delta>,\<sigma>,(\<vv>,\<qq>))) \<rightarrow> (Skip,Normal (\<delta>,\<sigma>,(\<vv>',\<qq>')))"
 
 \<comment>\<open>Dispose dispose will fail if it is not possible to find such states \<qq>',  \<qq>''\<close>
 
 
-| Dispose_F: "\<nexists>\<qq>' \<qq>''. \<vv> (q \<sigma>) \<noteq> {} \<and> \<vv> (q \<sigma>) = QState_vars \<qq>'' \<and> 
+ | Dispose_F: "\<nexists>\<qq>' \<qq>''. \<vv> (q \<sigma>) \<noteq> {} \<and> \<vv> (q \<sigma>) = QState_vars \<qq>'' \<and> 
                \<qq> =   \<qq>' +  \<qq>'' \<and> \<qq>' ## \<qq>'' \<Longrightarrow>
-               \<Gamma> \<turnstile> (Dispose q, Normal (\<delta>,\<sigma>,(\<vv>,\<qq>))) \<rightarrow> (Skip,Fault)"
+               \<turnstile> (Dispose q, Normal (\<delta>,\<sigma>,(\<vv>,\<qq>))) \<rightarrow> (Skip,Fault)"
 
 \<comment>\<open>Measure measures the value of the set of qubits given by q \<sigma> and it stores the result in 
   the stack variable v. Similar to allocate, we will require that the construct is well formed
  and that the type of v is a real number\<close>
 
-| Measure: "q \<sigma> \<subseteq> (QState_vars \<qq>) \<Longrightarrow> 
+ | Measure: "q \<sigma> \<subseteq> (QState_vars \<qq>) \<Longrightarrow> 
             (\<delta>k, \<qq>') = measure_vars k (q \<sigma>) \<qq> \<Longrightarrow>
             \<delta>k > 0 \<Longrightarrow> \<delta>' = \<delta> * \<delta>k \<Longrightarrow> 
-            \<Gamma> \<turnstile> (Measure v q, Normal (\<delta>,\<sigma>,(\<vv>,\<qq>))) \<rightarrow> (Skip,Normal (\<delta>',\<sigma>,(\<vv>,QState(Q_domain \<vv>', list_of_vec  \<qq>'))))" 
+            \<turnstile> (Measure v q, Normal (\<delta>,\<sigma>,(\<vv>,\<qq>))) \<rightarrow> (Skip,Normal (\<delta>',\<sigma>,(\<vv>,QState(Q_domain \<vv>', list_of_vec  \<qq>'))))" 
 
 \<comment>\<open>Since Measure access to the values of the qubits given by q \<sigma> as QMod, 
   Measure will similarly fail if the set of qubits to be mesured does not
   belong to the set of allocated qubits\<close>
 
-| Measure_F: "\<not> (q \<sigma> \<subseteq> (QState_vars \<qq>)) \<Longrightarrow>  
-            \<Gamma> \<turnstile> (Measure v q, Normal (\<delta>,\<sigma>,(\<vv>,\<qq>))) \<rightarrow> (Skip, Fault)" 
+ | Measure_F: "\<not> (q \<sigma> \<subseteq> (QState_vars \<qq>)) \<Longrightarrow>  
+              \<turnstile> (Measure v q, Normal (\<delta>,\<sigma>,(\<vv>,\<qq>))) \<rightarrow> (Skip, Fault)" 
+
+| Fault_Prop:" C\<noteq>Skip \<Longrightarrow> \<turnstile> (C, Fault) \<rightarrow> (Skip, Fault)"
 
 
-(* | Dispose: "\<vv> (q \<sigma>) \<noteq> {} \<Longrightarrow> \<vv>' = \<vv>((q \<sigma>):={}) \<Longrightarrow> \<qq>1 ## \<qq>2  \<Longrightarrow> 
-            \<vv> (q \<sigma>) = QState_vars \<qq>2 \<Longrightarrow> \<qq> =   \<qq>1 +  \<qq>2 \<Longrightarrow>
-            \<qq>' \<in> dispose_vars (\<vv> (q \<sigma>)) \<qq> \<Longrightarrow>
-             \<Gamma> \<turnstile> (Dispose q, (\<delta>,\<sigma>,(\<vv>,\<qq>))) \<rightarrow> (Skip,(\<delta>,\<sigma>,(\<vv>',QState(Q_domain \<vv>', list_of_vec  \<qq>'))))" *)
-
-end
+lemmas step_induct = QStep.induct [of "(c,s)" "(c',s')", split_format (complete), case_names
+StackMod QMod QMod_F Alloc Alloc_F CondTrue CondFalse WhileTrue WhileFalse Seq SeqSkip Dispose
+Dispose Dispose_F Measure Measure_F Fault_Prop, induct set]
+end 
 
 end
 

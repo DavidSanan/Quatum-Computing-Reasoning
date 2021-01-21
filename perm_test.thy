@@ -63,7 +63,6 @@ value "list_of_vec (tensor_vec_vars [2,2,2,2] {0} {2,3,1} (vec_of_list [0::nat, 
 value "(ind_in_set  {0::nat,1,2}) `  {0,1,2}"
 value "list_of_vec (tensor_vec_vars [2,2,2,2] {0,1,2} {} (vec_of_list [0::nat, 1, 2,3,4,5,6,7]) (vCons 1 vNil))"
 
-end
 
 value "mat_to_list (mat_of_rows_list 2 [[1::nat,2],[1,1]])"
 value "mat_to_list (mat_of_rows_list 2 [[1::nat,2],[2,2]])"
@@ -76,7 +75,7 @@ value "mat_to_list (tensor_mat {2,3} {0,1}
           (mat_of_rows_list 4 [[2::nat,20,21,22],[24,25,27,28],[40,41,44,45],[50,100,9,17]])  
           (mat_of_rows_list 4 [[1::nat,3,4,5],[6,7,8,9],[10,11,12,13],[14,15,16,17]] ))"
 
-
+value "let a = [[a0::nat,a1,a2,a3],[b1,b2,b3,b4],[c1,c2,c3,c4],[d1,d2,d3,d4]] in a"
 
 value "(tensor_mat {0,1} {2,3} 
           (mat_of_rows_list 4 [[a0::nat,a1,a2,a3],[b1,b2,b3,b4],[c1,c2,c3,c4],[d1,d2,d3,d4]])  
@@ -89,7 +88,7 @@ value "list_of_vec (tensor_vec {0} {1} (vec_of_list [a0::nat,a1]) (vec_of_list [
 value "list_of_vec (tensor_vec {1} {0} (vec_of_list [b0::nat,b1]) (vec_of_list [a0,a1])) "
 value "list_of_vec (tensor_vec {0} {1} (vec_of_list [b0::nat,b1]) (vec_of_list [a0,a1])) "
 \<comment>\<open> a * b * c \<close>
-value "list_of_vec (tensor_vec {0,1} {2} (vec_of_list [a0 * b0, a1 * b0, a0 * b1, a1 * b1]) (vec_of_list [c0,c1]))"
+value "list_of_vec (tensor_vec {0,1} {2} (vec_of_list [(a0::nat) * b0, a1 * b0, a0 * b1, a1 * b1]) (vec_of_list [c0,c1]))"
 value "[a0 * b0 * c0, a1 * b0 * c0, a0 * b1 * c0, a1 * b1 * c0, a0 * b0 * c1, a1 * b0 * c1, a0 * b1 * c1, a1 * b1 * c1]. 
         \<^sub>[0::nat,1,2] \<^sub>\<leadsto>\<^sub>i \<^sub>[1,0,2]"
 \<comment>\<open> b * a * c\<close>

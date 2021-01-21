@@ -287,6 +287,14 @@ lift_definition QState :: "nat set \<times> 'a::comm_ring_1 list \<Rightarrow> '
 lift_definition Conc :: " 'a QState \<Rightarrow> nat set \<times> 'a::comm_ring_1 vec" is
   "\<lambda>s. (QState_vars s, QState_vector s)" .
 
+definition sca_mult_qstate::"'a::comm_ring_1 \<Rightarrow> 'a QState \<Rightarrow> 'a QState"  (infixl "\<cdot>\<^sub>q" 70) 
+  where "sca_mult_qstate s qs \<equiv> QState(QState_vars qs, list_of_vec (s \<cdot>\<^sub>v (QState_vector qs)))"
+
+definition empty_qstate::"'a::comm_ring_1 QState"  ("|>") 
+  where "empty_qstate  \<equiv> QState({}, [1])"
+
+
+
 lemma uqstate_fst:"fst (uQState a) = QState_vars a" apply transfer' by auto
 lemma uqstate_snd:"snd (uQState a) = QState_list a" apply transfer' by auto
 
@@ -368,6 +376,12 @@ definition plus_QState_vector::"('a::comm_ring_1) QState \<Rightarrow> 'a QState
          d2 = QState_vars q2; 
          l1 = QState_vector q1; l2 = QState_vector q2 in
           (d1 \<union> d2, list_of_vec(partial_state2.ptensor_vec d1 d2 l1 l2))"
+
+definition vector_element_12::"('a::comm_ring_1) QState \<Rightarrow> nat set \<Rightarrow> nat \<times> nat \<Rightarrow> 'a"
+  where "vector_element_12 q v p \<equiv> 
+         let d = QState_vars q; 
+         d2 = d - v; 
+         l1 = QState_vector q in l1$(partial_state2.pencode12 v d2 p)"
 
 lemma plus_QState_vector_vars:
  "fst (plus_QState_vector q1 q2) = (QState_vars q1) \<union> (QState_vars q2)"
