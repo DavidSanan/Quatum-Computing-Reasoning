@@ -62,8 +62,6 @@ definition set_stack::"'s state \<Rightarrow> 's \<Rightarrow> 's state"
   where "set_stack \<sigma> v = (get_prob \<sigma>, v, get_qstate \<sigma>)"
 
 
-declare [[show_sorts]]
-
 datatype 's XQState = Normal "'s state" | Fault 
 
 datatype ('a, 's) com = 

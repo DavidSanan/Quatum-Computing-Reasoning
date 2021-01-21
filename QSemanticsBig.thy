@@ -70,7 +70,7 @@ inductive QExec::"('v, 's) com \<Rightarrow> 's XQState \<Rightarrow> 's XQState
   transformation matrix M, any qubit not included in q \<sigma> remains the same\<close>
 
  | QMod:"(q (\<sigma>,\<vv>)) \<subseteq> (QState_vars \<qq>) \<Longrightarrow> 
-         \<qq>' = matrix_sep (q (\<sigma>,\<vv>)) (\<vv>,\<qq>) m \<Longrightarrow>
+         \<qq>' = matrix_sep (q (\<sigma>,\<vv>)) (\<vv>,\<qq>) M \<Longrightarrow>
          \<turnstile> \<langle>QMod M q, Normal (\<delta>,\<sigma>,(\<vv>,\<qq>))\<rangle> \<Rightarrow> Normal (\<delta>, \<sigma>, \<qq>')"
 
 \<comment>\<open>QMod fails if the set of qubits to be modified is not included in the quantum state\<close>
@@ -99,7 +99,7 @@ inductive QExec::"('v, 's) com \<Rightarrow> 's XQState \<Rightarrow> 's XQState
 
  | CondTrue:"\<sigma>\<in>b \<Longrightarrow>  \<turnstile> \<langle>c1, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> \<sigma>' \<Longrightarrow> \<turnstile> \<langle>IF b c1 c2, Normal  (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> \<sigma>'"
 
-| CondFalse:"\<sigma>\<notin>b  \<Longrightarrow>  \<turnstile> \<langle>c2, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> \<sigma>' \<Longrightarrow> 
+ | CondFalse:"\<sigma>\<notin>b  \<Longrightarrow>  \<turnstile> \<langle>c2, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> \<sigma>' \<Longrightarrow> 
            \<turnstile> \<langle>IF b c1 c2, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> \<sigma>'"
 
  | WhileTrue: "\<sigma>\<in>b \<Longrightarrow> \<turnstile> \<langle>c, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> \<sigma>' \<Longrightarrow> \<turnstile> \<langle>While b c,\<sigma>'\<rangle> \<Rightarrow>  \<sigma>'' \<Longrightarrow>
@@ -184,6 +184,10 @@ primrec modify_locals :: "('v, 's) com  \<Rightarrow> 'v set" where
 | "modify_locals (Dispose e) = {}"
 
 thm QExec_Normal_elim_cases
+
+lemma exec_Fault_end: assumes exec: "\<turnstile>\<langle>c,s\<rangle> \<Rightarrow>  t" and s: "s=Fault"
+  shows "t=Fault"
+using exec s by (induct) auto
 
 end 
 
