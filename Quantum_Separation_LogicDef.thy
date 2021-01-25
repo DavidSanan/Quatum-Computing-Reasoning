@@ -34,6 +34,16 @@ definition map_assn'::"'s expr_q \<Rightarrow> 's expr_q \<Rightarrow> ('s state
                                 (q1 (st s, qv s)) = QState_vars \<qq>' \<and>
                                 (q1 (st s, qv s)) = QState_vars \<qq>')}"
 
+(*definition map_assna::"('s,nat set) expr \<Rightarrow> ('s, (complex) QState) expr \<Rightarrow> (('s state) set)"  
+ ("_ \<mapsto> _"   [20, 1000] 60)
+  where "map_assna q v \<equiv> let qv = (\<lambda>s. fst (get_qstate s)); 
+                            qs = (\<lambda>s. snd (get_qstate s));
+                            st = (\<lambda>s. get_stack s) in   
+                 {s. fst s = 1 \<and>(q1 (st s, qv s) \<union> q2 (st s, qv s)) \<noteq> {} \<and> 
+                      (\<exists>\<qq>' \<qq>''. (qs s) = (v s) \<and> (v s) = \<qq>' +  \<qq>'' \<and> \<qq>' ## \<qq>'' \<and> 
+                                (q1 (st s, qv s)) = QState_vars \<qq>' \<and>
+                                (q1 (st s, qv s)) = QState_vars \<qq>')}" *)
+
 
 definition map_assn::"'s expr_q \<Rightarrow> ('s state, (complex) QState) expr \<Rightarrow> (('s state) set)"  (infixr "\<mapsto>\<^sub>q" 35)
   where "map_assn f v \<equiv> let qv = (\<lambda>s. fst (get_qstate s)); 
@@ -135,6 +145,26 @@ where
 | Conseq: "\<forall>s \<in> P. \<exists>P' Q'. \<turnstile> P' c Q' \<and> s \<in> P' \<and> Q' \<subseteq> Q 
            \<Longrightarrow> \<turnstile> P c Q"
 
+
+lemma alloc_sound:
+  assumes a0: "qv = (\<lambda>s. fst (get_qstate s)) \<and> st = get_stack" and
+   a1:"not_access_locals v"
+  shows "\<Turnstile>{s. qv s (qa (st s)) = {} \<and>
+          length (v (st s)) = e (st s) \<and>
+          QState_list (Qs s) = v (st s) \<and>
+          set_stack s (set_value (st s) q (from_nat (qa (st s)))) \<in> (qa \<mapsto>\<^sub>l Qs)} q:=alloc[e] v (qa \<mapsto>\<^sub>l Qs)"  
+proof-
+  { fix \<sigma> \<sigma>'
+     assume a00:"\<turnstile> \<langle>q:=alloc[e] v,\<sigma>\<rangle> \<Rightarrow> \<sigma>'" and
+            a01:"\<sigma> \<in> Normal `
+              {s. qv s (qa (st s)) = {} \<and>
+                length (v (st s)) = e (st s) \<and>
+                QState_list (Qs s) = v (st s) \<and>
+                set_stack s (set_value (st s) q (from_nat (qa (st s)))) \<in> (qa \<mapsto>\<^sub>l Qs)}" and
+            a02:"\<sigma>' \<noteq> Fault"
+     have "\<sigma>' \<in> Normal ` (qa \<mapsto>\<^sub>l Qs)" sorry
+   } thus ?thesis unfolding valid_def by auto
+qed
 
 lemma quantum_separation_logic_sound:
  "\<turnstile> P c Q \<Longrightarrow> \<Turnstile> P c Q"
@@ -264,7 +294,7 @@ next
   qed  
 next
   case (QAlloc qv st v qa e Qs q)
-  then show ?case sorry
+  then show ?case using alloc_sound by auto 
 next
   case (QDispose qv st Qs P q \<qq>' Q)
   then show ?case sorry

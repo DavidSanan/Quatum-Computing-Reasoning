@@ -72,7 +72,7 @@ datatype ('a, 's) com =
   | While "'s assn" "('a, 's) com"
   | Seq "('a, 's) com" "('a, 's) com"  ("_;;/ _" [60, 61] 60)
   | Measure "'a"   "'s expr_q" ("_:=meassure / _" [60, 61] 60)
-  | Alloc "'a"  "('s,nat) expr"  "('s,complex list) expr"  ("_:=alloc/[_/]/(_/)" [60, 61] 60)
+  | Alloc "'a"  "('s,nat) expr"  "('s,complex list) expr"  ("_:=alloc[_] (_)" [60, 61] 60)
   | Dispose "('s,nat) expr" 
 
 

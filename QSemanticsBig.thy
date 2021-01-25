@@ -30,7 +30,7 @@ definition matrix_sep :: "nat set \<Rightarrow> qstate \<Rightarrow> complex mat
              (fst q, QState (var_d, list_of_vec (m *\<^sub>v v)))
         "
 
-definition measure_vars1::"nat \<Rightarrow>  nat set \<Rightarrow> qstate  \<Rightarrow> (real \<times> qstate)"
+(* definition measure_vars1::"nat \<Rightarrow>  nat set \<Rightarrow> qstate  \<Rightarrow> (real \<times> qstate)"
   where "measure_vars1 k  sep_vars q \<equiv>
    let qs = snd q in
    let vars_dom = QState_vars qs in
@@ -40,7 +40,7 @@ definition measure_vars1::"nat \<Rightarrow>  nat set \<Rightarrow> qstate  \<Ri
     let qn' =  mk  *\<^sub>v v in 
     let \<delta>k =  Re (((mat_adjoint (mat_of_rows (dim_vec v) [v]) *\<^sub>v qn') $ 0) div vec_norm qn') in    
     let qnprod = list_of_vec (((sqrt \<delta>k)::complex) \<cdot>\<^sub>v qn') in
-       (\<delta>k, (fst q, QState (vars_dom, qnprod)))" 
+       (\<delta>k, (fst q, QState (vars_dom, qnprod)))" *)
 
 definition measure_vars::"nat \<Rightarrow>  nat set \<Rightarrow> qstate  \<Rightarrow> (real \<times> qstate)"
   where "measure_vars k  sep_vars q \<equiv>
