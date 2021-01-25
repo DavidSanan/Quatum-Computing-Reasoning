@@ -725,6 +725,6 @@ instance
    apply (auto simp add: sep_disj_QState plus_QState intro:plus_disj_dist)[1]
   apply (auto simp add: sep_disj_QState plus_QState intro:plus_dis_dist2)[1]
   done
-end
+end 
 
 end
