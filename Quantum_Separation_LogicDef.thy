@@ -1,11 +1,14 @@
 theory Quantum_Separation_LogicDef
-  imports QSemanticsBig Sep_Prod_Instance
+  imports QSemanticsBig 
 begin
 
 type_synonym ('s,'p) triplet = "('s state) assn \<times> 'p \<times> ('s state) assn"
 
 context vars
 begin
+
+definition Q_domain_set::"'s expr_q \<Rightarrow> q_vars \<Rightarrow> 's expr_q "
+  where "Q_domain_set q qvars \<equiv> (\<lambda>s. \<Union> (qvars ` q s))"
 
 definition Q_sep_dis::"(('s state) \<Rightarrow> bool) \<Rightarrow> (('s state) \<Rightarrow> bool) \<Rightarrow>  (('s state) \<Rightarrow> bool)" 
 (infixr "\<and>*\<^sub>q" 35)
@@ -23,16 +26,26 @@ where "Q_sep_dis_set A B \<equiv> let eq_stack = (fst ` (snd ` A)) \<inter> (fst
                                 fst s = fst s1 * fst s2 \<and> fst (snd s) = fst (snd s1) \<and>
                                ((\<lambda>s. s \<in> (snd ` (snd ` {s. s = s1}))) \<and>* 
                                (\<lambda>s. s \<in> (snd ` (snd ` {s. s = s2})))) (snd (snd s))}"
-
-definition map_assn'::"'s expr_q \<Rightarrow> 's expr_q \<Rightarrow> ('s state, (complex) QState) expr \<Rightarrow> (('s state) set)"  
+\<comment>\<open>map_assn' receives two sets of qbits q1 q2 addresses and a vector v. It represents that the current
+  qstate is equal to v and that v can be split into two different separated qstates each
+ of them is composed by the qubits contained by the sets q1 and q2\<close>
+(*definition map_assn'::"'s expr_q \<Rightarrow> 's expr_q \<Rightarrow> ('s state, (complex) QState) expr \<Rightarrow> (('s state) set)"  
  ("_\<cdot>_ \<mapsto> _"  [1000, 20, 1000] 60)
-  where "map_assn' q1 q2 v \<equiv> let qv = (\<lambda>s. fst (get_qstate s)); 
-                            qs = (\<lambda>s. snd (get_qstate s));
-                            st = (\<lambda>s. get_stack s) in   
-                 {s. fst s = 1 \<and>(q1 (st s, qv s) \<union> q2 (st s, qv s)) \<noteq> {} \<and> 
-                      (\<exists>\<qq>' \<qq>''. (qs s) = (v s) \<and> (v s) = \<qq>' +  \<qq>'' \<and> \<qq>' ## \<qq>'' \<and> 
-                                (q1 (st s, qv s)) = QState_vars \<qq>' \<and>
-                                (q1 (st s, qv s)) = QState_vars \<qq>')}"
+  where "map_assn' q1 q2 v \<equiv> let qs = (\<lambda>s. snd (get_qstate s));
+                                  st = (\<lambda>s. get_stack s) in   
+                 {s. fst s = 1 \<and>(q1 (st s) \<union> q2 (st s)) \<noteq> {} \<and> (qs s) = (v s) \<and>
+                      (\<exists>\<qq>' \<qq>''. (get_QStateM s) = \<qq>' +  \<qq>'' \<and> \<qq>' ## \<qq>'' \<and> 
+                                (q1 (st s)) = QStateM_vars \<qq>' \<and>
+                                (q1 (st s)) = QStateM_vars \<qq>')}" *)
+
+definition map_assn'::"'s expr_q \<Rightarrow> 's expr_q \<Rightarrow> ('s, (complex) QState) expr \<Rightarrow> (('s state) set)"  
+ ("_\<cdot>_ \<mapsto> _"  [1000, 20, 1000] 60)
+  where "map_assn' q1 q2 v \<equiv> let qs = (\<lambda>s. snd (get_qstate s));
+                                  st = (\<lambda>s. get_stack s) in   
+                 {s. fst s = 1 \<and>(q1 (st s) \<union> q2 (st s)) \<noteq> {} \<and> (qs s) = (v (st s)) \<and>
+                      (\<exists>\<qq>' \<qq>''. (get_QStateM s) = \<qq>' +  \<qq>'' \<and> \<qq>' ## \<qq>'' \<and> 
+                                (q1 (st s)) = QStateM_vars \<qq>' \<and>
+                                (q1 (st s)) = QStateM_vars \<qq>')}"
 
 (*definition map_assna::"('s,nat set) expr \<Rightarrow> ('s, (complex) QState) expr \<Rightarrow> (('s state) set)"  
  ("_ \<mapsto> _"   [20, 1000] 60)
@@ -43,29 +56,89 @@ definition map_assn'::"'s expr_q \<Rightarrow> 's expr_q \<Rightarrow> ('s state
                       (\<exists>\<qq>' \<qq>''. (qs s) = (v s) \<and> (v s) = \<qq>' +  \<qq>'' \<and> \<qq>' ## \<qq>'' \<and> 
                                 (q1 (st s, qv s)) = QState_vars \<qq>' \<and>
                                 (q1 (st s, qv s)) = QState_vars \<qq>')}" *)
+\<comment>\<open>map_assn receives one set of qbits addresses and a vector. 
+  It represents that the current qstate is v and that it can be split into two different separated qstates
+  and the set of qubits of one of them is the set of qubits in q1\<close>
 
-
-definition map_assn::"'s expr_q \<Rightarrow> ('s state, (complex) QState) expr \<Rightarrow> (('s state) set)"  (infixr "\<mapsto>\<^sub>q" 35)
+(* definition map_assn::"'s expr_q \<Rightarrow> ('s state, (complex) QState) expr \<Rightarrow> (('s state) set)"  (infixr "\<mapsto>\<^sub>q" 35)
   where "map_assn f v \<equiv> let qv = (\<lambda>s. fst (get_qstate s)); 
                             qs = (\<lambda>s. snd (get_qstate s));
                             st = (\<lambda>s. get_stack s) in   
-                 {s. (f (st s, qv s)) \<noteq> {} \<and> (\<exists>\<qq>' \<qq>''. (qs s) = (v s) \<and> (v s) = \<qq>' +  \<qq>'' \<and> \<qq>' ## \<qq>'' \<and> (f (st s, qv s)) = QState_vars \<qq>')}"
+                 {s. \<Union>((qv s) ` (f (st s))) \<noteq> {} \<and> (qs s) = (v s) \<and>
+                  (\<exists>\<qq>' \<qq>''.  get_QStateM s = \<qq>' +  \<qq>'' \<and> \<qq>' ## \<qq>'' \<and> (\<Union>((qv s) ` (f (st s)))) = QStateM_vars \<qq>')}" *)
 
-definition map_assnl::"('s,nat) expr \<Rightarrow> ('s state, (complex) QState) expr \<Rightarrow> (('s state) set)"  (infixr "\<mapsto>\<^sub>l" 35)
+(* definition map_assn::"'s expr_q \<Rightarrow> ('s state, (complex) QState) expr \<Rightarrow> (('s state) set)"  (infixr "\<mapsto>\<^sub>q" 35)
+  where "map_assn f v \<equiv> let qv = (\<lambda>s. fst (get_qstate s)); 
+                            qs = (\<lambda>s. snd (get_qstate s));
+                            st = (\<lambda>s. get_stack s) in   
+                 {s. (f (st s, qv s)) \<noteq> {} \<and> (\<exists>\<qq>' \<qq>''. (qs s) = (v s) \<and> (v s) = \<qq>' +  \<qq>'' \<and> \<qq>' ## \<qq>'' \<and> (f (st s, qv s)) = QState_vars \<qq>')}"*)
+
+\<comment>\<open>map_assnl receives one variable of qbits addresses and a vector. 
+  It represents that the current qstate is v and that it can be split into two different separated qstates
+  and the set of qubits of one of them is the set of qubits in q1\<close>
+
+definition map_assnl::"('s,nat set) expr \<Rightarrow> ('s, (complex) QState) expr \<Rightarrow> (('s state) set)"  (infixr "\<mapsto>\<^sub>l" 35)
   where "map_assnl f v \<equiv> let qv = (\<lambda>s. fst (get_qstate s)); 
                             qs = (\<lambda>s. snd (get_qstate s));
                             st = (\<lambda>s. get_stack s) in   
-                 {s. (qv s) (f (st s)) \<noteq> {} \<and> (\<exists>\<qq>'. (qs s) =  \<qq>' +  (v s) \<and> \<qq>' ## (v s) \<and> (qv s) (f (st s)) = QState_vars (v s))}"
+                 {s. Q_domain_set f (qv s) (st s) \<noteq> {} \<and> Q_domain_set f (qv s) (st s) = QState_vars (v (st s)) \<and>
+                     (\<exists>\<qq>' \<qq>''. (qs s) =  \<qq>' + \<qq>'' \<and> (v (st s)) = \<qq>''  \<and> \<qq>' ## \<qq>'' )}"
 
-definition aij::"'s expr_q \<Rightarrow> ('s state, (complex) QState) expr \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow>'s state \<Rightarrow>  complex"
+definition map_assnla::"('s,nat set) expr \<Rightarrow> ('s, (complex) list) expr \<Rightarrow> (('s state) set)"
+(infixr "1\<mapsto>\<^sub>l" 35)
+  where "map_assnla f v \<equiv> let qv = (\<lambda>s. fst (get_qstate s)); 
+                            qs = (\<lambda>s. snd (get_qstate s));
+                            st = (\<lambda>s. get_stack s) in   
+                 {s. Q_domain_set f (qv s) (st s) \<noteq> {} \<and> 
+                     (\<exists>\<qq>' \<qq>''. (qs s) =  \<qq>' + \<qq>'' \<and> \<qq>' ## \<qq>'' \<and>  
+                                QState_vars \<qq>'' = Q_domain_set f (qv s) (st s) \<and>
+                               QState_list \<qq>'' = (v (st s)))}"
+
+ 
+
+(* definition map_assnl::"('s,nat set) expr \<Rightarrow> ('s state, (complex) QState) expr \<Rightarrow> (('s state) set)"  (infixr "\<mapsto>\<^sub>l" 35)
+  where "map_assnl f v \<equiv> let qv = (\<lambda>s. fst (get_qstate s)); 
+                            qs = (\<lambda>s. snd (get_qstate s));
+                            st = (\<lambda>s. get_stack s) in   
+                 {s. \<Union>((qv s) ` (f (st s))) \<noteq> {} \<and> Q_domain_set f s = QState_vars (v s) \<and>
+                     (\<exists>\<qq>' \<qq>''. (qs s) =  \<qq>' + \<qq>'' \<and> (v s) = \<qq>''  \<and> \<qq>' ## \<qq>'' )}" *)
+
+(* definition map_assnl'::"('s,nat set) expr \<Rightarrow> ('s,nat set) expr \<Rightarrow> ('s state, (complex) QState) expr \<Rightarrow> (('s state) set)" 
+("_\<cdot>_ \<mapsto>\<^sub>l _"  [1000, 20, 1000] 60)
+where "map_assnl' f f' v \<equiv> let qv = (\<lambda>s. fst (get_qstate s)); 
+                               qs = (\<lambda>s. snd (get_qstate s));
+                               st = (\<lambda>s. get_stack s) in   
+                 {s. Q_domain_set f (qv s) (st s) \<noteq> {} \<and> Q_domain_set f (qv s) (st s) = QState_vars (v s) \<and>
+                     (\<exists>\<qq>' \<qq>''. (qs s) =  \<qq>' + \<qq>'' \<and> (v s) = \<qq>''  \<and> \<qq>' ## \<qq>'' \<and> 
+                                 Q_domain_set f' (qv s) (st s) = QState_vars \<qq>'')}"*)
+
+(* definition aij::"'s expr_q \<Rightarrow> ('s, (complex) QState) expr \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow>'s state \<Rightarrow>  complex"
+  where "aij f v i j\<equiv>   let st =(\<lambda>s. get_stack s) in
+                 (\<lambda>s. vector_element_12 (v (st s)) (Q_domain_set f s) (i,j))" *)
+
+definition aij::"'s expr_q \<Rightarrow> q_vars \<Rightarrow> ('s, (complex) QState) expr \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow>'s  \<Rightarrow>  complex"
+  where "aij f qvars v i j\<equiv>  
+                 (\<lambda>s. vector_element_12 (v s) (Q_domain_set f qvars s) (i,j))"
+
+
+(* definition aij::"'s expr_q \<Rightarrow> ('s state, (complex) QState) expr \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow>'s state \<Rightarrow>  complex"
   where "aij v f i j\<equiv>  let qv = (\<lambda>s. fst (get_qstate s)); 
                             st = (\<lambda>s. get_stack s) in 
-                 (\<lambda>s. vector_element_12 (f s) (v (st s, qv s)) (i,j))"
+                 (\<lambda>s. vector_element_12 (f s) (v (st s, qv s)) (i,j))" *)
 
-definition v_f::"'s expr_q \<Rightarrow>( nat \<Rightarrow>'s state \<Rightarrow>  complex) \<Rightarrow> ('s state, (complex) QState) expr"
-  where "v_f q f \<equiv> let qv = (\<lambda>s. fst (get_qstate s)); 
-                            st = (\<lambda>s. get_stack s) in 
-                     (\<lambda>s. QState(q (st s, qv s), map (\<lambda>e. f e s) [0..<2^card (q (st s, qv s))]))"
+(* definition v_f::"'s expr_q \<Rightarrow>( nat \<Rightarrow>'s state \<Rightarrow>  complex) \<Rightarrow> ('s state, (complex) QState) expr"
+  where "v_f q f \<equiv> let vars = Q_domain_set q in 
+                     (\<lambda>s. QState(vars s, 
+                          map (\<lambda>e. f e s) [0..<2^card (vars s)]))" *)
+
+definition v_f::"'s expr_q \<Rightarrow> q_vars \<Rightarrow> ( nat \<Rightarrow>'s  \<Rightarrow>  complex) \<Rightarrow> ('s, (complex) QState) expr"
+  where "v_f q qvars f \<equiv> let vars = Q_domain_set q qvars in 
+                     (\<lambda>s. QState(vars s, 
+                          map (\<lambda>e. f e s) [0..<2^card (vars s)]))"
+
+definition var_exp::"'v \<Rightarrow> 's \<Rightarrow> nat set"
+("\<llangle>_\<rrangle>"  [] 1000)
+  where "var_exp q  \<equiv> \<lambda>\<sigma>. {to_nat (get_value \<sigma> q)}"
 
 definition valid::"[('s state) assn,('v, 's) com,('s state) assn] \<Rightarrow> bool"
     ("\<Turnstile>_ _ _"  [1000, 20, 1000] 60)
@@ -81,8 +154,8 @@ where
 | SMod: "\<turnstile>{s.  set_stack s (f (get_stack s)) \<in> Q} (SMod f) Q"
          
 | QMod: " \<turnstile> {s. q_v = fst (get_qstate s) \<and> q_s = snd (get_qstate s) \<and> st = get_stack s \<and>
-                (qs (st,q_v)) \<subseteq> QState_vars q_s \<and>
-                set_qstate s (matrix_sep (qs (st,q_v)) (get_qstate s) M) \<in> Q} 
+                Q_domain_set qs q_v  st \<noteq> {} \<and>
+                set_qstate s (matrix_sep (qs st) (get_QStateM s) M) \<in> Q} 
                 (QMod M qs) 
              Q"
 
@@ -106,21 +179,30 @@ where
                       (set_value st q (from_nat q'))
                     \<in> Q} 
               (Alloc q e v) Q" *)
+(* | QAlloc:"qv = (\<lambda>s. fst (get_qstate s)) \<and> st =(\<lambda>s. get_stack s) \<Longrightarrow> not_access_v v q \<Longrightarrow> not_access_v e q \<Longrightarrow>         
+          q \<in> variables \<Longrightarrow> 
+          \<turnstile> {s. ((qv s)(the_elem ((\<llangle>q\<rrangle>) (st s))) = {}) \<and> is_singleton ((\<llangle>q\<rrangle>) (st s)) \<and>
+                 length (v (st s)) = (e (st s)) \<and> (from_nat (the_elem ((\<llangle>q\<rrangle>) (st s)))) \<in> v_domain q \<and>
+                 QState_list (Qs (st s)) = (v (st s)) \<and> s' = set_stack s (set_value (st s) q (from_nat (the_elem ((\<llangle>q\<rrangle>) (st s))))) \<and>                 
+                 (set_stack s (set_value (st s) q (from_nat (the_elem ((\<llangle>q\<rrangle>) (st s)))))) \<in> ((\<llangle>q\<rrangle>) \<mapsto>\<^sub>l Qs)}
+              (Alloc q e v) (\<llangle>q\<rrangle> \<mapsto>\<^sub>l Qs)"
+*)
+| QAlloc:"not_access_v v q \<Longrightarrow>          
+          q \<in> variables \<Longrightarrow> is_nat q \<Longrightarrow>
+          \<turnstile> {s. True }  (Alloc q e v) (\<llangle>q\<rrangle> 1\<mapsto>\<^sub>l v)"
 
-| QAlloc:"qv = (\<lambda>s. fst (get_qstate s)) \<and> st =(\<lambda>s. get_stack s) \<Longrightarrow> 
-          not_access_locals v \<Longrightarrow>
-          \<turnstile> {s. ((qv s)(qa (st s)) = {}) \<and> 
-                   length (v (st s)) = (e (st s)) \<and> 
-                   QState_list (Qs s) = (v (st s)) \<and> 
-                 (set_stack s (set_value (st s) q (from_nat (qa (st s))))) \<in> (qa \<mapsto>\<^sub>l Qs)}
-              (Alloc q e v) (qa \<mapsto>\<^sub>l Qs)"
 
-
-| QDispose: "qv = (\<lambda>s. fst (get_qstate s)) \<and> st =(\<lambda>s. get_stack s) \<Longrightarrow> 
-             (\<forall>s st1 st2. st1\<noteq>st2 \<longrightarrow> Qs (set_stack s st1) = Qs (set_stack s st2)) \<Longrightarrow>
-              \<exists>Q n. P = ((q \<mapsto>\<^sub>l Qs) \<inter> {s. n = vec_norm (QState_vector (Qs s)) } \<inter> 
-              {s. set_qstate s ((qv s) ((q (st s)):={}),\<qq>' + n \<cdot>\<^sub>q |>) \<in>Q}) \<Longrightarrow> 
-              \<turnstile> P (Dispose q) Q"
+\<comment>\<open>In QDispose we set that Qs does not depend on the stack to avoid that 
+   the n in the postcondition may also depend on the stack and gives unsound results
+  in later modifications to the stack that may not affect the vector\<close>
+| QDispose: "qv = (\<lambda>s. fst (get_qstate s)) \<and> st =(\<lambda>s. get_stack s) \<Longrightarrow> not_access_v n q \<Longrightarrow>               
+             n = (\<lambda>s. vec_norm (QState_vector (Qs s))) \<Longrightarrow>
+             P = ((\<llangle>q\<rrangle> \<mapsto>\<^sub>l Qs) \<inter> (q1 \<mapsto>\<^sub>l Qs') \<inter>  
+              {s. (get_qstate s) = s1 + s2 \<and> 
+                  Q_domain (fst s1) = Q_domain_set \<llangle>q\<rrangle> (qv s) (st s) \<and> 
+                  Q_domain (fst s2) = Q_domain_set q1 (qv s) (st s) \<and>
+                  set_qstate s (QStateM(fst s2 ,snd s2+ (n (st s)) \<cdot>\<^sub>q |>)) \<in>Q}) \<Longrightarrow> 
+              \<turnstile> P (Dispose q) Q" 
 
 (* | QMeasure1: " \<turnstile> {s.  \<exists>k. pr = get_prob s \<and> qv = fst (get_qstate s) \<and> qs = snd (get_qstate s) \<and> st = get_stack s \<and> 
                  q (st, qv) \<subseteq> (QState_vars qs) \<and> 
@@ -129,15 +211,27 @@ where
                 set_prob (set_stack (set_qstate s q') st') (pr * \<delta>k) \<in> Q} 
                (Measure v q) Q"  *)
 
-| QMeasure: "qv = (\<lambda>s. fst (get_qstate s)) \<and> st = (\<lambda>s. get_stack s)  \<Longrightarrow>
-             (\<forall>s st1 st2. st1\<noteq>st2 \<longrightarrow> Qs (set_stack s st1) = Qs (set_stack s st2)) \<Longrightarrow>
-             \<rho> = (\<lambda>i s. (\<Sum>j\<in> (QState_vars (Qs s) - (q (st s, qv s))). norm (aij q Qs i j s )^2) / 
-                        (\<Sum>i\<in>q (st s, qv s). \<Sum>j\<in> (QState_vars (Qs s) - (q (st s, qv s))). norm (aij q Qs i j s )^2 )) \<Longrightarrow>               
-             \<Psi> = (\<lambda>i. ((q \<cdot> (\<lambda>s. {}) \<mapsto>  (\<lambda>s. QState (q (st s, qv s), unit_vecl (2^card (q (st s, qv s))) i))) \<and>\<^sup>* 
+(* | QMeasure: "st = (\<lambda>s. get_stack s)  \<Longrightarrow>
+             (\<forall>s1 s2. (st s1)\<noteq>(st s2) \<longrightarrow> Qs s1 = Qs s2) \<Longrightarrow>
+             \<rho> = (\<lambda>i s. (\<Sum>j\<in> (QState_vars (Qs s) - Q_domain_set q s). norm (aij q Qs i j s )^2) / 
+                        (\<Sum>i\<in>Q_domain_set q s. 
+                            \<Sum>j\<in> (QState_vars (Qs s) - Q_domain_set q s). norm (aij q Qs i j s )^2 )) \<Longrightarrow>               
+             \<Psi> = (\<lambda>i. ((q \<cdot> (\<lambda>s. {}) \<mapsto>  (\<lambda>s. QState (Q_domain_set q s, unit_vecl (2^card (Q_domain_set q s)) i))) \<and>\<^sup>* 
                         (qr \<cdot> (\<lambda>s. {}) \<mapsto> (v_f qr (\<lambda>j s. (aij q Qs i j s) / sqrt (\<rho> i s)) )))) \<Longrightarrow>
-               \<turnstile> ((q \<cdot> qr \<mapsto> Qs) \<inter> ({s. \<exists>i\<in>q (st s, qv s). \<Phi> (set_stack s (set_value (st s) v (from_nat i)))}))
+               \<turnstile> ((q \<cdot> qr \<mapsto> Qs) \<inter> ({s. \<exists>i\<in>Q_domain_set q s. \<Phi> (set_stack s (set_value (st s) v (from_nat i)))}))
                     (Measure v q) 
-                  ((\<Union>i\<in>A. \<Psi> i) \<inter> {s. \<Phi> s})"
+                  ((\<Union>i\<in>A. \<Psi> i) \<inter> {s. \<Phi> s})" *)
+
+| QMeasure: "st = (\<lambda>s. get_stack s) \<and> qv = (\<lambda>s. fst (get_qstate s)) \<Longrightarrow> \<Q> = (\<lambda>\<sigma>. Q_domain_set q (qv \<sigma>) (st \<sigma>)) \<Longrightarrow>
+             not_access_v q v \<Longrightarrow>  not_access_v Qs v \<Longrightarrow>
+             \<rho> = (\<lambda>i qv s. (\<Sum>j\<in> (QState_vars (Qs (st s)) - \<Q> s). norm (aij q (qv s) Qs i j (st s) )^2) / 
+                        (\<Sum>i\<in>\<Q> s. 
+                            \<Sum>j\<in> (QState_vars (Qs (st s)) - \<Q> s). norm (aij q (qv s) Qs i j (st s) )^2 )) \<Longrightarrow>               
+             \<Psi> = (\<lambda>i. {\<sigma>. \<sigma> \<in> ((q \<cdot> (\<lambda>s. {}) \<mapsto>  (\<lambda>s. QState (\<Q> \<sigma>, unit_vecl (2^card (\<Q> \<sigma>)) i))) \<and>\<^sup>* 
+                        (qr \<cdot> (\<lambda>s. {}) \<mapsto> (v_f qr (qv \<sigma>) (\<lambda>j s. (aij q (qv \<sigma>) Qs i j s) / sqrt (\<rho> i qv \<sigma>)) )))}) \<Longrightarrow>
+               \<turnstile> ((q \<cdot> qr \<mapsto> Qs) \<inter> ({s. \<exists>i\<in> \<Q> s. \<Phi> (set_stack s (set_value (st s) v (from_nat i)))}))
+                    (Measure v q)   
+                  ((\<Union>i\<in>A. \<Psi> i) \<inter> {s. \<Phi> s})" 
 
 | Frame: "\<turnstile> P c Q \<Longrightarrow> {v. (\<exists>p q. access_v  (\<lambda>s. (p, (s,q)) \<in> A) v = True)} \<inter> 
                       modify_locals c = {} \<Longrightarrow> \<turnstile> (P \<and>\<^sup>* A) c (Q \<and>\<^sup>* A)"
@@ -147,24 +241,107 @@ where
 
 
 lemma alloc_sound:
-  assumes a0: "qv = (\<lambda>s. fst (get_qstate s)) \<and> st = get_stack" and
-   a1:"not_access_locals v"
-  shows "\<Turnstile>{s. qv s (qa (st s)) = {} \<and>
-          length (v (st s)) = e (st s) \<and>
-          QState_list (Qs s) = v (st s) \<and>
-          set_stack s (set_value (st s) q (from_nat (qa (st s)))) \<in> (qa \<mapsto>\<^sub>l Qs)} q:=alloc[e] v (qa \<mapsto>\<^sub>l Qs)"  
+  assumes (* a0: "st =(\<lambda>s. get_stack s) " and *) a1:"not_access_v v q" and
+          a3:"q \<in> variables" and  a4:"is_nat q"
+  shows "\<Turnstile>{s. True } q:=alloc[e] v (\<llangle>q\<rrangle> 1\<mapsto>\<^sub>l v)"  
 proof-
-  { fix \<sigma> \<sigma>'
-     assume a00:"\<turnstile> \<langle>q:=alloc[e] v,\<sigma>\<rangle> \<Rightarrow> \<sigma>'" and
-            a01:"\<sigma> \<in> Normal `
-              {s. qv s (qa (st s)) = {} \<and>
-                length (v (st s)) = e (st s) \<and>
-                QState_list (Qs s) = v (st s) \<and>
-                set_stack s (set_value (st s) q (from_nat (qa (st s)))) \<in> (qa \<mapsto>\<^sub>l Qs)}" and
-            a02:"\<sigma>' \<noteq> Fault"
-     have "\<sigma>' \<in> Normal ` (qa \<mapsto>\<^sub>l Qs)" sorry
+  { fix s s'
+    let ?st = "(\<lambda>s. get_stack s) "
+     assume a00:"\<turnstile> \<langle>q:=alloc[e] v,s\<rangle> \<Rightarrow> s'" and
+            a01:"s \<in> Normal `
+              {s. True }" and
+            a02:"s' \<noteq> Fault"
+     then obtain sn where a01:"s = Normal sn" and         
+         a01a:"True"  
+       by auto               
+     then obtain q' \<Q> q'_addr \<sigma> \<delta> where 
+      sn: "sn = (\<delta>, \<sigma>, \<Q>)" and 
+      s':"s' = Normal (\<delta>, set_value \<sigma> q (from_nat q'),
+                         \<Q> + QStateM ((\<lambda>i. {})(q' := q'_addr), QState (q'_addr, v \<sigma>)))" and
+      q':"q' \<notin> dom_q_vars (QStateM_map \<Q>)" and
+      q'_addr_in_new: "q'_addr \<in> new_q_addr e \<sigma> (QStateM_map \<Q>)" and 
+      e_gt0:"0 < e \<sigma>" and e_eq_v:"length (v \<sigma>) = 2^e \<sigma>" 
+        using  a02
+        by (auto intro: QExec_Normal_elim_cases(9)[OF a00[simplified a01]])    
+    then obtain sn' where 
+       sn':"s' = Normal sn' \<and> 
+        sn' = (\<delta>, set_value \<sigma> q (from_nat q'), \<Q> + QStateM ((\<lambda>i. {})(q' := q'_addr), QState (q'_addr, v \<sigma>)))" 
+       by auto              
+     let ?\<Q> = "\<Q> + QStateM ((\<lambda>i. {})(q' := q'_addr), QState (q'_addr, v \<sigma>))" 
+     have \<sigma>:"\<sigma> = ?st sn" and Q:"QStateM_unfold \<Q> = get_qstate sn" and 
+          Q':"QStateM_unfold ?\<Q> = get_qstate sn'"
+       using sn  sn' unfolding get_stack_def get_qstate_def by auto
+     let ?\<sigma>' = "set_value \<sigma> q (from_nat q')" 
+     let ?\<Q>' = "QStateM ((\<lambda>i. {})(q' := q'_addr), QState (q'_addr, v \<sigma>))"
+          
+     have st':"?st sn' = ?\<sigma>'" using sn'    
+       unfolding get_stack_def by auto     
+     have v_eq:"v \<sigma> = v ?\<sigma>'" 
+       by (metis a3 a4 from_nat_in_vdomain local.a1 not_access_v_f_q_eq_set st')
+     then  have e_eq_v':"length (v ?\<sigma>') = 2^e \<sigma>"
+       using e_eq_v by auto
+     have q'_addr:"(q'_addr) \<noteq> {}" using e_gt0 q'_addr_in_new 
+       unfolding new_q_addr_def by auto     
+     have "sn' \<in> (\<llangle>q\<rrangle> 1\<mapsto>\<^sub>l v)"       
+     proof-    
+       have "QStateM_map (snd (snd sn')) = QStateM_map \<Q> + QStateM_map ?\<Q>'"
+         using allocate_wf[of ?\<Q>', OF _ q' _ _ q'_addr_in_new e_gt0, of "(\<lambda>i. {})(q' := q'_addr)" v ?\<sigma>' set_value q, simplified, OF e_eq_v]                    
+         by (simp add:Qstate_mapf plus_QStateM sn')                       
+       then have "QStateM_map (snd (snd sn')) q' = q'_addr"
+         using allocate_wf1[of ?\<Q>', OF _  _ _ q'_addr_in_new e_gt0, of  "(\<lambda>i. {})(q' := q'_addr)" v q' ?\<sigma>' set_value q, simplified, OF e_eq_v] 
+         using q'_addr unfolding plus_fun_def
+         by auto       
+       then have domain_q'_addr:"\<Union> (fst (get_qstate sn') ` \<llangle>q\<rrangle> (get_stack sn')) = q'_addr"
+         unfolding get_qstate_def var_exp_def 
+         using  st'  
+         unfolding get_stack_def set_value_def
+         by (auto simp add: get_set[OF a3] rep_nat)
+       then have "Q_domain_set \<llangle>q\<rrangle> (fst (get_qstate sn')) (get_stack sn') \<noteq> {}"
+         unfolding Q_domain_set_def
+         using  q'_addr by force
+       moreover have 
+        "(\<exists>\<qq>' \<qq>''. snd (get_qstate sn') = \<qq>' + \<qq>'' \<and> 
+                   \<qq>' ## \<qq>'' \<and> QState_vars \<qq>'' =
+                   Q_domain_set \<llangle>q\<rrangle> (fst (get_qstate sn')) (get_stack sn') \<and>
+                   QState_list \<qq>'' = v (get_stack sn'))"
+       proof-
+         have "snd (get_qstate sn') = qstate \<Q> + qstate ?\<Q>'"
+           using allocate_wf[of ?\<Q>', OF _ q' _ _ q'_addr_in_new e_gt0, 
+                           of "(\<lambda>i. {})(q' := q'_addr)" v ?\<sigma>' set_value q, 
+                           simplified, OF e_eq_v]
+           by (metis (no_types, lifting) Q' Qstate_vector plus_QStateM snd_conv)
+         moreover have "qstate \<Q> ## qstate ?\<Q>'"
+           using allocate_wf[of ?\<Q>', OF _ q' _ _ q'_addr_in_new e_gt0, 
+                           of "(\<lambda>i. {})(q' := q'_addr)" v ?\<sigma>' set_value q, 
+                           simplified, OF e_eq_v]
+           using disjoint_allocate[of ?\<Q>', OF _ q' _ _ q'_addr_in_new e_gt0, 
+                           of "(\<lambda>i. {})(q' := q'_addr)" v ?\<sigma>' set_value q, 
+                           simplified, OF e_eq_v]
+           by (simp add: sep_disj_QStateM)
+         moreover have "QState_vars (qstate ?\<Q>') =
+                        Q_domain_set \<llangle>q\<rrangle> (fst (get_qstate sn')) (get_stack sn')"
+           using allocate_wf1[of ?\<Q>', OF _  _ _ q'_addr_in_new e_gt0, 
+                           of "(\<lambda>i. {})(q' := q'_addr)" v q' ?\<sigma>' set_value q, 
+                           simplified, OF e_eq_v]
+           using allocate_wf[of ?\<Q>', OF _ q' _ _ q'_addr_in_new e_gt0, 
+                           of "(\<lambda>i. {})(q' := q'_addr)" v ?\<sigma>' set_value q, 
+                           simplified, OF e_eq_v]
+           by (metis domain_q'_addr QStateM_rel1 QState_var_idem Q_domain_set_def  e_eq_v fst_conv snd_conv)           
+         moreover have "QState_list (qstate ?\<Q>') = v (get_stack sn')"
+            using allocate_wf1[of ?\<Q>', OF _  _ _ q'_addr_in_new e_gt0, 
+                           of "(\<lambda>i. {})(q' := q'_addr)" v q' ?\<sigma>' set_value q, 
+                           simplified, OF e_eq_v] e_eq_v'
+            by (simp add: QStateM_wf_qstate QState_list_idem st' v_eq)
+         ultimately show ?thesis by auto
+       qed
+       ultimately show ?thesis 
+         using q'_addr unfolding map_assnla_def Let_def Q_domain_set_def 
+         by auto
+     qed       
+     then have "s' \<in> Normal ` (\<llangle>q\<rrangle> 1\<mapsto>\<^sub>l v)" using sn' by auto
    } thus ?thesis unfolding valid_def by auto
 qed
+
 
 lemma quantum_separation_logic_sound:
  "\<turnstile> P c Q \<Longrightarrow> \<Turnstile> P c Q"
@@ -175,13 +352,14 @@ case (Skip Q)
 next
   case (SMod f Q) 
   then show ?case unfolding valid_def 
-    unfolding get_stack_def set_stack_def get_prob_def get_qstate_def
+    unfolding get_stack_def set_stack_def get_prob_def get_qstate_def get_QStateM_def
     by (fastforce intro: QExec_Normal_elim_cases(3))
 next
   case (QMod q_v q_s st qs M Q) 
   then show ?case unfolding valid_def   
-    unfolding get_stack_def set_qstate_def get_prob_def get_qstate_def
-    by (fastforce intro: QExec_Normal_elim_cases(4)[of M])
+    unfolding get_stack_def get_QStateM_def set_qstate_def get_prob_def get_qstate_def Q_domain_set_def    
+    apply clarsimp
+    by (rule  QExec_Normal_elim_cases(4)[of M], auto)    
 next
   case (Seq P c\<^sub>1 R c\<^sub>2 Q)
   have valid_c1:"\<Turnstile>P c\<^sub>1 R" by fact
@@ -293,11 +471,11 @@ next
   } thus ?case unfolding valid_def by auto
   qed  
 next
-  case (QAlloc qv st v qa e Qs q)
+  case (QAlloc v q e)
   then show ?case using alloc_sound by auto 
 next
-  case (QDispose qv st Qs P q \<qq>' Q)
-  then show ?case sorry
+  case (QDispose qv st n q Qs P q1 Qs' s1 s2 Q)
+  then show ?case using dispose_sound by auto
 next
   case (QMeasure qv st Qs \<rho> q \<Psi> qr \<Phi> v A)
   then show ?case sorry

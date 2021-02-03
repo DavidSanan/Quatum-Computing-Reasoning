@@ -19,7 +19,81 @@ definition
   unit_vecl :: "nat \<Rightarrow> nat \<Rightarrow> complex list"
   where "unit_vecl n i = list_of_vec (unit_vec n i)"
 
-definition matrix_sep :: "nat set \<Rightarrow> qstate \<Rightarrow> complex mat \<Rightarrow> qstate" 
+definition matrix_sep :: "nat set \<Rightarrow> complex QStateM \<Rightarrow> complex mat \<Rightarrow> complex QStateM" 
+  where "matrix_sep heap_ind q M \<equiv>
+           let sep_vars = \<Union> ((QStateM_map q) ` heap_ind)  in
+           let var_d = QStateM_vars q in 
+           let var_r = var_d - sep_vars in
+           let v = QStateM_vector q in           
+           let m = ptensor_mat sep_vars var_r
+                               (M::complex mat) (1\<^sub>m (2^(card var_r)))  in 
+             QStateM (QStateM_map q, QState (var_d, list_of_vec (m *\<^sub>v v)))"
+
+lemma "\<Union> (QStateM_map q ` hi) \<noteq> {} \<Longrightarrow> sep_vars = \<Union> ((QStateM_map q) ` hi) \<Longrightarrow>
+       var_d =  QStateM_vars q \<Longrightarrow> var_r = var_d - sep_vars \<Longrightarrow> v = QStateM_vector q \<Longrightarrow> 
+       QStateM_map (matrix_sep hi q M) = QStateM_map q \<and> 
+       QStateM_vars (matrix_sep hi q M) = QStateM_vars q \<and>
+       QStateM_list (matrix_sep hi q M) = 
+         list_of_vec (ptensor_mat sep_vars var_r
+                               (M::complex mat) (1\<^sub>m (2^(card var_r))) *\<^sub>v 
+                      QStateM_vector q)"  
+proof- 
+  assume a0:"\<Union> (QStateM_map q ` hi) \<noteq> {}" and
+   a1:"sep_vars = \<Union> ((QStateM_map q) ` hi)" and
+   a2:"var_d =  QStateM_vars q" and a3:"var_r = var_d - sep_vars" and
+   a4:"v = QStateM_vector q"
+
+  then have hi_not_e:"hi\<noteq>{}" by auto
+  have "\<Union> (QStateM_map q ` hi) \<subseteq> Q_domain (QStateM_map q)"
+    unfolding Q_domain_def
+    by blast
+  then have domain_map_not_e:"Q_domain (QStateM_map q) \<noteq> {}"
+    using a0 hi_not_e apply transfer by auto  
+  let ?sep_vars = "\<Union> (QStateM_map q ` hi)" and
+      ?var_d = "QStateM_vars q" 
+  let ?var_r = "?var_d - ?sep_vars" and ?v = "QStateM_vector q" 
+  let ?m = "ptensor_mat ?sep_vars ?var_r M (1\<^sub>m (2 ^ card ?var_r))"
+  have qm_wf: "QStateM_wf (QStateM_unfold q)"
+    using QStateM_wf by blast
+  moreover have q_wf:"QState_wf (QState_unfold (qstate q))"
+    using qm_wf QState_wf by blast
+  ultimately have finite_Q_domain:"finite (Q_domain (QStateM_map q))" by auto   
+  interpret ps2:partial_state2 "replicate (card (QStateM_vars q)) 2" "?sep_vars" "?var_r"
+    apply standard
+    apply blast
+      apply simp using finite_Q_domain
+    unfolding Q_domain_def 
+     apply auto      
+     apply (subgoal_tac "\<Union> (QStateM_map q ` hi) \<subseteq> \<Union> (range (QStateM_map q))") 
+      apply auto
+    using finite_subset apply blast  
+    using q_wf eq_QStateM_vars
+    by (metis QState_rel3' finite_Diff)
+  have eq_domain_vars_map:"QStateM_vars q = {} \<Longrightarrow> 
+        Q_domain (QStateM_map q) = {}" 
+    apply auto unfolding qstate_def by (transfer, auto)  
+  have Q_wf:"QState_wf (QStateM_vars q, list_of_vec (?m *\<^sub>v ?v))"
+    unfolding matrix_sep_def Let_def apply auto
+    unfolding ps2.d0_def ps2.dims0_def ps2.vars0_def apply transfer   
+    unfolding Q_domain_def apply auto
+      apply (metis UN_Un Un_UNIV_right)    
+     apply (transfer, simp add: QState_rel3')
+    using eq_domain_vars_map domain_map_not_e by fastforce
+  then have f1:"QState_vars (QState (QStateM_vars q, list_of_vec (?m *\<^sub>v ?v))) = 
+             QStateM_vars q"
+    using QState_var_idem
+    by blast   
+  then have q:"QStateM_wf (QStateM_map q, QState (?var_d, list_of_vec (?m *\<^sub>v ?v)))"    
+    using eq_QStateM_vars qm_wf by auto      
+  then show ?thesis unfolding matrix_sep_def Let_def 
+    using  f1 a1 a2 a3 a4
+    apply (auto simp add:  QStateM_wf_map QStateM_wf_vars )
+    using a1 a2 a3 a4 Q_wf
+    by (auto simp add: QState_list_idem  QStateM_wf_list)
+qed
+
+
+(* definition matrix_sep :: "nat set \<Rightarrow> qstate \<Rightarrow> complex mat \<Rightarrow> qstate" 
   where "matrix_sep sep_vars q M \<equiv>
            let qs = snd q in
            let var_d = QState_vars qs in 
@@ -28,7 +102,7 @@ definition matrix_sep :: "nat set \<Rightarrow> qstate \<Rightarrow> complex mat
            let m = partial_state2.ptensor_mat sep_vars var_r
                                         (M::complex mat) (1\<^sub>m (2^(card var_r)))  in           
              (fst q, QState (var_d, list_of_vec (m *\<^sub>v v)))
-        "
+        " *)
 
 (* definition measure_vars1::"nat \<Rightarrow>  nat set \<Rightarrow> qstate  \<Rightarrow> (real \<times> qstate)"
   where "measure_vars1 k  sep_vars q \<equiv>
@@ -42,8 +116,8 @@ definition matrix_sep :: "nat set \<Rightarrow> qstate \<Rightarrow> complex mat
     let qnprod = list_of_vec (((sqrt \<delta>k)::complex) \<cdot>\<^sub>v qn') in
        (\<delta>k, (fst q, QState (vars_dom, qnprod)))" *)
 
-definition measure_vars::"nat \<Rightarrow>  nat set \<Rightarrow> qstate  \<Rightarrow> (real \<times> qstate)"
-  where "measure_vars k  sep_vars q \<equiv>
+definition measure_vars1::"nat \<Rightarrow>  nat set \<Rightarrow> qstate  \<Rightarrow> (real \<times> qstate)"
+  where "measure_vars1 k  sep_vars q \<equiv>
    let qs = snd q in
    let vars_dom = QState_vars qs in
     let v =   QState_vector qs in
@@ -53,6 +127,97 @@ definition measure_vars::"nat \<Rightarrow>  nat set \<Rightarrow> qstate  \<Rig
     let \<delta>k =  Re ((vec_norm v')^2 div (vec_norm v)^2) in    
     let qnprod = list_of_vec (((sqrt \<delta>k)::complex) \<cdot>\<^sub>v v') in
        (\<delta>k, (fst q, QState (vars_dom, qnprod)))" 
+
+definition measure_vars::"nat \<Rightarrow>  nat set \<Rightarrow> complex QStateM  \<Rightarrow> (real \<times> complex QStateM)"
+  where "measure_vars k  sep_addr q \<equiv>
+   let (qm, qs) = QStateM_unfold q in
+   let vars_dom = QState_vars qs in
+    let v =   QState_vector qs in
+    let sep_vars = \<Union>(qm ` sep_addr) in
+    let rest_vars= (vars_dom - sep_vars) in        
+    let mk = partial_state2.ptensor_mat  sep_vars rest_vars (1\<^sub>k (2^(card sep_vars))) (1\<^sub>m (2^(card rest_vars))) in
+    let v' =  mk  *\<^sub>v v in 
+    let \<delta>k =  Re ((vec_norm v')^2 div (vec_norm v)^2) in    
+    let qnprod = list_of_vec (((sqrt \<delta>k)::complex) \<cdot>\<^sub>v v') in
+       (\<delta>k, QStateM(qm, QState (vars_dom, qnprod)))" 
+
+lemma allocate_wf1:
+  assumes a0:"\<Q>' = QStateM(\<vv>', QState (q'_addr,(v \<sigma>)))" and       
+       a2:"\<vv>' = (\<lambda>i. {})(q' := q'_addr)" and a2':"\<sigma>' = set_value \<sigma> q (from_nat q')" and
+      a3:"q'_addr \<in> new_q_addr e \<sigma> (QStateM_map \<Q>) " and a4:"0 < e \<sigma> " and a5:"length (v \<sigma>) = 2^(e \<sigma>)"
+    shows "QState_wf (q'_addr, v \<sigma>) \<and> 
+           QStateM_wf ((\<lambda>i. {})(q' := q'_addr), QState (q'_addr, v \<sigma>))  \<and>
+           QStateM_map \<Q>' = (\<lambda>i. {})(q' := q'_addr)"
+proof-
+   have Qstate_wf:"QState_wf (q'_addr, v \<sigma>)"
+     using assms
+     unfolding new_q_addr_def
+     using assms snd_conv
+     using card_infinite by force
+   moreover have QStateM_wf:"QStateM_wf ((\<lambda>i. {})(q' := q'_addr), QState (q'_addr, v \<sigma>))"
+     using calculation
+     unfolding Q_domain_def using QState_var_idem by auto
+   moreover have QState_mapQ':"QStateM_map \<Q>' = (\<lambda>i. {})(q' := q'_addr)"
+     using calculation
+     apply auto
+     by (auto simp add: QStateM_wf_map a0 local.a2)
+   ultimately show ?thesis by auto
+ qed
+
+lemma allocate_wf:
+  assumes a0:"\<Q>' = QStateM(\<vv>', QState (q'_addr,(v \<sigma>)))" and
+       a1:"q' \<notin> (dom_q_vars (QStateM_map \<Q>))" and
+       a2:"\<vv>' = (\<lambda>i. {})(q' := q'_addr)" and a2':"\<sigma>' = set_value \<sigma> q (from_nat q')" and
+      a3:"q'_addr \<in> new_q_addr e \<sigma> (QStateM_map \<Q>) " and a4:"0 < e \<sigma> " and a5:"length (v \<sigma>) = 2^(e \<sigma>)"
+    shows "QStateM_wf (QStateM_map \<Q> + QStateM_map \<Q>',
+                  qstate \<Q> + qstate \<Q>')"
+proof-  
+  have "QState_wf (q'_addr, v \<sigma>) \<and> 
+           QStateM_wf ((\<lambda>i. {})(q' := q'_addr), QState (q'_addr, v \<sigma>))  \<and>
+           QStateM_map \<Q>' = (\<lambda>i. {})(q' := q'_addr)"
+    using allocate_wf1[of  \<Q>' \<vv>' q'_addr v \<sigma>, OF a0  a2 _ a3 a4 a5, of \<sigma>' set_value q, OF a2']
+    by auto
+  moreover have d1:"QStateM_map \<Q> ## QStateM_map \<Q>'"
+    using assms calculation
+    unfolding dom_q_vars_def sep_disj_fun_def opt_class.domain_def
+    by auto 
+  moreover have d2:"qstate \<Q> ## qstate \<Q>'" 
+    unfolding sep_disj_QState disj_QState_def calculation
+    using QStateM_wf QState_wf a3 unfolding new_q_addr_def
+    apply auto
+    by (smt QStateM_rel1 QState_rel3' QState_var_idem a3 a4 
+           calculation(1) fst_conv new_q_addr_gt_old_q_addr not_less_iff_gr_or_eq snd_conv)                        
+  ultimately show ?thesis   
+    using plus_wf
+    by metis 
+qed
+
+lemma disjoint_allocate: 
+  assumes a0:"\<Q>' = QStateM(\<vv>', QState (q'_addr,(v \<sigma>)))" and
+       a1:"q' \<notin> (dom_q_vars (QStateM_map \<Q>))" and
+       a2:"\<vv>' = (\<lambda>i. {})(q' := q'_addr)" and a2':"\<sigma>' = set_value \<sigma> q (from_nat q')" and
+      a3:"q'_addr \<in> new_q_addr e \<sigma> (QStateM_map \<Q>) " and a4:"0 < e \<sigma> " and a5:"length (v \<sigma>) = 2^(e \<sigma>)"
+    shows "\<Q> ## \<Q>'"
+proof-  
+  have "QState_wf (q'_addr, v \<sigma>) \<and> 
+           QStateM_wf ((\<lambda>i. {})(q' := q'_addr), QState (q'_addr, v \<sigma>))  \<and>
+           QStateM_map \<Q>' = (\<lambda>i. {})(q' := q'_addr)"
+    using allocate_wf1[of  \<Q>' \<vv>' q'_addr v \<sigma>, OF a0  a2 _ a3 a4 a5, of \<sigma>' set_value q, OF a2']
+    by auto
+  moreover have d1:"QStateM_map \<Q> ## QStateM_map \<Q>'"
+    using assms calculation
+    unfolding dom_q_vars_def sep_disj_fun_def opt_class.domain_def
+    by auto 
+  moreover have d2:"qstate \<Q> ## qstate \<Q>'" 
+    unfolding sep_disj_QState disj_QState_def calculation
+    using QStateM_wf QState_wf a3 unfolding new_q_addr_def
+    apply auto
+    by (smt QStateM_rel1 QState_rel3' QState_var_idem a3 a4 
+           calculation(1) fst_conv new_q_addr_gt_old_q_addr not_less_iff_gr_or_eq snd_conv)                        
+  ultimately show ?thesis   
+    using plus_wf
+    by (simp add: sep_disj_QStateM)
+qed
 
 context vars
 begin
@@ -69,13 +234,13 @@ inductive QExec::"('v, 's) com \<Rightarrow> 's XQState \<Rightarrow> 's XQState
 \<comment>\<open>QMod modifies the set of qubits of the Quantum State given by q \<sigma> with the 
   transformation matrix M, any qubit not included in q \<sigma> remains the same\<close>
 
- | QMod:"(q (\<sigma>,\<vv>)) \<subseteq> (QState_vars \<qq>) \<Longrightarrow> 
-         \<qq>' = matrix_sep (q (\<sigma>,\<vv>)) (\<vv>,\<qq>) M \<Longrightarrow>
-         \<turnstile> \<langle>QMod M q, Normal (\<delta>,\<sigma>,(\<vv>,\<qq>))\<rangle> \<Rightarrow> Normal (\<delta>, \<sigma>, \<qq>')"
+ | QMod:"\<Union>(QStateM_map \<Q> ` (q \<sigma>)) \<noteq> {} \<Longrightarrow> 
+         \<Q>' = matrix_sep (q \<sigma>) \<Q> M \<Longrightarrow>
+         \<turnstile> \<langle>QMod M q, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Normal (\<delta>, \<sigma>, \<Q>')"
 
 \<comment>\<open>QMod fails if the set of qubits to be modified is not included in the quantum state\<close>
- | QMod_F:"\<not> ((q (\<sigma>,\<vv>)) \<subseteq> (QState_vars \<qq>)) \<Longrightarrow>          
-          \<turnstile> \<langle>QMod M q, Normal (\<delta>,\<sigma>,(\<vv>,\<qq>))\<rangle> \<Rightarrow> Fault"
+ | QMod_F:"(QStateM_map \<Q> ` (q \<sigma>)) = {} \<Longrightarrow>          
+          \<turnstile> \<langle>QMod M q, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Fault"
 
 \<comment>\<open>Alloc takes a normal variable "q" representing the variable where the index to the qubits is store
    an function e from the state \<sigma> to a natural number representing the number of qubits to allocate
@@ -85,15 +250,23 @@ inductive QExec::"('v, 's) com \<Rightarrow> 's XQState \<Rightarrow> 's XQState
   We will require that a program is well formed, meaning that the types are correct.
   A call to Alloc is well formed if the type of q is a natural number\<close>
 
- | Alloc:"q' \<notin> (dom_q_vars \<vv>) \<Longrightarrow> q'_addr \<in> new_q_addr e (\<delta>,\<sigma>,(\<vv>,\<qq>)) \<Longrightarrow> e \<sigma> \<noteq> 0 \<Longrightarrow> 
-          \<vv>' = \<vv>(q' := q'_addr)  \<Longrightarrow> length (v \<sigma>) = (e \<sigma>) \<Longrightarrow> \<sigma>' = set_value \<sigma> q (from_nat q') \<Longrightarrow>                    
-          \<turnstile> \<langle>Alloc q e v, Normal (\<delta>,\<sigma>,(\<vv>,\<qq>))\<rangle> \<Rightarrow> Normal (\<delta>, \<sigma>',(\<vv>',\<qq> + QState (q'_addr,(v \<sigma>)) ))"
+(* | Alloc1:"\<forall>q'. q' \<notin> (dom_q_vars (QStateM_map \<Q>)) \<longrightarrow> 
+              \<vv>' = (QStateM_map \<Q>)(q' := q'_addr) \<and>  \<sigma>' = set_value \<sigma> q (from_nat q') \<Longrightarrow> 
+          q'_addr \<in> new_q_addr e \<sigma> (QStateM_map \<Q>)  \<Longrightarrow> e \<sigma> \<noteq> 0 \<Longrightarrow> length (v \<sigma>) = (e \<sigma>) \<Longrightarrow>                     
+          \<turnstile> \<langle>Alloc q e v, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Normal (\<delta>, \<sigma>',QStateM(\<vv>',\<qq> + QState (q'_addr,(v \<sigma>)) ))" *)
 
+| Alloc:"q' \<notin> (dom_q_vars (QStateM_map \<Q>)) \<Longrightarrow>
+              \<vv>' = (\<lambda>i. {})(q' := q'_addr) \<and>  \<sigma>' = set_value \<sigma> q (from_nat q') \<Longrightarrow> 
+          q'_addr \<in> new_q_addr e \<sigma> (QStateM_map \<Q>)  \<Longrightarrow> e \<sigma> \<noteq> 0 \<Longrightarrow> length (v \<sigma>) = 2^(e \<sigma>) \<Longrightarrow>                     
+          \<turnstile> \<langle>Alloc q e v, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Normal (\<delta>, \<sigma>',\<Q> + QStateM(\<vv>', QState (q'_addr,(v \<sigma>)) ))"
+(* | Alloc:"q' \<notin> (dom_q_vars (QStateM_map \<Q>)) \<Longrightarrow> q'_addr \<in> new_q_addr e \<sigma> (QStateM_map \<Q>)  \<Longrightarrow> e \<sigma> \<noteq> 0 \<Longrightarrow>
+          \<vv>' = (QStateM_map \<Q>)(q' := q'_addr)  \<Longrightarrow> length (v \<sigma>) = (e \<sigma>) \<Longrightarrow> \<sigma>' = set_value \<sigma> q (from_nat q') \<Longrightarrow>                    
+          \<turnstile> \<langle>Alloc q e v, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Normal (\<delta>, \<sigma>',QStateM(\<vv>',\<qq> + QState (q'_addr,(v \<sigma>)) ))" *)
 \<comment>\<open>Alloc will fail if the length of the initial value is not equal to the number of qubits allocated \<close>
 
 
- | Alloc_F:"length (v \<sigma>) \<noteq> (e \<sigma>) \<or> e \<sigma> = 0 \<Longrightarrow>                    
-          \<turnstile> \<langle>Alloc q e v, Normal (\<delta>,\<sigma>,(\<vv>,\<qq>))\<rangle> \<Rightarrow> Fault"
+ | Alloc_F:"length (v \<sigma>) \<noteq> 2^(e \<sigma>) \<or> e \<sigma> = 0 \<Longrightarrow>                    
+          \<turnstile> \<langle>Alloc q e v, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Fault"
 
 \<comment>\<open>the conditional, while, and seq statements follow the standard definitions\<close>
 
@@ -116,33 +289,51 @@ inductive QExec::"('v, 's) com \<Rightarrow> 's XQState \<Rightarrow> 's XQState
   Quantum state. The entanglement condition is that it is possible to find a vector \<qq>1 such that
   \<qq> =  \<qq>' +  \<qq>''\<close>
 
- | Dispose: "\<vv> (q \<sigma>) \<noteq> {} \<Longrightarrow> \<vv>' = \<vv>((q \<sigma>):={}) \<Longrightarrow> \<qq>' ## \<qq>''  \<Longrightarrow> 
-            \<vv> (q \<sigma>) = QState_vars \<qq>'' \<Longrightarrow> \<qq> =   \<qq>' +  \<qq>'' \<Longrightarrow> 
-            n = vec_norm (QState_vector \<qq>'') \<Longrightarrow>                       
-             \<turnstile> \<langle>Dispose q, Normal (\<delta>,\<sigma>,(\<vv>,\<qq>))\<rangle> \<Rightarrow> Normal (\<delta>,\<sigma>,(\<vv>',n \<cdot>\<^sub>q \<qq>'))"                                  
+
+(* | Dispose: "  \<Q> = \<Q>' + \<Q>'' \<Longrightarrow> \<Q>' ## \<Q>'' \<Longrightarrow> n = vec_norm (QStateM_vector \<Q>'') \<Longrightarrow>
+              (\<Union>((QStateM_map \<Q>'') ` (q \<sigma>))) \<noteq> {} \<Longrightarrow> 
+              Q_domain (QStateM_map \<Q>'') =(\<Union>((QStateM_map \<Q>'') ` (q \<sigma>))) \<Longrightarrow>                                      
+             \<turnstile> \<langle>Dispose q, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Normal (\<delta>,\<sigma>,QStateM(m', n \<cdot>\<^sub>q Q'))" *)
+
+ | Dispose: "  \<Q> = \<Q>' + \<Q>'' \<Longrightarrow> \<Q>' ## \<Q>'' \<Longrightarrow> n = vec_norm (QStateM_vector \<Q>'') \<Longrightarrow>
+              ((QStateM_map \<Q>'') (to_nat (get_value \<sigma> q))) \<noteq> {} \<Longrightarrow> 
+              Q_domain (QStateM_map \<Q>'') =((QStateM_map \<Q>'') (to_nat (get_value \<sigma> q))) \<Longrightarrow>                                      
+             \<turnstile> \<langle>Dispose q, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Normal (\<delta>,\<sigma>,QStateM(m', n \<cdot>\<^sub>q Q'))"
 
 \<comment>\<open>Dispose dispose will fail if it is not possible to find such states \<qq>',  \<qq>''\<close>
 
+(* | Dispose_F: "\<nexists>\<Q>' \<Q>''.(\<Union>((QStateM_map \<Q>'') ` (q \<sigma>))) \<noteq> {} \<and> 
+                Q_domain (QStateM_map \<Q>'') = (\<Union>((QStateM_map \<Q>'') ` (q \<sigma>)))  \<and> 
+               \<Q> = \<Q>' + \<Q>'' \<and> \<Q>' ## \<Q>'' \<Longrightarrow>
+               \<turnstile> \<langle>Dispose q, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Fault" *)
 
- | Dispose_F: "\<nexists>\<qq>' \<qq>''. \<vv> (q \<sigma>) \<noteq> {} \<and> \<vv> (q \<sigma>) = QState_vars \<qq>'' \<and> 
-               \<qq> =   \<qq>' +  \<qq>'' \<and> \<qq>' ## \<qq>'' \<Longrightarrow>
-               \<turnstile> \<langle>Dispose q, Normal (\<delta>,\<sigma>,(\<vv>,\<qq>))\<rangle> \<Rightarrow> Fault"
+ | Dispose_F: "\<nexists>\<Q>' \<Q>''.((QStateM_map \<Q>'') (to_nat (get_value \<sigma> q))) \<noteq> {} \<and> 
+                Q_domain (QStateM_map \<Q>'') = ((QStateM_map \<Q>'') (to_nat (get_value \<sigma> q))) \<and> 
+               \<Q> = \<Q>' + \<Q>'' \<and> \<Q>' ## \<Q>'' \<Longrightarrow>
+               \<turnstile> \<langle>Dispose q, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Fault"
 
 \<comment>\<open>Measure measures the value of the set of qubits given by q \<sigma> and it stores the result in 
   the stack variable v. Similar to allocate, we will require that the construct is well formed
  and that the type of v is a real number\<close>
 
- | Measure: "q (\<sigma>,\<vv>) = (QState_vars \<qq>1) \<Longrightarrow> k \<in> {0.. 2^(card (q (\<sigma>,\<vv>)))} \<Longrightarrow>
+ (* | Measure: "q (\<sigma>,\<vv>) = (QState_vars \<qq>1) \<Longrightarrow> k \<in> {0.. 2^(card (q (\<sigma>,\<vv>)))} \<Longrightarrow>
             (\<delta>k, (\<vv>',\<qq>')) = measure_vars k (q (\<sigma>,\<vv>)) (\<vv>,\<qq>) \<Longrightarrow> \<qq> =   \<qq>1 +  \<qq>2 \<and> \<qq>1 ## \<qq>2 \<Longrightarrow>            
             \<delta>k > 0 \<Longrightarrow> \<delta>' = \<delta> * \<delta>k \<Longrightarrow> \<sigma>' = set_value \<sigma> v (from_nat k) \<Longrightarrow>
-            \<turnstile> \<langle>Measure v q, Normal (\<delta>,\<sigma>,(\<vv>,\<qq>))\<rangle> \<Rightarrow> Normal (\<delta>',\<sigma>',(\<vv>',\<qq>'))" 
+            \<turnstile> \<langle>Measure v q, Normal (\<delta>,\<sigma>,(\<vv>,\<qq>))\<rangle> \<Rightarrow> Normal (\<delta>',\<sigma>',(\<vv>',\<qq>'))"  *)
 
+| Measure: "addr1 = \<Union>((QStateM_map \<Q>) ` (q \<sigma>)) \<Longrightarrow>
+            (QStateM_vars \<Q>) = addr1 \<union> addr2 \<Longrightarrow>            
+            k \<in> {0.. 2^(card addr1)} \<Longrightarrow>              
+            (\<delta>k, \<Q>') = measure_vars k addr1 \<Q> \<Longrightarrow>             
+            \<delta>k > 0 \<Longrightarrow> \<delta>' = \<delta> * \<delta>k \<Longrightarrow> \<sigma>' = set_value \<sigma> v (from_nat k) \<Longrightarrow>
+            \<turnstile> \<langle>Measure v q, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Normal (\<delta>',\<sigma>',\<Q>')"
 \<comment>\<open>Since Measure access to the values of the qubits given by q \<sigma> as QMod, 
   Measure will similarly fail if the set of qubits to be mesured does not
   belong to the set of allocated qubits\<close>
 
- | Measure_F: "\<not> (q (\<sigma>,\<vv>) \<subseteq> (QState_vars \<qq>)) \<Longrightarrow>  
-              \<turnstile> \<langle>Measure v q, Normal (\<delta>,\<sigma>,(\<vv>,\<qq>))\<rangle> \<Rightarrow> Fault" 
+ | Measure_F: "\<nexists>\<Q>' \<Q>''. \<not>(\<Union>((QStateM_map \<Q>') ` (q \<sigma>)) = (QStateM_vars \<Q>')) \<and>  
+               \<Q> = \<Q>' + \<Q>'' \<and> \<Q>' ## \<Q>'' \<Longrightarrow> 
+              \<turnstile> \<langle>Measure v q, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Fault" 
 
 | Fault_Prop:"\<turnstile> \<langle>C, Fault\<rangle> \<Rightarrow> Fault"
 

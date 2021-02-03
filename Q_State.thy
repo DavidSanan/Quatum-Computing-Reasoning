@@ -1,7 +1,7 @@
 theory Q_State
 imports HOL.Complex vars HOL.Orderings  
           Deep_Learning.Tensor_Matricization Separation_Algebra.Separation_Algebra
-          QHLProver.Partial_State Tensor_Permutation HOL.Finite_Set
+          QHLProver.Partial_State Tensor_Permutation HOL.Finite_Set Sep_Prod_Instance
 begin               
 \<comment>\<open>Function to obtain the index of variables in the vector\<close>
 definition to_nat_set::"'q::linorder set \<Rightarrow> ('q \<Rightarrow> nat)"
@@ -84,7 +84,7 @@ definition dims :: "'a list \<Rightarrow> nat set \<Rightarrow> 'a list" where
 
 lemma tensor_neutral:     
       shows "list_of_vec
-             (partial_state2.ptensor_vec  {} {} (vec_of_list [1])
+             (ptensor_vec  {} {} (vec_of_list [1])
                (vec_of_list [1])) = [1::'a::comm_ring_1]"
 proof-
   interpret ps2:partial_state2 "[]" "{}" "{}" apply standard by auto
@@ -256,33 +256,43 @@ setup_lifting type_definition_QState
 definition tensor_mat_ord::"'a QState \<Rightarrow> nat set \<Rightarrow> 'a::comm_ring_1 mat \<Rightarrow> 'a QState set"
   where "tensor_mat_ord Q q M \<equiv> {}"
 
-lemma QState_rel1:"length(snd(uQState x)) = 2 ^ card (fst(uQState x))"  
-proof -
-  have "\<exists>B v. uQState x = (B, v) \<and> length v = (2 ^ card B) \<and> 
-              (B = {}) \<longrightarrow> (v ! 0 = 1)"
-    using uQState by fastforce
-  then show ?thesis using uQState  by (auto simp add:  split_beta)    
-qed
+lemma QState_rel1:"length(snd(uQState x)) = 2 ^ card (fst(uQState x))"
+  by (transfer, auto)
 
 lemma QState_rel2:"fst (uQState (x::('a::comm_ring_1) QState )) = {} \<longrightarrow> 
                   (((snd (uQState x)) ! 0) = 1)"
-proof -
-  have "\<exists>B v. uQState x = (B, v) \<and> length v = (2 ^ card B) \<and> 
-              (B = {}) \<longrightarrow> (v ! 0 = 1)"
-    using uQState by fastforce
-  then show ?thesis using uQState  by (auto simp add:  split_beta)       
-qed
+  by (transfer, auto)
 
 lemma QState_rel3:"finite (fst (uQState (x::('a::comm_ring_1) QState )))"
   apply transfer by auto
- 
+
+
 lift_definition QState_vars :: "('a::comm_ring_1) QState \<Rightarrow> nat set" is fst .
 lift_definition QState_list :: "('a::comm_ring_1) QState \<Rightarrow> 'a::comm_ring_1 list" is snd .
 lift_definition QState_vector::"('a::comm_ring_1) QState \<Rightarrow> 'a::comm_ring_1 vec" is "\<lambda>s. vec_of_list (snd s)" .
+
+abbreviation QState_wf::"nat set \<times> 'a::comm_ring_1 list \<Rightarrow> bool"
+  where "QState_wf s \<equiv> 
+      length (snd s) = (2^(card (fst s))) \<and> finite (fst s) \<and>
+              ((fst s) = {} \<longrightarrow> ((snd s!0) = (1::'a)))"
+
 lift_definition QState :: "nat set \<times> 'a::comm_ring_1 list \<Rightarrow> 'a QState" is  
-  "\<lambda>s. (if fst s = {} \<and> snd s = [1] then (fst s, snd s)
-       else (if finite (fst s) \<and> fst s \<noteq> {} \<and> length (snd s) = 2 ^ (card (fst s)) then (fst s, snd s)
-       else ({}, [1])))"  by auto
+  "\<lambda>s. if QState_wf s then (fst s, snd s)
+       else ({}, [1])"  by auto
+
+abbreviation QState_unfold ::"'a::comm_ring_1 QState \<Rightarrow> nat set \<times> 'a::comm_ring_1 list"
+  where "QState_unfold x \<equiv> (QState_vars x, QState_list x)"
+
+lemma QState_wf:"QState_wf (QState_unfold x)"
+   by (transfer, auto)
+
+lemma QState_var_idem:"QState_wf (vs, v) \<Longrightarrow> 
+       QState_vars (QState (vs, v)) = vs"
+  by (transfer, auto)
+
+lemma QState_list_idem:"QState_wf (vs, v) \<Longrightarrow> 
+       QState_list (QState (vs, v)) = v"
+  by (transfer, auto)
 
 lift_definition Conc :: " 'a QState \<Rightarrow> nat set \<times> 'a::comm_ring_1 vec" is
   "\<lambda>s. (QState_vars s, QState_vector s)" .
@@ -294,21 +304,18 @@ definition empty_qstate::"'a::comm_ring_1 QState"  ("|>")
   where "empty_qstate  \<equiv> QState({}, [1])"
 
 
-
 lemma uqstate_fst:"fst (uQState a) = QState_vars a" apply transfer' by auto
 lemma uqstate_snd:"snd (uQState a) = QState_list a" apply transfer' by auto
 
 lemma QState_rel3':"finite (QState_vars (x::('a::comm_ring_1) QState ))"
-  apply transfer by auto
+  by (transfer, auto)
 
 lemma QState_rel1':"length(QState_list x) = 2 ^ card (QState_vars x)"
-  using uqstate_fst uqstate_snd  QState_rel1
-  by metis 
+  by (transfer, auto)
 
 lemma QState_rel2':"QState_vars x = {} \<Longrightarrow> 
                   (((QState_list x) ! 0) = 1)"
-using uqstate_fst uqstate_snd  QState_rel2
-  by metis 
+  by (transfer, auto)
 
 lemma QState_empty0:"QState_vars x = {} \<Longrightarrow> 
                      QState_list x = [1]"
@@ -358,10 +365,10 @@ lemma fst_uQState_empty_snd_1:"a \<noteq> QState ({}, [1]) \<Longrightarrow>
 
 lemma fst_uQState_not_empty_wf_uQState:"fst (uQState a) \<noteq> {} \<Longrightarrow> 
       length (snd (uQState a)) =  2^(card (fst (uQState a)))"
-  apply transfer by auto
+  by (transfer, auto)
 
 lemma QState_refl:"QState (QState_vars a, QState_list a) = a"
-  apply transfer apply auto using List.list_eq_iff_nth_eq by fastforce
+  by (transfer, auto)
 
 lemma "QState_vars (QState (QState_vars a, QState_list a)) = QState_vars a"
   by (simp add:  QState_refl)
@@ -378,10 +385,10 @@ definition plus_QState_vector::"('a::comm_ring_1) QState \<Rightarrow> 'a QState
           (d1 \<union> d2, list_of_vec(partial_state2.ptensor_vec d1 d2 l1 l2))"
 
 definition vector_element_12::"('a::comm_ring_1) QState \<Rightarrow> nat set \<Rightarrow> nat \<times> nat \<Rightarrow> 'a"
-  where "vector_element_12 q v p \<equiv> 
-         let d = QState_vars q; 
-         d2 = d - v; 
-         l1 = QState_vector q in l1$(partial_state2.pencode12 v d2 p)"
+  where "vector_element_12 v d1 p \<equiv> 
+         let d = QState_vars v; 
+         d2 = d - d1; 
+         l1 = QState_vector v in l1$(partial_state2.pencode12 d1 d2 p)"
 
 lemma plus_QState_vector_vars:
  "fst (plus_QState_vector q1 q2) = (QState_vars q1) \<union> (QState_vars q2)"
@@ -542,8 +549,9 @@ lemma QState_list_Plus:"(QState_vars q1 \<inter> QState_vars q2 \<noteq> {} \<lo
     apply auto
   apply transfer 
   apply auto 
-  using plus_QState_vector_set_wf plus_QState_vector_wf plus_QState_vector_empty_vars_one_wf
-  by  blast+
+  using plus_QState_vector_set_wf     
+  by (auto simp add: plus_QState_vector_wf 
+           plus_QState_vector_empty_vars_one_wf)
 
 lemma neutral_vector_wf:"length [1] = (2^(card {}))" by auto
 
@@ -726,5 +734,223 @@ instance
   apply (auto simp add: sep_disj_QState plus_QState intro:plus_dis_dist2)[1]
   done
 end 
+
+type_synonym q_vars = "(nat \<Rightarrow>nat set)"
+type_synonym  'a qstate = "q_vars \<times> 'a QState"
+
+definition Q_domain::"q_vars \<Rightarrow> nat set" 
+  where "Q_domain q_vars \<equiv> \<Union> (range q_vars)"
+
+definition ket_dim ::"q_vars \<Rightarrow> nat"
+  where "ket_dim q_vars \<equiv>  card (Q_domain q_vars)"
+
+\<comment>\<open>\<close>
+abbreviation QStateM_wf::"q_vars \<times> ('a::comm_ring_1 QState) \<Rightarrow> bool"
+  where "QStateM_wf s \<equiv> 
+        Q_domain (fst s) = QState_vars (snd s) \<and>
+        (\<forall>x y. x\<noteq>y \<and> x\<in> domain (fst s) \<and> y \<in> domain (fst s) \<longrightarrow> (fst s) x \<inter> (fst s) y = {})"
+
+typedef (overloaded) ('a::comm_ring_1)
+  QStateM = "{(m,q)| (m::q_vars) (q:: 'a QState). QStateM_wf (m,q)}"
+  morphisms uQStateM Abs_QStateM              
+  unfolding Q_domain_def  apply auto apply transfer
+  apply (rule exI[where x ="\<lambda>x. {}"], auto)
+  by (metis length_Cons list.size(3) nth_Cons_0)
+
+setup_lifting type_definition_QStateM
+
+lift_definition QStateM_map :: "('a::comm_ring_1) QStateM \<Rightarrow> q_vars" is fst .
+
+definition qstate :: "('a::comm_ring_1) QStateM \<Rightarrow> 'a::comm_ring_1 QState" 
+  where "qstate s \<equiv> snd (uQStateM s)"
+
+lift_definition QStateM_vars::"('a::comm_ring_1) QStateM \<Rightarrow> nat set" is "(\<lambda>s. QState_vars (snd s))" .
+lift_definition QStateM_list::"('a::comm_ring_1) QStateM \<Rightarrow> 'a list" is "(\<lambda>s. QState_list (snd s))" .
+lift_definition QStateM_vector::"('a::comm_ring_1) QStateM \<Rightarrow> 'a vec" is "(\<lambda>s. QState_vector (snd s))" .
+
+lift_definition QStateM ::"q_vars \<times> ('a::comm_ring_1 QState) \<Rightarrow> 'a QStateM" is
+"\<lambda>s. if QStateM_wf s then (fst s, snd s) else (\<lambda>s. {}, QState ({},[1]))"
+  unfolding Q_domain_def by (auto simp add:  QState_vars_empty)
+
+abbreviation QStateM_unfold::"('a::comm_ring_1) QStateM \<Rightarrow> (q_vars \<times> 'a::comm_ring_1 QState)"
+  where "QStateM_unfold q \<equiv> (QStateM_map q, qstate q)"
+
+lemma eq_QStateM_vars:"QState_vars (snd (QStateM_unfold q)) = QStateM_vars q"
+  unfolding qstate_def
+  by (transfer, auto)
+
+lemma QStateM_wf:"QStateM_wf (QStateM_unfold x)"
+  unfolding qstate_def  apply transfer by fastforce
+
+lemma QStateM_wf_map:"QStateM_wf (vs, v) \<Longrightarrow> QStateM_map (QStateM (vs, v)) = vs"
+  by (transfer, auto)
+
+lemma QStateM_wf_qstate:"QStateM_wf (vs, v) \<Longrightarrow> qstate (QStateM (vs, v)) = v"
+  unfolding qstate_def by (transfer, auto)
+
+lemma QStateM_wf_vars:"QStateM_wf (vs, v) \<Longrightarrow> QStateM_vars (QStateM (vs, v)) = QState_vars v"
+  apply transfer'
+  by simp
+
+lemma QStateM_wf_list:"QStateM_wf (vs, v) \<Longrightarrow> QStateM_list (QStateM (vs, v)) = QState_list v"
+  apply transfer'
+  by simp
+
+
+lemma QStateM_rel1:"Q_domain (QStateM_map x) = QState_vars (qstate x)" 
+  unfolding qstate_def  apply transfer by fastforce
+
+lemma QStateM_rel2:
+   "x\<in> domain (QStateM_map s) \<and> y \<in> domain (QStateM_map s) \<and> x\<noteq>y \<longrightarrow> 
+    (QStateM_map s) x \<inter> (QStateM_map s) y = {}" 
+  apply transfer 
+  by (fastforce simp add: Q_domain_def)
+
+lemma Qstate_map_0_0:"QStateM_map (QStateM (0, 0)) = 0"
+  apply transfer' apply (auto, simp add: Q_domain_def)
+  apply (simp add: zero_fun_def)
+  by (auto simp add: QState_vars_empty zero_QState zero_fun_def)
+
+
+lemma idem_QState:"QStateM (QStateM_map x, qstate x) = x"  
+  unfolding qstate_def apply transfer by fastforce
+
+lemma Qstate_mapf:
+  assumes a0:"Q_domain (f (QStateM_map q)) =  QState_vars (g (qstate q))" and 
+          a1:"(\<forall>x y. x\<noteq>y \<and> x\<in> domain (f (QStateM_map q)) \<and> 
+                      y \<in> domain (f (QStateM_map q)) \<longrightarrow> 
+                     (f (QStateM_map q)) x \<inter> (f (QStateM_map q)) y = {})"
+        shows "QStateM_map (QStateM (f (QStateM_map q), g (qstate q))) = 
+               f (QStateM_map q)"  
+  using a0 a1 apply transfer' by auto 
+   
+
+lemma Qstate_vector:
+  assumes a0:"Q_domain (f (QStateM_map q)) =  QState_vars (g (qstate q))" and 
+          a1:"\<forall>x y. x\<noteq>y \<and> x\<in> domain (f (QStateM_map q)) \<and> 
+                      y \<in> domain (f (QStateM_map q)) \<longrightarrow> 
+                     (f (QStateM_map q)) x \<inter> (f (QStateM_map q)) y = {}"
+        shows "qstate (QStateM (f (QStateM_map q), g (qstate q))) = 
+               g (qstate q)"  
+  using a0 a1 unfolding qstate_def apply transfer' by auto
+  
+lemma Q_domain_unfold_rel1:
+  "Q_domain (fst (QStateM_unfold q)) = QState_vars(snd (QStateM_unfold q))"
+  by (simp add: QStateM_rel1)
+
+lemma Q_domain_unfold_rel2:
+  "\<forall>x y. x\<noteq>y \<and> x\<in> domain (fst (QStateM_unfold q)) \<and> 
+                y \<in> domain (fst (QStateM_unfold q)) \<longrightarrow> 
+        (fst (QStateM_unfold q)) x \<inter> (fst (QStateM_unfold q)) y = {}" 
+  by (simp add: QStateM_rel2)
+
+lemma a1:"\<Union> (range (0::nat \<Rightarrow> nat set)) = none"
+  unfolding zero_set_def zero_fun_def by auto
+
+lemma a2:"QState_vars 0 = 0"
+  by (simp add: QState_vars_empty zero_QState zero_set_def)
+
+lemma disjoint_x_y_wf1_x_plus_y:
+       assumes a0:"QStateM_map x ## QStateM_map y "  and 
+              a1:"qstate x ## qstate y"
+      shows "Q_domain (QStateM_map x + QStateM_map y) = 
+                   QState_vars (qstate x + qstate y)"
+proof-
+  have wr_x:"QStateM_wf (QStateM_map x, qstate x)" and
+       wr_y:"QStateM_wf (QStateM_map y, qstate y)"
+    using QStateM_wf by blast+
+  { fix xa 
+    assume a00:"xa \<in> Q_domain (QStateM_map x + QStateM_map y)"        
+    then have "xa \<in> QState_vars (qstate x + qstate y)"
+      using a0 a1 wr_x wr_y unfolding Q_domain_def  plus_fun_def apply auto
+      by (metis QState_vars_Plus UNIV_I UN_iff Un_iff disj_QState_def plus_QState plus_QState_vector_vars sep_disj_QState)+            
+  }
+  moreover 
+  { fix xa 
+    assume a00: "xa \<in> QState_vars (qstate x + qstate y)"         
+    then have "xa \<in> QState_vars (qstate x) \<or> xa \<in> QState_vars (qstate y)"
+      by (metis QState_vars_Plus Un_iff empty_iff plus_QState plus_QState_vector_vars)
+    moreover have "QState_vars (qstate x) \<inter> QState_vars (qstate y) = {}" using a1
+      by (simp add: disj_QState_def sep_disj_QState)      
+    ultimately have "xa \<in> Q_domain (QStateM_map x + QStateM_map y)"
+      using a0 a1 wr_x wr_y unfolding Q_domain_def  domain_def sep_disj_fun_def plus_fun_def 
+      apply (auto simp add:)
+      by (metis (mono_tags) IntI UN_iff empty_iff mem_Collect_eq)+
+  } ultimately show ?thesis by auto
+qed
+
+lemma disjoint_x_y_wf2_x_plus_y:
+      assumes a0:"QStateM_map q1 ## QStateM_map q2"  and 
+              a1:"qstate q1 ## qstate q2" and 
+              a2:"x\<noteq>y \<and> x\<in> domain (QStateM_map q1 + QStateM_map q2)" 
+            shows "((QStateM_map q1 + QStateM_map q2) x) \<inter> ((QStateM_map q1 + QStateM_map q2) y) = {}"  
+proof-
+  have wr_x:"QStateM_wf (QStateM_map q1, qstate q1)" and
+       wr_y:"QStateM_wf (QStateM_map q2, qstate q2)"
+    using QStateM_wf by blast+
+  thus ?thesis using a0 a1 a2   
+    unfolding Q_domain_def  domain_def sep_disj_fun_def plus_fun_def 
+      apply (auto simp add:)
+      apply blast
+    by (metis IntI Sup_upper disj_QState_def empty_iff range_eqI sep_disj_QState subsetD)+
+
+qed
+  
+
+lemma plus_wf: assumes a0:"QStateM_map x ## QStateM_map y "  and 
+              a1:"qstate x ## qstate y"
+            shows "QStateM_wf (QStateM_map x + QStateM_map y, qstate x + qstate y)"  
+  using disjoint_x_y_wf1_x_plus_y[OF a0 a1] 
+     disjoint_x_y_wf2_x_plus_y[OF a0 a1 ] by force
+
+
+(* lemma assumes a0:"QStateM_map x ## QStateM_map y" 
+  shows "QStateM_map
+               (QStateM
+                 (QStateM_map x + QStateM_map y, qstate x + qstate y)) =
+      QStateM_map x + QStateM_map y"
+   apply transfer'    
+  unfolding plus_fun_def plus_QState plus_QState_def 
+   sep_disj_fun_def opt_class.domain_def Q_domain_def qstate_def Let_def  
+  apply transfer' apply auto 
+  sorry *)
+
+instantiation QStateM :: (comm_ring_1) sep_algebra
+begin
+definition zero_QStateM: "0 \<equiv> QStateM (0, 0)"
+definition plus_QStateM: "s1 + s2 \<equiv> QStateM (QStateM_map s1 + QStateM_map s2, qstate s1 + qstate s2)" 
+definition sep_disj_QStateM: "s1 ## s2 \<equiv> (QStateM_map s1 ## QStateM_map s2) \<and> qstate s1 ## qstate s2"
+
+lemma h:"QStateM_map x + QStateM_map 0 = QStateM_map x"
+  unfolding zero_QStateM using Qstate_map_0_0
+  by (simp add: Qstate_map_0_0) 
+
+lemma qstate_idem:"qstate x + qstate 0 = qstate x"    
+proof -
+  have "uQStateM (0::'a QStateM) = (0, 0) \<or> 
+       snd (uQStateM (0::'a QStateM)) = 0"
+    by (simp add: QStateM.rep_eq zero_QState zero_QStateM)
+  then show ?thesis unfolding qstate_def
+    by fastforce
+qed
+
+instance 
+  apply standard
+        apply (metis (mono_tags, hide_lams) Q_State.sep_disj_QStateM Q_State.zero_QStateM Qstate_map_0_0 disj_QState_def 
+               plus_QState plus_QState_def qstate_idem sep_add_zero_sym sep_disj_QState sep_disj_zero zero_QState)
+       apply (simp add: sep_disj_QStateM sep_disj_commute)
+      apply (metis Q_State.plus_QStateM Q_State.qstate_idem Qstate_map_0_0 idem_QState sep_add_zero zero_QStateM)
+     apply (metis Q_State.plus_QStateM sep_add_commute sep_disj_QStateM)
+  subgoal for x y z
+    apply  (auto simp add: sep_disj_QStateM plus_QStateM)
+    using plus_wf[of x y] plus_wf[of y z]
+    by (simp add: Qstate_mapf Qstate_vector sep_add_assoc)
+   apply (smt Q_State.sep_disj_QStateM Qstate_mapf Qstate_vector disjoint_x_y_wf1_x_plus_y 
+             fst_conv plus_QStateM plus_wf sep_disj_addD)
+  by (smt Q_State.sep_disj_QStateM Qstate_mapf Qstate_vector 
+          disjoint_x_y_wf1_x_plus_y fst_conv plus_QStateM plus_wf 
+           sep_disj_add sep_disj_addD)  
+end
+
 
 end
