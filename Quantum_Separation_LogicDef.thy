@@ -781,18 +781,27 @@ proof-
      then obtain sn where a01:"s = Normal sn" and         
          a01a:"sn \<in>  ((q\<cdot>i \<mapsto>\<^sub>v v) \<and>\<^sup>* R)"        
        by auto 
+     then obtain \<rho>1 \<rho>2 Q1 Q2 where 
+       "(\<rho>1, get_stack sn, Q1) \<in> (q\<cdot>i \<mapsto>\<^sub>v v)" and
+       "(\<rho>2, get_stack sn, Q2) \<in> R" and "get_prob sn = \<rho>1 * \<rho>2 " and 
+       "get_QStateM sn =  Q1 + Q2"
+       using Q_sep_dis_set_dest unfolding get_prob_def get_QStateM_def get_stack_def
+       using prod.exhaust_sel by metis       
      have "\<exists> \<Q>' \<Q>'' \<sigma> \<delta> . sn = (\<delta>, \<sigma>, \<Q>' + \<Q>'') \<and>
           s' = Normal (\<delta>, \<sigma>, QStateM (QStateM_map \<Q>', vec_norm (QStateM_vector \<Q>'') \<cdot>\<^sub>q qstate \<Q>')) \<and>
-          \<Q>' ## \<Q>'' \<and> QStateM_map \<Q>'' (to_nat (get_value \<sigma> q)) \<noteq> {} \<and>
-          Q_domain (QStateM_map \<Q>'') = QStateM_map \<Q>'' (to_nat (get_value \<sigma> q))"      
+          \<Q>' ## \<Q>'' \<and>  Q_domain_var (var_set q i \<sigma>) (QStateM_map \<Q>'') \<noteq> {} \<and>
+          Q_domain (QStateM_map \<Q>'') = Q_domain_var (var_set q i \<sigma>) (QStateM_map \<Q>'')"      
        apply (rule  QExec_Normal_elim_cases(10)[OF a00[simplified a01]])
-       using a02 by fast+
+       using a02 by fast+    
      then obtain \<Q>' \<Q>'' \<sigma> \<delta>  where
       f1:"sn = (\<delta>, \<sigma>, \<Q>' + \<Q>'')" and
       f2:"s' = Normal (\<delta>, \<sigma>, QStateM (QStateM_map \<Q>', vec_norm (QStateM_vector \<Q>'') \<cdot>\<^sub>q qstate \<Q>'))" and
-      f3:"\<Q>' ## \<Q>''" and f4:"QStateM_map \<Q>'' (to_nat (get_value \<sigma> q)) \<noteq> {}" and
-      f5:"Q_domain (QStateM_map \<Q>'') = QStateM_map \<Q>'' (to_nat (get_value \<sigma> q))"       
+      f3:"\<Q>' ## \<Q>''" and f4:"Q_domain_var (var_set q i \<sigma>) (QStateM_map \<Q>'') \<noteq> {}" and
+      f5:"Q_domain (QStateM_map \<Q>'') = Q_domain_var (var_set q i \<sigma>) (QStateM_map \<Q>'')"       
        by fast
+     have "(\<rho>1, get_stack sn, QStateM ({}\<^sub>q, (n \<sigma>) \<cdot>\<^sub>q |>)) \<in> ( |>a\<^sub>n)" sorry
+     moreover have "(\<rho>1, get_stack sn, \<Q>') \<in> R" sorry
+     moreover have " "
      have "QStateM_map \<Q>' = (\<lambda>s. if s \<in> QState_vars (qstate (snd (snd sn)))
            then fst (QStateM_unfold (snd (snd sn))) s else {})" 
        sorry
@@ -804,8 +813,9 @@ proof-
        unfolding QStateM_expr_def QState_expr_def 
           empty_state_norm_expr_def Let_def QState_plus_expr_def get_qstate_def
           get_stack_def by auto
-     then have "(\<delta>, \<sigma>, QStateM (QStateM_map \<Q>', vec_norm (QStateM_vector \<Q>'') \<cdot>\<^sub>q qstate \<Q>')) \<in> (( |>a\<^sub>n) \<and>\<^sup>* R)"
-       using  a01d f1
+     have ""
+     have "(\<delta>, \<sigma>, QStateM (QStateM_map \<Q>', vec_norm (QStateM_vector \<Q>'') \<cdot>\<^sub>q qstate \<Q>')) \<in> (( |>a\<^sub>n) \<and>\<^sup>* R)"
+       using   f1
        unfolding set_qstate_def get_prob_def get_stack_def by auto
      then have "s' \<in> Normal ` (( |>a\<^sub>n) \<and>\<^sup>* R)" using f2 by auto
    }
