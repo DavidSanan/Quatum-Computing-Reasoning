@@ -19,6 +19,9 @@ definition
   unit_vecl :: "nat \<Rightarrow> nat \<Rightarrow> complex list"
   where "unit_vecl n i = list_of_vec (unit_vec n i)"
 
+definition Q_domain_var::"nat set \<Rightarrow> q_vars \<Rightarrow> nat set "
+  where "Q_domain_var q qvars \<equiv> \<Union> (qvars ` q)"
+
 definition matrix_sep :: "nat set \<Rightarrow> complex QStateM \<Rightarrow> complex mat \<Rightarrow> complex QStateM" 
   where "matrix_sep heap_ind q M \<equiv>
            let sep_vars = \<Union> ((QStateM_map q) ` heap_ind)  in
@@ -76,9 +79,8 @@ proof-
     unfolding matrix_sep_def Let_def apply auto
     unfolding ps2.d0_def ps2.dims0_def ps2.vars0_def apply transfer   
     unfolding Q_domain_def apply auto
-      apply (metis UN_Un Un_UNIV_right)    
-     apply (transfer, simp add: QState_rel3')
-    using eq_domain_vars_map domain_map_not_e by fastforce
+     apply (metis UN_Un Un_UNIV_right)       
+    by (transfer, simp add: QState_rel3')    
   then have f1:"QState_vars (QState (QStateM_vars q, list_of_vec (?m *\<^sub>v ?v))) = 
              QStateM_vars q"
     using QState_var_idem
@@ -219,6 +221,16 @@ proof-
     by (simp add: sep_disj_QStateM)
 qed
 
+(* lemma assumes f1:"sn = (\<delta>, \<sigma>, \<Q>' + \<Q>'')" and
+      f3:"\<Q>' ## \<Q>''" and f4:"QStateM_map \<Q>'' (to_nat (get_value \<sigma> q)) \<noteq> {}" and
+      f5:"Q_domain (QStateM_map \<Q>'') = QStateM_map \<Q>'' (to_nat (get_value \<sigma> q))"
+    shows "QState_wf (QState_vars (vec_norm (QStateM_vector \<Q>'') \<cdot>\<^sub>q qstate \<Q>'),
+                      QState_list (vec_norm (QStateM_vector \<Q>'') \<cdot>\<^sub>q qstate \<Q>')) \<and>
+           QStateM_wf (QStateM_map \<Q>',vec_norm (QStateM_vector \<Q>'') \<cdot>\<^sub>q qstate \<Q>') \<and> 
+           QStateM_map \<Q>' = (\<lambda>i. if i \<in> fst (qstate \<Q>') then )"
+proof-
+qed *)
+
 context vars
 begin
 
@@ -296,9 +308,9 @@ inductive QExec::"('v, 's) com \<Rightarrow> 's XQState \<Rightarrow> 's XQState
              \<turnstile> \<langle>Dispose q, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Normal (\<delta>,\<sigma>,QStateM(m', n \<cdot>\<^sub>q Q'))" *)
 
  | Dispose: "  \<Q> = \<Q>' + \<Q>'' \<Longrightarrow> \<Q>' ## \<Q>'' \<Longrightarrow> n = vec_norm (QStateM_vector \<Q>'') \<Longrightarrow>
-              ((QStateM_map \<Q>'') (to_nat (get_value \<sigma> q))) \<noteq> {} \<Longrightarrow> 
-              Q_domain (QStateM_map \<Q>'') =((QStateM_map \<Q>'') (to_nat (get_value \<sigma> q))) \<Longrightarrow>                                      
-             \<turnstile> \<langle>Dispose q, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Normal (\<delta>,\<sigma>,QStateM(m', n \<cdot>\<^sub>q Q'))"
+              Q_domain (QStateM_map \<Q>'') \<noteq> {} \<Longrightarrow> 
+              Q_domain (QStateM_map \<Q>'') = (Q_domain_var (var_set q v \<sigma>) (QStateM_map \<Q>'')) \<Longrightarrow>                                      
+             \<turnstile> \<langle>Dispose q v, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Normal (\<delta>,\<sigma>,QStateM(QStateM_map \<Q>', n \<cdot>\<^sub>q (qstate \<Q>')))"
 
 \<comment>\<open>Dispose dispose will fail if it is not possible to find such states \<qq>',  \<qq>''\<close>
 
@@ -307,10 +319,9 @@ inductive QExec::"('v, 's) com \<Rightarrow> 's XQState \<Rightarrow> 's XQState
                \<Q> = \<Q>' + \<Q>'' \<and> \<Q>' ## \<Q>'' \<Longrightarrow>
                \<turnstile> \<langle>Dispose q, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Fault" *)
 
- | Dispose_F: "\<nexists>\<Q>' \<Q>''.((QStateM_map \<Q>'') (to_nat (get_value \<sigma> q))) \<noteq> {} \<and> 
-                Q_domain (QStateM_map \<Q>'') = ((QStateM_map \<Q>'') (to_nat (get_value \<sigma> q))) \<and> 
-               \<Q> = \<Q>' + \<Q>'' \<and> \<Q>' ## \<Q>'' \<Longrightarrow>
-               \<turnstile> \<langle>Dispose q, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Fault"
+ | Dispose_F: "\<nexists>\<Q>' \<Q>''. Q_domain (QStateM_map \<Q>'') \<noteq> {} \<and>  \<Q> = \<Q>' + \<Q>'' \<and> \<Q>' ## \<Q>'' \<and>
+                Q_domain (QStateM_map \<Q>'') = ((QStateM_map \<Q>'') (to_nat (get_value \<sigma> q))) \<Longrightarrow>
+               \<turnstile> \<langle>Dispose q v, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Fault"
 
 \<comment>\<open>Measure measures the value of the set of qubits given by q \<sigma> and it stores the result in 
   the stack variable v. Similar to allocate, we will require that the construct is well formed
@@ -349,7 +360,7 @@ inductive_cases QExec_elim_cases [cases set]:
   "\<turnstile>\<langle>IF b c1 c2,s\<rangle> \<Rightarrow>  t"
   "\<turnstile>\<langle>Measure v q,s\<rangle> \<Rightarrow>  t"
   "\<turnstile>\<langle>Alloc v q e,s\<rangle> \<Rightarrow>  t"
-  "\<turnstile>\<langle>Dispose q,s\<rangle> \<Rightarrow>  t"
+  "\<turnstile>\<langle>Dispose q v,s\<rangle> \<Rightarrow>  t"
 
 inductive_cases QExec_Normal_elim_cases [cases set]:
  "\<turnstile>\<langle>c,Fault\<rangle> \<Rightarrow>  t"  
@@ -361,7 +372,7 @@ inductive_cases QExec_Normal_elim_cases [cases set]:
   "\<turnstile>\<langle>IF b c1 c2,Normal s\<rangle> \<Rightarrow>  t"
   "\<turnstile>\<langle>Measure v q,Normal s\<rangle> \<Rightarrow>  t"
   "\<turnstile>\<langle>Alloc v q e,Normal s\<rangle> \<Rightarrow>  t"
-  "\<turnstile>\<langle>Dispose q,Normal s\<rangle> \<Rightarrow>  t"
+  "\<turnstile>\<langle>Dispose q v,Normal s\<rangle> \<Rightarrow>  t"
 
 primrec modify_locals :: "('v, 's) com  \<Rightarrow> 'v set" where 
   "modify_locals  Skip = {}"
@@ -372,7 +383,7 @@ primrec modify_locals :: "('v, 's) com  \<Rightarrow> 'v set" where
 | "modify_locals (Seq c1 c2) = modify_locals c1 \<union> modify_locals c2"
 | "modify_locals (Measure v e) = {v}"
 | "modify_locals (Alloc v e val) = {v}"
-| "modify_locals (Dispose e) = {}"
+| "modify_locals (Dispose q v) = {}"
 
 thm QExec_Normal_elim_cases
 

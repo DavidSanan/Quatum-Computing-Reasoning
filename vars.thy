@@ -22,40 +22,62 @@ class nat_abs=
   assumes abs_nat:"a \<in> subset_nat \<Longrightarrow> from_nat (to_nat a) = a "
   assumes rep_nat:"to_nat (from_nat b) = b"
 
+class nat_list_abs= nat_abs +
+  fixes from_nat_list ::"nat list \<Rightarrow> 'a"
+  fixes to_nat_list ::"'a \<Rightarrow> nat list"
+  fixes subset_nat_list :: "'a set"
+
+  assumes nat_list_bij:"bij_betw to_nat_list subset_nat_list UNIV"
+  assumes abs_nat_list:"a \<in> subset_nat_list \<Longrightarrow> from_nat_list (to_nat_list a) = a "
+  assumes rep_nat_list:"to_nat_list (from_nat_list b) = b" 
+
 class real_abs= nat_abs+
   fixes from_real ::"real \<Rightarrow> 'a"
   fixes to_real ::"'a \<Rightarrow> real"
   fixes subset_real :: "'a set"
 
+  assumes real_bij:"bij_betw to_real subset_real UNIV"
   assumes "a \<in> subset_real \<Longrightarrow> from_real (to_real a) = a "
   assumes "to_real (from_real b) = b"
+
 
 locale vars =  
   fixes variables :: "'v set"
   fixes types::"'t set"
-  fixes v_domain :: "'v \<Rightarrow> ('b::nat_abs) set"
-  fixes get_value :: "'s \<Rightarrow> 'v  \<Rightarrow> 'b"
+  fixes v_domain :: "'v \<Rightarrow> ('m::nat_list_abs) set"
+  fixes get_value :: "'s \<Rightarrow> 'v  \<Rightarrow> 'm"
   (* fixes set_value ::"'s \<Rightarrow> 'v \<Rightarrow> 'b \<Rightarrow> 's"  *)
-  fixes conv::"('v \<Rightarrow> 'b) \<Rightarrow> 'v set \<Rightarrow> 's"  
-  fixes is_nat::"'v \<Rightarrow> bool"
-
-  assumes domain_nat:"v \<in> variables \<Longrightarrow> is_nat v \<Longrightarrow> v_domain v = subset_nat"
+  fixes conv::"('v \<Rightarrow> 'm) \<Rightarrow> 'v set \<Rightarrow> 's"  
+\<comment>\<open> I can add a function from 'v to a string noting the type of 'v and a set of possible 
+    values, the assumes must specify that the range is in a set of types\<close>
+  fixes var_types::"'v \<Rightarrow> nat"
+  fixes nat_vars::"'v set"
+  fixes nat_list_vars::"'v set" 
+  
+  assumes domain_nat:"v \<in> variables \<Longrightarrow> v \<in> nat_vars \<Longrightarrow> v_domain v = subset_nat"
+  assumes domain_nat_list:"v\<in>variables \<Longrightarrow> v \<in> nat_list_vars \<Longrightarrow> v_domain v = subset_nat_list"     
   assumes "finite variables" 
   assumes "v \<in> variables \<Longrightarrow> (get_value s v) \<in> v_domain v"
 (*  assumes eq_get_set:"v \<in> variables \<Longrightarrow> x \<in> (v_domain v) \<Longrightarrow> get_value (set_value s v x) v = x" *)
   assumes abs_elem: "s = conv (get_value s) variables"
   assumes get_set:"v \<in> variables \<Longrightarrow> get_value (conv ((get_value s)(v := val)) variables) v = val"
+  assumes int_domains:"nat_vars \<inter> nat_list_vars = {}"
   (* assumes get_value: "v\<in>variables \<Longrightarrow> 
                        (get_value (m (v:= x))) = x" *)
 (*  assumes set_value_eq:"set_value s v val = conv (get_value (set_value s v val)) variables" *)
+ (* for dynamic types *)
+  assumes type_vars:"v \<in> variables \<Longrightarrow> var_types v = 0 \<or> var_types v = 1"
+  assumes domain_nat1:"v \<in> variables \<Longrightarrow> var_types v = 0 \<Longrightarrow> v_domain v = subset_nat"
+  assumes domain_nat_list1:"v\<in>variables \<Longrightarrow> var_types v = 1 \<Longrightarrow> v_domain v = subset_nat_list"
 
   
 begin
 
-definition set_value:: "'s \<Rightarrow> 'v \<Rightarrow> 'b \<Rightarrow> 's"
+definition set_value:: "'s \<Rightarrow> 'v \<Rightarrow> 'm \<Rightarrow> 's"
   where "set_value s v val = conv ((get_value s)(v:=val)) variables"
 
-
+lemma v_only_one_domain:"v \<in> nat_vars \<and> v \<in> nat_list_vars \<Longrightarrow> False"
+  using int_domains by auto
 
 definition not_access_v::"('s \<Rightarrow> 'n) \<Rightarrow> 'v \<Rightarrow> bool"
 where "not_access_v f v \<equiv>     
@@ -90,11 +112,11 @@ lemma not_access_v_f_q_eq_set:
        \<sigma>' = set_value \<sigma> q v \<Longrightarrow> 
        not_access_v f q \<Longrightarrow> f \<sigma> = f \<sigma>'"
   unfolding not_access_v_def set_value_def 
-  using fun_upd_triv vars_axioms vars_def
+  using fun_upd_triv vars_axioms unfolding vars_def
   by metis
 
 lemma from_nat_in_vdomain:
-  assumes a0:"q \<in> variables" and a1:"is_nat q"
+  assumes a0:"q \<in> variables" and a1:"q \<in> nat_vars"
   shows "from_nat q' \<in> v_domain q"
 proof- 
   have "v_domain q = subset_nat" using domain_nat[OF a0 a1]
@@ -103,10 +125,36 @@ proof-
     by (metis UNIV_I bij_betw_def imageE)
 qed
 
+lemma from_nat_list_in_vdomain:
+  assumes a0:"q \<in> variables" and a1:"q \<in> nat_list_vars"
+  shows "from_nat_list q' \<in> v_domain q"
+proof- 
+  have "v_domain q = subset_nat_list" using domain_nat_list[OF a0 a1]
+    by auto
+  thus ?thesis using nat_list_bij abs_nat_list
+    by (metis UNIV_I bij_betw_def imageE)
+qed
+
+definition var_set::"'v \<Rightarrow> ('s \<Rightarrow> nat set) \<Rightarrow> 's \<Rightarrow> nat set"
+  where "var_set v f \<sigma> \<equiv> (if (v \<in> nat_vars) then {to_nat (get_value \<sigma> v )} 
+                          else set (nths (to_nat_list (get_value \<sigma> v )) (f \<sigma>)))" 
+
 end
 
+locale vars_plus = vars +
+  fixes from_real ::"real \<Rightarrow> 'c"
+  fixes to_real ::"'c \<Rightarrow> real"
+  fixes subset_real :: "'c set"
 
+  assumes "a \<in> subset_real \<Longrightarrow> from_real (to_real a) = a "
+  assumes "to_real (from_real b) = b" 
 
+  assumes type_vars:"v \<in> variables \<Longrightarrow> var_types v = 0 \<or> var_types v = 1 \<or> var_types v = 2"
+  assumes domain_real:"v\<in>variables \<Longrightarrow> var_types v = 2 \<Longrightarrow> v_domain v = subset_real "
+begin
+  definition real_set::"'a set"
+    where "real_set \<equiv> {v. var_types v = 2}"
+end
 
 end
 

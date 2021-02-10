@@ -44,16 +44,16 @@ type_synonym 's expr_a = "'s \<Rightarrow> nat"
 type_synonym ('s,'b) expr = "'s \<Rightarrow> 'b"
 
 definition get_prob ::"'s state \<Rightarrow> real"
-  where "get_prob \<sigma> = fst \<sigma>"
+  where "get_prob \<sigma> \<equiv> fst \<sigma>"
 
 definition get_QStateM ::"'s state \<Rightarrow> complex QStateM"
-  where "get_QStateM \<sigma> = snd (snd \<sigma>)"
+  where "get_QStateM \<sigma> \<equiv> snd (snd \<sigma>)"
 
 definition get_qstate ::"'s state \<Rightarrow> qstate"
-  where "get_qstate \<sigma> = QStateM_unfold (snd (snd \<sigma>))"
+  where "get_qstate \<sigma> \<equiv> QStateM_unfold (snd (snd \<sigma>))"
 
 definition get_stack::"'s state \<Rightarrow> 's"
-  where "get_stack \<sigma> = fst (snd \<sigma>)"
+  where "get_stack \<sigma> \<equiv> fst (snd \<sigma>)"
 
 definition set_prob ::"'s state \<Rightarrow> real \<Rightarrow> 's state"
   where "set_prob \<sigma> v = (v, get_stack \<sigma>, get_QStateM \<sigma>)"
@@ -76,7 +76,7 @@ datatype ('a, 's) com =
   | Seq "('a, 's) com" "('a, 's) com"  ("_;;/ _" [60, 61] 60)
   | Measure "'a"   "'s expr_q" ("_:=meassure / _" [60, 61] 60)
   | Alloc "'a"  "('s,nat) expr"  "('s,complex list) expr"  ("_:=alloc[_] (_)" [60, 61] 60)
-  | Dispose "'a" 
+  | Dispose "'a" "('s,nat set) expr"
 
 
 
