@@ -801,22 +801,13 @@ proof-
        by fast
      have "(\<rho>1, get_stack sn, QStateM ({}\<^sub>q, (n \<sigma>) \<cdot>\<^sub>q |>)) \<in> ( |>a\<^sub>n)" sorry
      moreover have "(\<rho>1, get_stack sn, \<Q>') \<in> R" sorry
-     moreover have " "
-     have "QStateM_map \<Q>' = (\<lambda>s. if s \<in> QState_vars (qstate (snd (snd sn)))
-           then fst (QStateM_unfold (snd (snd sn))) s else {})" 
+     moreover have "QStateM ({}\<^sub>q, (n \<sigma>) \<cdot>\<^sub>q |>) ## \<Q>'" sorry
+     moreover have "QStateM (QStateM_map \<Q>', vec_norm (QStateM_vector \<Q>'') \<cdot>\<^sub>q qstate \<Q>') = 
+                      QStateM ({}\<^sub>q, (n \<sigma>) \<cdot>\<^sub>q |>) + \<Q>'" sorry
+    
+     ultimately have "(\<delta>, \<sigma>, QStateM (QStateM_map \<Q>', vec_norm (QStateM_vector \<Q>'') \<cdot>\<^sub>q qstate \<Q>')) \<in> (( |>a\<^sub>n) \<and>\<^sup>* R)"
+       using Q_sep_dis_set_intro unfolding get_stack_def
        sorry
-     moreover have "vec_norm (QStateM_vector \<Q>'') \<cdot>\<^sub>q qstate \<Q>' = 
-                    qstate \<Q>' + n (fst (snd sn)) \<cdot>\<^sub>q |>"
-       sorry
-     ultimately have "QStateM (QStateM_map \<Q>', vec_norm (QStateM_vector \<Q>'') \<cdot>\<^sub>q qstate \<Q>') = 
-          ((QStateM_expr ((QState_expr q1 v2) +\<^sub>e |>\<^sub>n)) sn)"  
-       unfolding QStateM_expr_def QState_expr_def 
-          empty_state_norm_expr_def Let_def QState_plus_expr_def get_qstate_def
-          get_stack_def by auto
-     have ""
-     have "(\<delta>, \<sigma>, QStateM (QStateM_map \<Q>', vec_norm (QStateM_vector \<Q>'') \<cdot>\<^sub>q qstate \<Q>')) \<in> (( |>a\<^sub>n) \<and>\<^sup>* R)"
-       using   f1
-       unfolding set_qstate_def get_prob_def get_stack_def by auto
      then have "s' \<in> Normal ` (( |>a\<^sub>n) \<and>\<^sup>* R)" using f2 by auto
    }
    thus ?thesis  unfolding valid_def by auto
