@@ -341,6 +341,20 @@ definition map_assnv::"'v  \<Rightarrow> ('s, nat set) expr \<Rightarrow> ('s, (
                  {s. QState_vars (qs s)  = Q_domain_var (set_v (st s)) (qv s) \<and>
                      QState_list (qs s) = (q (st s))}"
 
+lemma map_assnv_dest:
+  "(\<rho>,\<sigma>,Q) \<in> q\<cdot>f \<mapsto>\<^sub>v v \<Longrightarrow> 
+      QStateM_vars Q = Q_domain_var (var_set q f \<sigma>) (QStateM_map Q) \<and> 
+      QStateM_list Q = v \<sigma>"
+  unfolding map_assnv_def Let_def get_qstate_def get_stack_def
+proof -
+  assume a1: "(\<rho>, \<sigma>, Q) \<in> {s. QState_vars (snd (QStateM_unfold (snd (snd s)))) = Q_domain_var (var_set q f (fst (snd s))) (fst (QStateM_unfold (snd (snd s)))) \<and> QState_list (snd (QStateM_unfold (snd (snd s)))) = v (fst (snd s))}"
+  have "\<forall>q. QState_vars (snd (QStateM_map (q::complex QStateM), snd (uQStateM q))) = QStateM_vars q"
+    by (metis (full_types) eq_QStateM_vars qstate_def)
+  then show ?thesis
+    using a1 by (simp add: QStateM_list.rep_eq qstate_def)
+qed
+  
+
 definition prob_assert::" (('s state) set) \<Rightarrow>  real \<Rightarrow> (('s state) set)"
 (infixr "\<smile>" 60)
   where "prob_assert q p \<equiv> {s. fst s = p \<and> snd s \<in> {(x,y). \<exists>p. (p,(x,y)) \<in> q}} "
@@ -509,9 +523,17 @@ where
                  ((QStateM_expr ((QState_expr q1 v2) +\<^sub>e |>\<^sub>n)) s) \<in> Q} \<Longrightarrow> 
               \<turnstile> P (Dispose q) Q"  *)
 
- | QDispose: "q \<in> variables \<Longrightarrow> q \<in> nat_vars \<or> q \<in> nat_list_vars  \<Longrightarrow>            
+(* | QDispose: "q \<in> variables \<Longrightarrow> q \<in> nat_vars \<or> q \<in> nat_list_vars  \<Longrightarrow>                       
                n = (\<lambda>s. vec_norm (vec_of_list (v s))) \<Longrightarrow>                  
-              \<turnstile> ((q\<cdot>i \<mapsto>\<^sub>v v) \<and>\<^sup>* R) (Dispose q i) (( |>a\<^sub>n) \<and>\<^sup>* R)"  
+              \<turnstile> ((q\<cdot>i \<mapsto>\<^sub>v v) \<and>\<^sup>* R) (Dispose q i) (( |>a\<^sub>n) \<and>\<^sup>* R)"  *)
+
+| QDispose: "q \<in> variables \<Longrightarrow> q \<in> nat_vars \<or> q \<in> nat_list_vars  \<Longrightarrow>                       
+               n = (\<lambda>s. vec_norm (vec_of_list (v s))) \<Longrightarrow>                  
+              \<turnstile> (q\<cdot>i \<mapsto>\<^sub>v v) (Dispose q i) ( |>a\<^sub>n) "
+
+(* | QDispose: "q \<in> variables \<Longrightarrow> q \<in> nat_vars \<or> q \<in> nat_list_vars  \<Longrightarrow> n = (\<lambda>v s. vec_norm (vec_of_list (v s))) \<Longrightarrow>                     
+               \<forall>v s. (s \<in> P \<longrightarrow> (s \<in> (q\<cdot>i \<mapsto>\<^sub>v v)) \<and> (\<forall>t. (t\<in>( |>a\<^sub>(n v)) \<longrightarrow> t \<in> Q))) \<Longrightarrow>                  
+              \<turnstile> (P \<and>\<^sup>* R) (Dispose q i) (Q \<and>\<^sup>* R)" *)
 
 (* | QMeasure1: " \<turnstile> {s.  \<exists>k. pr = get_prob s \<and> qv = fst (get_qstate s) \<and> qs = snd (get_qstate s) \<and> st = get_stack s \<and> 
                  q (st, qv) \<subseteq> (QState_vars qs) \<and> 
@@ -571,6 +593,7 @@ lemma prob_assert_dest:"s \<in> P \<smile> 1 \<Longrightarrow> get_prob s = 1 \<
   apply (simp add:  get_set rep_nat set_value_def)
   by (simp add:  get_set rep_nat) *)
 
+
 lemma map_assnv_prob:
    "QState_wf (q'_addr, v \<sigma>) \<Longrightarrow> QStateM_wf ((\<lambda>i. {})(q' := q'_addr), QState (q'_addr, v \<sigma>)) \<Longrightarrow> 
        QStateM_map (QStateM ((\<lambda>i. {})(q' := q'_addr), QState (q'_addr, v \<sigma>))) = (\<lambda>i. {})(q' := q'_addr) \<Longrightarrow>
@@ -582,13 +605,15 @@ lemma map_assnv_prob:
            \<in> (q\<cdot>f \<mapsto>\<^sub>v v) \<smile> 1"
   unfolding prob_assert_def map_assnv_def Let_def get_qstate_def get_stack_def 
             Q_domain_var_def set_value_def var_set_def
-  apply auto
-  apply (simp add: get_set rep_nat)
-     apply (metis QStateM_rel1 QState_var_idem  fst_conv snd_conv)
-  using QStateM_rel1 QState_var_idem  apply fastforce 
-    apply (metis QStateM_rel2 QStateM_wf_qstate QState_list_idem  fst_conv snd_conv )      
-  apply (simp add:  get_set rep_nat set_value_def)
-  by (simp add:  get_set rep_nat )
+  apply auto           
+  using QStateM_rel1[of "QStateM ((\<lambda>i. {})(q' := q'_addr), QState (q'_addr, v \<sigma>))"] QState_var_idem[of q'_addr "v \<sigma>"]  
+           apply (metis One_nat_def QState.rep_eq QState_vars.rep_eq card_0_eq fst_conv nat_power_eq_Suc_0_iff numeral_One numeral_eq_iff semiring_norm(85) snd_conv)
+ using QStateM_rel1 QState_var_idem
+         apply (metis One_nat_def card_0_eq equals0D fst_conv nat_power_eq_Suc_0_iff numeral_One numeral_eq_iff semiring_norm(83) snd_conv)
+        apply (auto simp add: QStateM_wf_qstate QState_list_idem less_not_refl2 get_set rep_nat set_value_def)             
+  apply (metis  QState_var_idem  fst_conv snd_conv)
+  using QStateM_rel1 QState_var_idem  
+  by fastforce 
 
 
 lemma alloc_sound:
@@ -636,9 +661,11 @@ proof-
      have sn_mod_\<sigma>'_in_R:"(\<delta>, ?\<sigma>', \<Q>) \<in> R" using a01a st' unfolding get_stack_def
        using a2' a3 a4 allocate_preserves_R sn by blast
      have new_state_in_assr:"(1, ?\<sigma>', ?\<Q>') \<in> (q\<cdot>f \<mapsto>\<^sub>v v) \<smile> 1"
-       using map_assnv_prob[OF _ _ _ ] e_eq_v e_eq_v'  v_eq a4
-          allocate_wf1[of ?\<Q>', OF _  _ _ q'_addr_in_new e_gt0, of  "(\<lambda>i. {})(q' := q'_addr)" v q' ?\<sigma>' set_value q, simplified, OF e_eq_v]
-       by (simp add: a3)
+       using  e_eq_v e_eq_v'  v_eq a4 a3
+          allocate_wf1[of ?\<Q>', OF _  _  q'_addr_in_new e_gt0, of  "(\<lambda>i. {})(q' := q'_addr)" v q', simplified, OF e_eq_v]
+       apply clarify       
+       apply (rule map_assnv_prob)
+       by auto
      have "sn' \<in> ((q\<cdot>f \<mapsto>\<^sub>v v) \<smile> 1 \<and>\<^sup>* R)"       
      proof-    
        let ?A = "(q\<cdot>f \<mapsto>\<^sub>v v) \<smile> 1" and ?B = R
@@ -651,7 +678,7 @@ proof-
          using stack_set_intro[OF new_state_in_assr sn_mod_\<sigma>'_in_R]
          by (simp add: st')
        moreover have h:"QStateM ((\<lambda>i. {})(q' := q'_addr), QState (q'_addr, v \<sigma>)) ## \<Q>"
-         using disjoint_allocate[of ?\<Q>', OF _ q' _ _ q'_addr_in_new e_gt0, of "(\<lambda>i. {})(q' := q'_addr)" v ?\<sigma>' set_value q, simplified, OF e_eq_v]         
+         using disjoint_allocate[of ?\<Q>', OF _ q' _  q'_addr_in_new e_gt0, of "(\<lambda>i. {})(q' := q'_addr)" v , simplified, OF e_eq_v]         
          using sep_disj_commuteI by blast 
        then have "((\<lambda>s. s \<in> (QState\<^sub>s ?A')) \<and>* (\<lambda>s. s \<in> (QState\<^sub>s  ?B'))) (get_QStateM sn')"
          using quantu_set_QState\<^sub>s_intro[OF new_state_in_assr sn_mod_\<sigma>'_in_R] sn' 
@@ -767,47 +794,54 @@ proof-
    } thus ?thesis unfolding valid_def by auto
 qed *)
 
+lemma Q_domain_Q:"QStateM_vars \<Q> = Q_domain_var vs (QStateM_map \<Q>) \<Longrightarrow> 
+       \<Q> =  \<Q>' + \<Q>'' \<Longrightarrow> \<Q>' ## \<Q>'' \<Longrightarrow>
+       Q_domain (QStateM_map \<Q>') = Q_domain_var vs (QStateM_map \<Q>') \<Longrightarrow>
+       Q_domain (QStateM_map \<Q>') =  Q_domain (QStateM_map \<Q>)"
+  unfolding Q_domain_var_def 
+  sorry
 
 lemma dispose_sound:
   assumes a0:"q \<in> variables" and  a1:"q \<in> nat_vars \<or> q \<in> nat_list_vars" and
     a4:"n = (\<lambda>s. vec_norm (vec_of_list (v s)))" 
-  shows "\<Turnstile> ((q\<cdot>i \<mapsto>\<^sub>v v) \<and>\<^sup>* R) (Dispose q i) (( |>a\<^sub>n) \<and>\<^sup>* R)" 
+  shows "\<Turnstile> (q\<cdot>i \<mapsto>\<^sub>v v) (Dispose q i) ( |>a\<^sub>n)" 
 proof-
   { fix s s'
     let ?st = "(\<lambda>s. get_stack s) "
     assume a00:"\<turnstile> \<langle>Dispose q i,s\<rangle> \<Rightarrow> s'" and
-            a01:"s \<in> Normal ` ((q\<cdot>i \<mapsto>\<^sub>v v) \<and>\<^sup>* R)" and
+            a01:"s \<in> Normal ` ((q\<cdot>i \<mapsto>\<^sub>v v))" and
             a02:"s' \<noteq> Fault"
-     then obtain sn where a01:"s = Normal sn" and         
-         a01a:"sn \<in>  ((q\<cdot>i \<mapsto>\<^sub>v v) \<and>\<^sup>* R)"        
-       by auto 
-     then obtain \<rho>1 \<rho>2 Q1 Q2 where 
-       "(\<rho>1, get_stack sn, Q1) \<in> (q\<cdot>i \<mapsto>\<^sub>v v)" and
-       "(\<rho>2, get_stack sn, Q2) \<in> R" and "get_prob sn = \<rho>1 * \<rho>2 " and 
-       "get_QStateM sn =  Q1 + Q2"
-       using Q_sep_dis_set_dest unfolding get_prob_def get_QStateM_def get_stack_def
-       using prod.exhaust_sel by metis       
-     have "\<exists> \<Q>' \<Q>'' \<sigma> \<delta> . sn = (\<delta>, \<sigma>, \<Q>' + \<Q>'') \<and>
-          s' = Normal (\<delta>, \<sigma>, QStateM (QStateM_map \<Q>', vec_norm (QStateM_vector \<Q>'') \<cdot>\<^sub>q qstate \<Q>')) \<and>
-          \<Q>' ## \<Q>'' \<and>  Q_domain_var (var_set q i \<sigma>) (QStateM_map \<Q>'') \<noteq> {} \<and>
-          Q_domain (QStateM_map \<Q>'') = Q_domain_var (var_set q i \<sigma>) (QStateM_map \<Q>'')"      
+     then obtain \<sigma> \<rho> \<Q> where a01:"s = Normal (\<rho>,\<sigma>,\<Q>)" and         
+         a01a:"(\<rho>,\<sigma>,\<Q>) \<in>  (q\<cdot>i \<mapsto>\<^sub>v v)"        
+       by auto      
+       note dest_assign = map_assnv_dest[OF a01a]
+     moreover obtain \<Q>' \<Q>''  where "\<Q> =  \<Q>' + \<Q>'' \<and>
+          s' = Normal (\<rho>, \<sigma>, QStateM (QStateM_map \<Q>'', vec_norm (QStateM_vector \<Q>') \<cdot>\<^sub>q qstate \<Q>'')) \<and>
+          \<Q>' ## \<Q>'' \<and>  Q_domain_var (var_set q i \<sigma>) (QStateM_map \<Q>') \<noteq> {} \<and>
+          Q_domain (QStateM_map \<Q>') = Q_domain_var (var_set q i \<sigma>) (QStateM_map \<Q>')"          
        apply (rule  QExec_Normal_elim_cases(10)[OF a00[simplified a01]])
-       using a02 by fast+    
-     then obtain \<Q>' \<Q>'' \<sigma> \<delta>  where
-      f1:"sn = (\<delta>, \<sigma>, \<Q>' + \<Q>'')" and
-      f2:"s' = Normal (\<delta>, \<sigma>, QStateM (QStateM_map \<Q>', vec_norm (QStateM_vector \<Q>'') \<cdot>\<^sub>q qstate \<Q>'))" and
-      f3:"\<Q>' ## \<Q>''" and f4:"Q_domain_var (var_set q i \<sigma>) (QStateM_map \<Q>'') \<noteq> {}" and
-      f5:"Q_domain (QStateM_map \<Q>'') = Q_domain_var (var_set q i \<sigma>) (QStateM_map \<Q>'')"       
-       by fast
-     have "(\<rho>1, get_stack sn, QStateM ({}\<^sub>q, (n \<sigma>) \<cdot>\<^sub>q |>)) \<in> ( |>a\<^sub>n)" sorry
-     moreover have "(\<rho>1, get_stack sn, \<Q>') \<in> R" sorry
-     moreover have "QStateM ({}\<^sub>q, (n \<sigma>) \<cdot>\<^sub>q |>) ## \<Q>'" sorry
-     moreover have "QStateM (QStateM_map \<Q>', vec_norm (QStateM_vector \<Q>'') \<cdot>\<^sub>q qstate \<Q>') = 
+       using a02 by auto  
+     moreover have "Q_domain (QStateM_map \<Q>') =  Q_domain (QStateM_map \<Q>)"
+       using calculation unfolding Q_domain_var_def Q_domain_def
+       using Q_domain_Q
+       by (metis Q_domain_def calculation(2) dest_assign)      
+     ultimately have "\<Q> = ((QStateM_list \<Q>'' ! 0)) \<cdot>\<^sub>Q \<Q>' \<and> (inverse(QStateM_list \<Q>'' ! 0)) \<cdot>\<^sub>Q \<Q>'' = 0"
+        using sep_eq by auto
+     ultimately have "\<Q>' = \<Q>" 
+     then have "\<sigma> = get_stack sn" and "\<rho> = get_prob sn" 
+       unfolding get_stack_def get_prob_def get_QStateM_def
+       by auto 
+     have "\<Q>' + \<Q>'' =  " 
+     moreover have h1:"(\<rho>1, get_stack sn, QStateM ({}\<^sub>q, (n \<sigma>) \<cdot>\<^sub>q |>)) \<in> ( |>a\<^sub>n)" sorry
+     moreover have h2:"(\<rho>2, get_stack sn, \<Q>') \<in> R" 
+        using calculation R  sep_R f1 f2 f3 f4 f5 qstate sepq1q2 unfolding get_stack_def sorry
+     moreover have h3:"QStateM ({}\<^sub>q, (n \<sigma>) \<cdot>\<^sub>q |>) ## \<Q>'" sorry
+     moreover have h4:"QStateM (QStateM_map \<Q>', vec_norm (QStateM_vector \<Q>'') \<cdot>\<^sub>q qstate \<Q>') = 
                       QStateM ({}\<^sub>q, (n \<sigma>) \<cdot>\<^sub>q |>) + \<Q>'" sorry
     
-     ultimately have "(\<delta>, \<sigma>, QStateM (QStateM_map \<Q>', vec_norm (QStateM_vector \<Q>'') \<cdot>\<^sub>q qstate \<Q>')) \<in> (( |>a\<^sub>n) \<and>\<^sup>* R)"
-       using Q_sep_dis_set_intro unfolding get_stack_def
-       sorry
+     ultimately have "(\<rho>, \<sigma>, QStateM (QStateM_map \<Q>', vec_norm (QStateM_vector \<Q>'') \<cdot>\<^sub>q qstate \<Q>')) \<in> (( |>a\<^sub>n) \<and>\<^sup>* R)"
+       using Q_sep_dis_set_intro[OF h1 h2 h3] prob unfolding get_stack_def get_prob_def
+       by auto
      then have "s' \<in> Normal ` (( |>a\<^sub>n) \<and>\<^sup>* R)" using f2 by auto
    }
    thus ?thesis  unfolding valid_def by auto
@@ -969,8 +1003,8 @@ next
   case (QAlloc v q e)
   then show ?case using alloc_sound by auto 
 next
-  case (QDispose qv st n q Qs P q1 Qs' s1 s2 Q)
-  then show ?case using dispose_sound by auto
+  case (QDispose q n v i)
+  then show ?case using dispose_sound sorry
 next
   case (QMeasure qv st Qs \<rho> q \<Psi> qr \<Phi> v A)
   then show ?case sorry
@@ -1003,6 +1037,12 @@ next
 qed
 
 
+lemma QDispose':
+  assumes a0:"q \<in> variables" and a1:"q \<in> nat_vars \<or> q \<in> nat_list_vars" and 
+          a2:"n = (\<lambda>s. vec_norm (vec_of_list (v s)))"
+        shows "\<turnstile> ((q\<cdot>i \<mapsto>\<^sub>v v) \<and>\<^sup>* R) (Dispose q i) (( |>a\<^sub>n) \<and>\<^sup>* R)"
+  using QDispose[OF a0 a1, of _ "(q\<cdot>i \<mapsto>\<^sub>v v)" i "( |>a\<^sub>n)" R]
+  apply auto
 
 end
 end

@@ -79,8 +79,9 @@ proof-
     unfolding matrix_sep_def Let_def apply auto
     unfolding ps2.d0_def ps2.dims0_def ps2.vars0_def apply transfer   
     unfolding Q_domain_def apply auto
-     apply (metis UN_Un Un_UNIV_right)       
-    by (transfer, simp add: QState_rel3')    
+     apply (metis UN_Un Un_UNIV_right)
+    apply (simp add: QStateM_vars.rep_eq QState_rel3')
+    using a0 ps2.finite_v1 ps2.finite_v2 by auto
   then have f1:"QState_vars (QState (QStateM_vars q, list_of_vec (?m *\<^sub>v ?v))) = 
              QStateM_vars q"
     using QState_var_idem
@@ -90,8 +91,8 @@ proof-
   then show ?thesis unfolding matrix_sep_def Let_def 
     using  f1 a1 a2 a3 a4
     apply (auto simp add:  QStateM_wf_map QStateM_wf_vars )
-    using a1 a2 a3 a4 Q_wf
-    by (auto simp add: QState_list_idem  QStateM_wf_list)
+    using a1 a2 a3 a4 Q_wf q
+    by (metis QStateM_wf_list QState_list_idem q)
 qed
 
 
@@ -145,7 +146,7 @@ definition measure_vars::"nat \<Rightarrow>  nat set \<Rightarrow> complex QStat
 
 lemma allocate_wf1:
   assumes a0:"\<Q>' = QStateM(\<vv>', QState (q'_addr,(v \<sigma>)))" and       
-       a2:"\<vv>' = (\<lambda>i. {})(q' := q'_addr)" and a2':"\<sigma>' = set_value \<sigma> q (from_nat q')" and
+       a2:"\<vv>' = (\<lambda>i. {})(q' := q'_addr)" and 
       a3:"q'_addr \<in> new_q_addr e \<sigma> (QStateM_map \<Q>) " and a4:"0 < e \<sigma> " and a5:"length (v \<sigma>) = 2^(e \<sigma>)"
     shows "QState_wf (q'_addr, v \<sigma>) \<and> 
            QStateM_wf ((\<lambda>i. {})(q' := q'_addr), QState (q'_addr, v \<sigma>))  \<and>
@@ -169,7 +170,7 @@ proof-
 lemma allocate_wf:
   assumes a0:"\<Q>' = QStateM(\<vv>', QState (q'_addr,(v \<sigma>)))" and
        a1:"q' \<notin> (dom_q_vars (QStateM_map \<Q>))" and
-       a2:"\<vv>' = (\<lambda>i. {})(q' := q'_addr)" and a2':"\<sigma>' = set_value \<sigma> q (from_nat q')" and
+       a2:"\<vv>' = (\<lambda>i. {})(q' := q'_addr)" and 
       a3:"q'_addr \<in> new_q_addr e \<sigma> (QStateM_map \<Q>) " and a4:"0 < e \<sigma> " and a5:"length (v \<sigma>) = 2^(e \<sigma>)"
     shows "QStateM_wf (QStateM_map \<Q> + QStateM_map \<Q>',
                   qstate \<Q> + qstate \<Q>')"
@@ -177,7 +178,7 @@ proof-
   have "QState_wf (q'_addr, v \<sigma>) \<and> 
            QStateM_wf ((\<lambda>i. {})(q' := q'_addr), QState (q'_addr, v \<sigma>))  \<and>
            QStateM_map \<Q>' = (\<lambda>i. {})(q' := q'_addr)"
-    using allocate_wf1[of  \<Q>' \<vv>' q'_addr v \<sigma>, OF a0  a2 _ a3 a4 a5, of \<sigma>' set_value q, OF a2']
+    using allocate_wf1[of  \<Q>' \<vv>' q'_addr v \<sigma>, OF a0  a2  a3 a4 a5]
     by auto
   moreover have d1:"QStateM_map \<Q> ## QStateM_map \<Q>'"
     using assms calculation
@@ -197,14 +198,14 @@ qed
 lemma disjoint_allocate: 
   assumes a0:"\<Q>' = QStateM(\<vv>', QState (q'_addr,(v \<sigma>)))" and
        a1:"q' \<notin> (dom_q_vars (QStateM_map \<Q>))" and
-       a2:"\<vv>' = (\<lambda>i. {})(q' := q'_addr)" and a2':"\<sigma>' = set_value \<sigma> q (from_nat q')" and
+       a2:"\<vv>' = (\<lambda>i. {})(q' := q'_addr)" and
       a3:"q'_addr \<in> new_q_addr e \<sigma> (QStateM_map \<Q>) " and a4:"0 < e \<sigma> " and a5:"length (v \<sigma>) = 2^(e \<sigma>)"
     shows "\<Q> ## \<Q>'"
 proof-  
   have "QState_wf (q'_addr, v \<sigma>) \<and> 
            QStateM_wf ((\<lambda>i. {})(q' := q'_addr), QState (q'_addr, v \<sigma>))  \<and>
            QStateM_map \<Q>' = (\<lambda>i. {})(q' := q'_addr)"
-    using allocate_wf1[of  \<Q>' \<vv>' q'_addr v \<sigma>, OF a0  a2 _ a3 a4 a5, of \<sigma>' set_value q, OF a2']
+    using allocate_wf1[of  \<Q>' \<vv>' q'_addr v \<sigma>, OF a0  a2 a3 a4 a5]
     by auto
   moreover have d1:"QStateM_map \<Q> ## QStateM_map \<Q>'"
     using assms calculation
@@ -221,6 +222,44 @@ proof-
     by (simp add: sep_disj_QStateM)
 qed
 
+lemma sep_eq: 
+     assumes a0:"\<Q> =  \<Q>' + \<Q>'' " and 
+              a1:"\<Q>' ## \<Q>''" and
+              a2:"Q_domain (QStateM_map \<Q>') = Q_domain (QStateM_map \<Q>)"
+      shows "\<Q> = ((QStateM_list \<Q>'' ! 0)) \<cdot>\<^sub>Q \<Q>' \<and> (inverse(QStateM_list \<Q>'' ! 0)) \<cdot>\<^sub>Q \<Q>'' = 0" 
+proof-
+  have Q''0:"Q_domain (QStateM_map \<Q>'') = {}"
+    using a0 a1 a2 unfolding  plus_QStateM sep_disj_QStateM     
+    by (smt QStateM_rel1  Qstate_vector disj_QState_def 
+           disjoint_x_y_wf1_x_plus_y fst_conv inf.idem plus_wf 
+           sep_add_disjD sep_disj_QState)  
+  then have  "inverse(QStateM_list \<Q>'' ! 0) \<cdot>\<^sub>Q \<Q>'' = 0" 
+    unfolding zero_QStateM  zero_fun_def      
+    by (simp add: QStateM_list_inv zero_QState)
+  moreover have "\<Q> = 1 \<cdot>\<^sub>Q \<Q>' + \<Q>''" 
+    unfolding sca_mult_qstatem_def sca_mult_qstate_def
+    by (simp add: QState_refl QState_vector.rep_eq a0 idem_QState list_vec uqstate_snd)
+  moreover have "\<And>a::'a::field. a \<noteq> 0 \<Longrightarrow> a * inverse a = 1"
+    using right_inverse by blast
+  moreover have "QStateM_list \<Q>'' ! 0 \<noteq> 0" using Q''0 QStateM_empty_not_zero by auto
+  ultimately have "\<Q> = ((QStateM_list \<Q>'' ! 0) * (inverse (QStateM_list \<Q>'' ! 0))) \<cdot>\<^sub>Q 
+                        (\<Q>' + \<Q>'')"
+    by (metis QState_list.rep_eq QState_refl QState_vector.rep_eq a0 
+              idem_QState list_vec one_smult_vec sca_mult_qstate_def 
+              sca_mult_qstatem_def) 
+  then have "\<Q> = (QStateM_list \<Q>'' ! 0) \<cdot>\<^sub>Q 
+                  ( inverse (QStateM_list \<Q>'' ! 0) \<cdot>\<^sub>Q (\<Q>' + \<Q>''))"
+    using \<open>QStateM_list \<Q>'' ! 0 \<noteq> 0\<close> inverse_nonzero_iff_nonzero sca_mult_qstatem_assoc by blast
+       
+  then have "\<Q> = (QStateM_list \<Q>'' ! 0) \<cdot>\<^sub>Q 
+                  (\<Q>' + (inverse (QStateM_list \<Q>'' ! 0) \<cdot>\<^sub>Q \<Q>''))"
+    by (simp add: \<open>QStateM_list \<Q>'' ! 0 \<noteq> 0\<close> local.a1 scalar_mult_QStateM_plus_r)    
+  then have "\<Q> = ((QStateM_list \<Q>'' ! 0) \<cdot>\<^sub>Q \<Q>' + (inverse (QStateM_list \<Q>'' ! 0) \<cdot>\<^sub>Q \<Q>''))"
+    by (simp add: \<open>inverse (QStateM_list \<Q>'' ! 0) \<cdot>\<^sub>Q \<Q>'' = 0\<close>)
+  thus ?thesis
+    by (simp add: \<open>inverse (QStateM_list \<Q>'' ! 0) \<cdot>\<^sub>Q \<Q>'' = 0\<close>)
+qed
+
 (* lemma assumes f1:"sn = (\<delta>, \<sigma>, \<Q>' + \<Q>'')" and
       f3:"\<Q>' ## \<Q>''" and f4:"QStateM_map \<Q>'' (to_nat (get_value \<sigma> q)) \<noteq> {}" and
       f5:"Q_domain (QStateM_map \<Q>'') = QStateM_map \<Q>'' (to_nat (get_value \<sigma> q))"
@@ -230,6 +269,61 @@ qed
            QStateM_map \<Q>' = (\<lambda>i. if i \<in> fst (qstate \<Q>') then )"
 proof-
 qed *)
+
+(* lemma dispose_Q'_sep: 
+  assumes a0:"sn = (\<rho>, \<sigma>, \<Q>' + \<Q>'')" and
+      a1:"s' = Normal (\<rho>, \<sigma>, QStateM (QStateM_map \<Q>', vec_norm (QStateM_vector \<Q>'') \<cdot>\<^sub>q qstate \<Q>'))" and
+      a3:"\<Q>' ## \<Q>''" and a4:"Q_domain_var vs (QStateM_map \<Q>'') \<noteq> {}" and
+      a5:"Q_domain (QStateM_map \<Q>'') = Q_domain_var vs (QStateM_map \<Q>'')"
+    shows "\<forall>Q' Q''. Q' \<noteq> \<Q>' \<or> Q'' \<noteq> \<Q>'' \<longrightarrow> 
+             QStateM (QStateM_map Q', vec_norm (QStateM_vector Q'') \<cdot>\<^sub>q qstate Q') \<noteq>
+             QStateM (QStateM_map \<Q>', vec_norm (QStateM_vector \<Q>'') \<cdot>\<^sub>q qstate \<Q>')"
+proof-
+  { fix Q' Q''
+    assume a00:"Q' \<noteq> \<Q>' \<or> Q'' \<noteq> \<Q>''"
+    have "QStateM (QStateM_map Q', vec_norm (QStateM_vector Q'') \<cdot>\<^sub>q qstate Q') \<noteq>
+          QStateM (QStateM_map \<Q>', vec_norm (QStateM_vector \<Q>'') \<cdot>\<^sub>q qstate \<Q>')"
+      sorry
+  } thus ?thesis by auto
+qed
+
+lemma dispose_Q'_sep': 
+  assumes a0:"sn = (\<rho>, \<sigma>, \<Q>' + \<Q>'')" and
+      a1:"s' = Normal (\<rho>, \<sigma>, QStateM (QStateM_map \<Q>', vec_norm (QStateM_vector \<Q>'') \<cdot>\<^sub>q qstate \<Q>'))" and
+      a3:"\<Q>' ## \<Q>''" and a4:"Q_domain_var vs (QStateM_map \<Q>'') \<noteq> {}" and
+      a5:"Q_domain (QStateM_map \<Q>'') = Q_domain_var vs (QStateM_map \<Q>'')"
+    shows "\<forall>Q' Q''. 
+             QStateM (QStateM_map Q', vec_norm (QStateM_vector Q'') \<cdot>\<^sub>q qstate Q') \<noteq>
+             QStateM (QStateM_map \<Q>', vec_norm (QStateM_vector \<Q>'') \<cdot>\<^sub>q qstate \<Q>') \<longrightarrow>
+           Q'\<noteq> \<Q>' \<or> Q'' \<noteq> \<Q>''"
+proof-
+  { fix Q' Q''
+    assume a00:"QStateM (QStateM_map Q', vec_norm (QStateM_vector Q'') \<cdot>\<^sub>q qstate Q') \<noteq>
+              QStateM (QStateM_map \<Q>', vec_norm (QStateM_vector \<Q>'') \<cdot>\<^sub>q qstate \<Q>')"
+    have "Q'\<noteq> \<Q>' \<or> Q'' \<noteq> \<Q>''"
+      sorry
+  } thus ?thesis by auto
+qed
+
+lemma dispose_Q_sep: 
+  assumes a0:"sn = (\<rho>, \<sigma>, \<Q>' + \<Q>'')" and
+      a1:"s' = Normal (\<rho>, \<sigma>, QStateM (QStateM_map \<Q>', vec_norm (QStateM_vector \<Q>'') \<cdot>\<^sub>q qstate \<Q>'))" and
+      a2:"\<Q>' ## \<Q>''" and a3:"Q_domain_var vs (QStateM_map \<Q>'') \<noteq> {}" and
+      a4:"Q_domain (QStateM_map \<Q>'') = Q_domain_var vs (QStateM_map \<Q>'')"
+    shows "\<forall>Q' Q''. snd (snd sn) = Q' + Q'' \<longrightarrow> Q' = \<Q>' \<and> Q'' = \<Q>''"
+proof-
+  { fix Q' Q''
+    assume a00:"snd (snd sn) = Q' + Q''"
+    {  assume "Q' \<noteq> \<Q>' \<or> Q'' \<noteq> \<Q>''"
+      then have 
+         "QStateM (QStateM_map Q', vec_norm (QStateM_vector Q'') \<cdot>\<^sub>q qstate Q') \<noteq>
+          QStateM (QStateM_map \<Q>', vec_norm (QStateM_vector \<Q>'') \<cdot>\<^sub>q qstate \<Q>')"
+        using dispose_Q'_sep[OF a0 a1 a2 a3 a4] by auto
+        have False sorry
+    }
+  } thus ?thesis by auto
+qed
+*)
 
 context vars
 begin
@@ -307,10 +401,10 @@ inductive QExec::"('v, 's) com \<Rightarrow> 's XQState \<Rightarrow> 's XQState
               Q_domain (QStateM_map \<Q>'') =(\<Union>((QStateM_map \<Q>'') ` (q \<sigma>))) \<Longrightarrow>                                      
              \<turnstile> \<langle>Dispose q, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Normal (\<delta>,\<sigma>,QStateM(m', n \<cdot>\<^sub>q Q'))" *)
 
- | Dispose: "  \<Q> = \<Q>' + \<Q>'' \<Longrightarrow> \<Q>' ## \<Q>'' \<Longrightarrow> n = vec_norm (QStateM_vector \<Q>'') \<Longrightarrow>
-              Q_domain (QStateM_map \<Q>'') \<noteq> {} \<Longrightarrow> 
-              Q_domain (QStateM_map \<Q>'') = (Q_domain_var (var_set q v \<sigma>) (QStateM_map \<Q>'')) \<Longrightarrow>                                      
-             \<turnstile> \<langle>Dispose q v, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Normal (\<delta>,\<sigma>,QStateM(QStateM_map \<Q>', n \<cdot>\<^sub>q (qstate \<Q>')))"
+ | Dispose: "  \<Q> = \<Q>' + \<Q>'' \<Longrightarrow> \<Q>' ## \<Q>'' \<Longrightarrow> n = vec_norm (QStateM_vector \<Q>') \<Longrightarrow>
+              Q_domain (QStateM_map \<Q>') \<noteq> {} \<Longrightarrow> 
+              Q_domain (QStateM_map \<Q>') = (Q_domain_var (var_set q v \<sigma>) (QStateM_map \<Q>')) \<Longrightarrow>                                      
+             \<turnstile> \<langle>Dispose q v, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Normal (\<delta>,\<sigma>,QStateM(QStateM_map \<Q>'', n \<cdot>\<^sub>q (qstate \<Q>'')))"
 
 \<comment>\<open>Dispose dispose will fail if it is not possible to find such states \<qq>',  \<qq>''\<close>
 
