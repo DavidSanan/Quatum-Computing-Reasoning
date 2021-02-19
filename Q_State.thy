@@ -95,16 +95,6 @@ proof-
     by auto
 qed
 
-lemma ptensor_empty:"(ptensor_vec {} {} q1 q2) $ 0 = q1 $ 0 * q2 $ 0"
-proof-
-  interpret ps2:partial_state2 "[]" "{}" "{}" apply standard by auto
-  show ?thesis  unfolding ps2.ptensor_vec_def unfolding  
-    partial_state.tensor_vec_def  state_sig.d_def 
-   partial_state.encode1_def partial_state.dims1_def 
-    partial_state.encode2_def partial_state.dims2_def ps2.dims0_def ps2.vars0_def 
-    by auto
-qed
-
 lemma nths_set_gt_list_length:"nths l (- {0..<length l}) = []"
 proof -
   have "nths l (- {0..<length l}) ! 0 \<notin> set (nths l (- {0..<length l}))"
@@ -254,9 +244,9 @@ lemma idempoten_qstate:
 definition mapping::"'q set \<Rightarrow> 'q set \<Rightarrow> nat set \<times> nat set"
   where "mapping s1 s2 \<equiv>({},{})"
 
-typedef (overloaded) ('a::field)
+typedef (overloaded) ('a::comm_ring_1)
   QState = "{(s,v)| (s::nat set) (v::'a list).                                   
-              length v = (2^(card s)) \<and> finite s \<and> (length v = 1 \<longrightarrow> v\<noteq>[0])}"
+              length v = (2^(card s)) \<and> finite s}"
   morphisms uQState Abs_QState  
   by (rule exI[where x ="({},[1])"], auto)
 
@@ -272,31 +262,23 @@ lemma QState_rel1:"length(snd(uQState x)) = 2 ^ card (fst(uQState x))"
                   (((snd (uQState x)) ! 0) = 1)"
   by (transfer, auto) *)
 
-lemma QState_rel2:"length(snd(uQState x)) =  0 \<longrightarrow>
-                   (snd (uQState x)) \<noteq> [0]"
+lemma QState_rel3:"finite (fst (uQState (x::('a::comm_ring_1) QState )))"
   apply transfer by auto
 
 
-lemma QState_rel3:"finite (fst (uQState (x::('a::field) QState )))"
-  apply transfer by auto
+lift_definition QState_vars :: "('a::comm_ring_1) QState \<Rightarrow> nat set" is fst .
+lift_definition QState_list :: "('a::comm_ring_1) QState \<Rightarrow> 'a::comm_ring_1 list" is snd .
+lift_definition QState_vector::"('a::comm_ring_1) QState \<Rightarrow> 'a::comm_ring_1 vec" is "\<lambda>s. vec_of_list (snd s)" .
 
-
-
-lift_definition QState_vars :: "('a::field) QState \<Rightarrow> nat set" is fst .
-lift_definition QState_list :: "('a::field) QState \<Rightarrow> 'a list" is snd .
-lift_definition QState_vector::"('a::field) QState \<Rightarrow> 'a vec" is "\<lambda>s. vec_of_list (snd s)" .
-
-abbreviation QState_wf::"nat set \<times> 'a::field list \<Rightarrow> bool"
+abbreviation QState_wf::"nat set \<times> 'a::comm_ring_1 list \<Rightarrow> bool"
   where "QState_wf s \<equiv> 
-      length (snd s) = (2^(card (fst s))) \<and> 
-      finite (fst s) \<and> 
-      (length (snd s) = 1 \<longrightarrow> (snd s)\<noteq>[0])"
+      length (snd s) = (2^(card (fst s))) \<and> finite (fst s)"
 
-lift_definition QState :: "nat set \<times> 'a::field list \<Rightarrow> 'a QState" is  
+lift_definition QState :: "nat set \<times> 'a::comm_ring_1 list \<Rightarrow> 'a QState" is  
   "\<lambda>s. if QState_wf s then (fst s, snd s)
        else ({}, [1])"  by auto
 
-abbreviation QState_unfold ::"'a::field QState \<Rightarrow> nat set \<times> 'a::field list"
+abbreviation QState_unfold ::"'a::comm_ring_1 QState \<Rightarrow> nat set \<times> 'a::comm_ring_1 list"
   where "QState_unfold x \<equiv> (QState_vars x, QState_list x)"
 
 lemma QState_wf:"QState_wf (QState_unfold x)"
@@ -310,69 +292,20 @@ lemma QState_list_idem:"QState_wf (vs, v) \<Longrightarrow>
        QState_list (QState (vs, v)) = v"
   by (transfer, auto)
 
-lift_definition Conc :: " 'a QState \<Rightarrow> nat set \<times> 'a::field vec" is
+lift_definition Conc :: " 'a QState \<Rightarrow> nat set \<times> 'a::comm_ring_1 vec" is
   "\<lambda>s. (QState_vars s, QState_vector s)" .
 
-definition sca_mult_qstate::"'a::field \<Rightarrow> 'a QState \<Rightarrow> 'a QState"  (infixl "\<cdot>\<^sub>q" 70) 
+definition sca_mult_qstate::"'a::comm_ring_1 \<Rightarrow> 'a QState \<Rightarrow> 'a QState"  (infixl "\<cdot>\<^sub>q" 70) 
   where "sca_mult_qstate s qs \<equiv> QState(QState_vars qs, list_of_vec (s \<cdot>\<^sub>v (QState_vector qs)))"
 
-lemma sca_mult_qstate_wf:
-  assumes a0:"(s::'a::field) \<noteq> 0" 
-  shows "QState_wf (QState_vars qs, list_of_vec (s \<cdot>\<^sub>v (QState_vector qs)))"  
-proof-
-  have wf:"QState_wf (QState_unfold qs)"
-    using QState_wf by blast
-  
-  { assume "length (QState_list qs) = 1"    
-    then obtain v where v:"QState_list qs = [v] \<and> v \<noteq> 0"
-      using wf
-      by (metis One_nat_def Suc_length_conv length_0_conv snd_conv) 
-    then have "s * v \<noteq> 0" using a0 by auto
-    then have ?thesis using v
-    proof -
-      have "snd (uQState qs) = [v]"
-        by (metis (no_types) QState_list.rep_eq v)
-      then show ?thesis
-        by (metis (no_types) QState_rel1 QState_rel3 QState_vars.rep_eq 
-            QState_vector.rep_eq \<open>s * v \<noteq> 0\<close> dim_vec_of_list fst_conv 
-            index_smult_vec(1) index_smult_vec(2) neq0_conv snd_conv 
-            vec_index_vCons_0 vec_list vec_of_list_Cons zero_neq_one)
-    qed                                             
-  }
-  moreover { 
-    assume "length (QState_list qs) \<noteq> 1"
-    then have "dim_vec (vec_of_list (snd (uQState qs))) \<noteq> 1"
-        by (metis (full_types) QState_list.rep_eq  dim_vec_of_list)
-    then have ?thesis
-      by (simp add: QState_rel1 QState_rel3 QState_vars.rep_eq QState_vector.rep_eq)
-  }
-  ultimately show ?thesis by auto
-qed
-
-lemma sca_mult_qstate_vars:"(s::'a::field) \<noteq>0 \<Longrightarrow>QState_vars (s \<cdot>\<^sub>q qs) = QState_vars qs"
-  unfolding sca_mult_qstate_def using sca_mult_qstate_wf
-  using QState_var_idem by blast
-
-lemma sca_mult_qstate_quantum: 
-  "(s::'a::field) \<noteq>0 \<Longrightarrow> QState_vector (s \<cdot>\<^sub>q qs) = s \<cdot>\<^sub>v (QState_vector qs)"
-  unfolding sca_mult_qstate_def using sca_mult_qstate_wf[of s qs]  
-  apply transfer 
-  by (simp add: vec_list)
-
-lemma sca_mult_qstate_assoc: 
-  "a1 \<noteq> 0 \<Longrightarrow> a2\<noteq>0 \<Longrightarrow> (a1::'a::field)* a2 \<cdot>\<^sub>q qs = a1 \<cdot>\<^sub>q (a2 \<cdot>\<^sub>q qs)" 
-  by (metis (no_types) sca_mult_qstate_def 
-    sca_mult_qstate_quantum sca_mult_qstate_vars smult_smult_assoc)
-
-  
-definition empty_qstate::"'a::field QState"  ("|>") 
+definition empty_qstate::"'a::comm_ring_1 QState"  ("|>") 
   where "empty_qstate  \<equiv> QState({}, [1])"
 
 
 lemma uqstate_fst:"fst (uQState a) = QState_vars a" apply transfer' by auto
 lemma uqstate_snd:"snd (uQState a) = QState_list a" apply transfer' by auto
 
-lemma QState_rel3':"finite (QState_vars (x::('a::field) QState ))"
+lemma QState_rel3':"finite (QState_vars (x::('a::comm_ring_1) QState ))"
   by (transfer, auto)
 
 lemma QState_rel1':"length(QState_list x) = 2 ^ card (QState_vars x)"
@@ -435,31 +368,21 @@ lemma fst_uQState_not_empty_wf_uQState:"fst (uQState a) \<noteq> {} \<Longrighta
 lemma QState_refl:"QState (QState_vars a, QState_list a) = a"
   by (transfer, auto)
 
-lemma QState_var_qstate:"QState_vars (QState (QState_vars a, QState_list a)) = QState_vars a"
+lemma "QState_vars (QState (QState_vars a, QState_list a)) = QState_vars a"
   by (simp add:  QState_refl)
 
-lemma QState_list_qstate:"QState_list (QState (QState_vars a, QState_list a)) = QState_list a"
+lemma "QState_list (QState (QState_vars a, QState_list a)) = QState_list a"
   by (simp add:  QState_refl)
 
-lemma QState_list_empty:"QState_vars Q = {} \<Longrightarrow> \<exists>v. QState_list Q = [v]"
-  by (metis One_nat_def QState_rel1' Suc_length_conv card_empty 
-      list_exhaust_size_eq0 power.simps(1))
-  
-lemma QState_list_inv: assumes a0:"QState_vars Q = {}"
-  shows "inverse(QState_list Q ! 0) \<cdot>\<^sub>q Q = |>"
-  unfolding empty_qstate_def sca_mult_qstate_def using a0 apply transfer' 
-  apply auto
-  by (simp add: list_of_vec_map vec_of_list_index)
-  
 
-definition plus_QState_vector::"('a::field) QState \<Rightarrow> 'a QState \<Rightarrow>nat set \<times> 'a list"
+definition plus_QState_vector::"('a::comm_ring_1) QState \<Rightarrow> 'a QState \<Rightarrow>nat set \<times> 'a list"
   where "plus_QState_vector q1 q2 \<equiv> 
      let d1 = QState_vars q1; 
          d2 = QState_vars q2; 
          l1 = QState_vector q1; l2 = QState_vector q2 in
           (d1 \<union> d2, list_of_vec(partial_state2.ptensor_vec d1 d2 l1 l2))"
 
-definition vector_element_12::"('a::field) QState \<Rightarrow> nat set \<Rightarrow> nat \<times> nat \<Rightarrow> 'a"
+definition vector_element_12::"('a::comm_ring_1) QState \<Rightarrow> nat set \<Rightarrow> nat \<times> nat \<Rightarrow> 'a"
   where "vector_element_12 v d1 p \<equiv> 
          let d = QState_vars v; 
          d2 = d - d1; 
@@ -500,13 +423,13 @@ proof-
      using  v1  apply transfer' by (auto simp add: list_vec)          
 qed
 
-definition plus_QState:: "('a::field) QState \<Rightarrow> 'a QState \<Rightarrow> 'a QState"
+definition plus_QState:: "('a::comm_ring_1) QState \<Rightarrow> 'a QState \<Rightarrow> 'a QState"
   where "plus_QState q1 q2 \<equiv> 
     let d1 = (QState_vars q1); d2 = (QState_vars q2) in
       if (d1 \<inter> d2 \<noteq> {}) then QState ({},[1])
       else QState (plus_QState_vector q1 q2)"
 
-definition disj_QState::"('a::field) QState \<Rightarrow> 'a QState \<Rightarrow> bool"
+definition disj_QState::"('a::comm_ring_1) QState \<Rightarrow> 'a QState \<Rightarrow> bool"
   where "disj_QState q1 q2 \<equiv> QState_vars q1 \<inter> QState_vars q2 = {}"
 
 \<comment>\<open>Lemmas on plus_QState_vector\<close>
@@ -589,27 +512,6 @@ lemma plus_QState_vector_wf: assumes a0: "QState_vars q1 \<inter> QState_vars q2
   apply clarsimp  apply (frule plus_QState_vector_wf')  
   by force+
 
-lemma plus_QState_vector_wf_empty:
-  assumes a0:"QState_vars q1 \<inter> QState_vars q2 = {}" and
-          a1:"fst (plus_QState_vector q1 q2) = {}"
-        shows "snd (plus_QState_vector q1 q2) \<noteq> [0]"
-proof-
-  have "QState_vars q1 = {}" and "QState_vars q2 = {}"
-    using a1 unfolding plus_QState_vector_def Let_def by auto  
-  moreover have "QState_vector q1 $ 0 \<noteq> 0" and "QState_vector q2 $ 0 \<noteq> 0"
-    using calculation apply auto apply transfer
-     apply (metis One_nat_def Suc_length_conv card_empty fstI 
-              list_exhaust_size_eq0 nth_Cons_0 power_0 sndI vec_of_list_index)
-    apply transfer
-    by (metis One_nat_def Suc_length_conv card_empty fstI 
-              list_exhaust_size_eq0 nth_Cons_0 power_0 sndI vec_of_list_index)
-  ultimately have "(ptensor_vec (QState_vars q1) (QState_vars q2) (QState_vector q1)
-            (QState_vector q2)) $ 0 \<noteq> 0" 
-    using ptensor_empty[of "QState_vector q1" "QState_vector q2"] by simp
-  then show ?thesis unfolding plus_QState_vector_def Let_def
-    by (metis nth_Cons_0 snd_conv vec_list vec_of_list_index)                                                     
-qed
-
 (* lemma plus_QState_vector_empty_vars_one_wf:
   assumes a0:"fst (plus_QState_vector q1 q2) = {} " 
   shows "snd (plus_QState_vector q1 q2) = [1]"
@@ -632,8 +534,8 @@ lemma QState_vars_Plus:"(QState_vars q1 \<inter> QState_vars q2 \<noteq> {} \<lo
            QState_vars (plus_QState q1 q2) = fst (plus_QState_vector q1 q2))"  
     apply (auto simp add: plus_QState_def ) apply transfer
     apply simp 
-   apply transfer' using plus_QState_vector_set_wf plus_QState_vector_wf
-  apply (smt QState_id_fst_empty empty_iff prod.collapse snd_uQState_empty)
+   apply transfer' using plus_QState_vector_set_wf plus_QState_vector_wf  
+   apply (smt fst_conv)
    apply transfer' using plus_QState_vector_set_wf plus_QState_vector_wf
   by fastforce
 
@@ -645,10 +547,8 @@ lemma QState_list_Plus:"(QState_vars q1 \<inter> QState_vars q2 \<noteq> {} \<lo
     apply auto
   apply transfer 
   apply auto 
-  using plus_QState_vector_set_wf
-  apply blast
-  using plus_QState_vector_wf apply blast
-  using plus_QState_vector_wf_empty by auto
+  using plus_QState_vector_set_wf     
+  by (auto simp add: plus_QState_vector_wf) 
 
 lemma neutral_vector_wf:"length [1] = (2^(card {}))" by auto
 
@@ -687,6 +587,8 @@ proof-
   }
   ultimately show ?thesis by auto 
 qed
+typedef natsub = "{x. x<(10::nat)}"
+  by (meson mem_Collect_eq zero_less_numeral)
   
 
 lemma plus_comm:"disj_QState x y \<Longrightarrow> plus_QState x y = plus_QState y x"
@@ -736,6 +638,8 @@ lemma nths_eq:"v = {0..<card v} \<Longrightarrow>
   by (smt Collect_cong add_cancel_left_right append_Nil2 atLeast0LessThan le_add_same_cancel1 
           length_append length_nths length_replicate lessThan_iff less_le_trans 
           list_exhaust_size_eq0 nths_append zero_le)
+
+
 
 lemma QState_list_assoc:
    assumes a0:"QState_vars x  \<inter> QState_vars y = {}" and
@@ -811,7 +715,7 @@ proof-
 qed
 
 
-instantiation QState :: (field) sep_algebra
+instantiation QState :: (comm_ring_1) sep_algebra
 begin
 definition zero_QState: "0 \<equiv> QState ({},[1])"
 definition plus_QState: "s1 + s2 \<equiv> plus_QState s1 s2" 
@@ -829,73 +733,6 @@ instance
   done
 end 
 
-lemma scalar_mult_QState_plus_l:
-  assumes a0: "(a::'a::field) \<noteq> 0" and 
-          a1:"Q' ## Q''"
-        shows "a  \<cdot>\<^sub>q (Q' + Q'') = (a  \<cdot>\<^sub>q Q' + Q'')"
-proof-
-  let ?q'vs = "QState_vars Q'" and ?q''vs = "QState_vars Q''" and
-      ?q'v = "QState_vector Q'" and ?q''v = "QState_vector Q''"
-  note a1 = a1[simplified disj_QState_def sep_disj_QState]
-  have "QState_vars (a  \<cdot>\<^sub>q (Q' + Q'')) = QState_vars (Q' + Q'')"
-    by (simp add: a0 sca_mult_qstate_vars)
-  moreover have "QState_vector (a  \<cdot>\<^sub>q (Q' + Q'')) = a \<cdot>\<^sub>v (QState_vector (Q' + Q''))"
-    by (meson a0 sca_mult_qstate_quantum)  
-  moreover have "a \<cdot>\<^sub>v (QState_vector (Q' + Q'')) = 
-                 a \<cdot>\<^sub>v (ptensor_vec ?q'vs ?q''vs ?q'v ?q''v)"
-    using a1 
-    unfolding plus_QState_vector_def disj_QState_def sep_disj_QState plus_QState plus_QState_def Let_def sca_mult_qstate_def
-    apply auto    
-    by (metis QState_list_Plus QState_vector.rep_eq plus_QState_def plus_QState_vector_def plus_QState_vector_vector uqstate_snd vec_list)
-  then have " a \<cdot>\<^sub>v (QState_vector (Q' + Q'')) = 
-                  (ptensor_vec ?q'vs ?q''vs (a \<cdot>\<^sub>v ?q'v) ?q''v)" 
-    by (simp add:pscalar_ptensor_1[OF a1] QState_rel1' QState_rel3' QState_vector.rep_eq uqstate_snd)   
-  moreover have  "QState_vars (a  \<cdot>\<^sub>q Q' + Q'') = QState_vars (Q' + Q'')"
-    by (metis (no_types, lifting) QState_vars_Plus a0 plus_QState plus_QState_vector_vars sca_mult_qstate_vars)
-  moreover have "QState_vector (a  \<cdot>\<^sub>q Q' + Q'') =  
-                 ptensor_vec ?q'vs ?q''vs (a  \<cdot>\<^sub>v ?q'v) ?q''v"
-    using calculation(3)
-    by (smt QState_vars_Plus a0 a1  plus_QState plus_QState_def 
-            plus_QState_vector_def plus_QState_vector_vars 
-            sca_mult_qstate_def sca_mult_qstate_quantum sca_mult_qstate_vars)
-  ultimately show ?thesis
-    by (metis QState_refl QState_vector.rep_eq list_vec uqstate_snd)
-qed
-
-lemma scalar_mult_QState_plus_r: 
-  assumes a0: "(a::'a::field) \<noteq> 0" and 
-          a1:"Q' ## Q''" 
-  shows "a  \<cdot>\<^sub>q (Q' + Q'') = ( Q' + a  \<cdot>\<^sub>q Q'')"
-proof-
-let ?q'vs = "QState_vars Q'" and ?q''vs = "QState_vars Q''" and
-      ?q'v = "QState_vector Q'" and ?q''v = "QState_vector Q''"
-  note a1 = a1[simplified disj_QState_def sep_disj_QState]
-  have "QState_vars (a  \<cdot>\<^sub>q (Q' + Q'')) = QState_vars (Q' + Q'')"
-    by (simp add: a0 sca_mult_qstate_vars)
-  moreover have "QState_vector (a  \<cdot>\<^sub>q (Q' + Q'')) = a \<cdot>\<^sub>v (QState_vector (Q' + Q''))"
-    by (meson a0 sca_mult_qstate_quantum)  
-  moreover have "a \<cdot>\<^sub>v (QState_vector (Q' + Q'')) = 
-                 a \<cdot>\<^sub>v (ptensor_vec ?q'vs ?q''vs ?q'v ?q''v)"
-    using a1 
-    unfolding plus_QState_vector_def disj_QState_def sep_disj_QState plus_QState plus_QState_def Let_def sca_mult_qstate_def
-    apply auto    
-    by (metis QState_list_Plus QState_vector.rep_eq plus_QState_def plus_QState_vector_def plus_QState_vector_vector uqstate_snd vec_list)
-  then have " a \<cdot>\<^sub>v (QState_vector (Q' + Q'')) = 
-                  (ptensor_vec ?q'vs ?q''vs ?q'v (a \<cdot>\<^sub>v ?q''v))" 
-    by (simp add:pscalar_ptensor_2[OF a1] QState_rel1' QState_rel3' QState_vector.rep_eq uqstate_snd)   
-  moreover have  "QState_vars (Q' + a  \<cdot>\<^sub>q Q'') = QState_vars (Q' + Q'')"
-    by (metis (no_types, lifting) QState_vars_Plus a0 plus_QState plus_QState_vector_vars sca_mult_qstate_vars)
-  moreover have "QState_vector (Q' + a  \<cdot>\<^sub>q Q'') =  
-                 ptensor_vec ?q'vs ?q''vs ?q'v (a  \<cdot>\<^sub>v ?q''v)"
-    using calculation(3) 
-    by (smt QState_vars_Plus a0 a1  plus_QState plus_QState_def 
-            plus_QState_vector_def plus_QState_vector_vars 
-            sca_mult_qstate_def sca_mult_qstate_quantum sca_mult_qstate_vars)
-  ultimately show ?thesis
-    by (metis QState_refl QState_vector.rep_eq list_vec uqstate_snd)
-qed
-
-
 type_synonym q_vars = "(nat \<Rightarrow>nat set)"
 type_synonym  'a qstate = "q_vars \<times> 'a QState"
 
@@ -906,38 +743,37 @@ definition ket_dim ::"q_vars \<Rightarrow> nat"
   where "ket_dim q_vars \<equiv>  card (Q_domain q_vars)"
 
 \<comment>\<open>\<close>
-abbreviation QStateM_wf::"q_vars \<times> ('a::field QState) \<Rightarrow> bool"
+abbreviation QStateM_wf::"q_vars \<times> ('a::comm_ring_1 QState) \<Rightarrow> bool"
   where "QStateM_wf s \<equiv> 
         Q_domain (fst s) = QState_vars (snd s) \<and>
         (\<forall>x y. x\<noteq>y \<and> x\<in> domain (fst s) \<and> y \<in> domain (fst s) \<longrightarrow> (fst s) x \<inter> (fst s) y = {})"
 
-typedef (overloaded) ('a::field)
+typedef (overloaded) ('a::comm_ring_1)
   QStateM = "{(m,q)| (m::q_vars) (q:: 'a QState). QStateM_wf (m,q)}"
   morphisms uQStateM Abs_QStateM              
   unfolding Q_domain_def  apply auto apply transfer
   apply (rule exI[where x ="\<lambda>x. {}"], auto)
-  by (rule exI[where x ="[1]"], auto)
+  by (metis length_Cons list.size(3) nth_Cons_0)
 
 setup_lifting type_definition_QStateM
 
-lift_definition QStateM_map :: "('a::field) QStateM \<Rightarrow> q_vars" is fst .
+lift_definition QStateM_map :: "('a::comm_ring_1) QStateM \<Rightarrow> q_vars" is fst .
 
 abbreviation empty_map::"q_vars" ("{}\<^sub>q")
   where "empty_map \<equiv> (\<lambda>n. {})"
 
-definition qstate :: "('a::field) QStateM \<Rightarrow> 'a QState" 
+definition qstate :: "('a::comm_ring_1) QStateM \<Rightarrow> 'a::comm_ring_1 QState" 
   where "qstate s \<equiv> snd (uQStateM s)"
 
-lift_definition QStateM_vars::"('a::field) QStateM \<Rightarrow> nat set" is "(\<lambda>s. QState_vars (snd s))" .
-lift_definition QStateM_list::"('a::field) QStateM \<Rightarrow> 'a list" is "(\<lambda>s. QState_list (snd s))" .
-lift_definition QStateM_vector::"('a::field) QStateM \<Rightarrow> 'a vec" is "(\<lambda>s. QState_vector (snd s))" .
+lift_definition QStateM_vars::"('a::comm_ring_1) QStateM \<Rightarrow> nat set" is "(\<lambda>s. QState_vars (snd s))" .
+lift_definition QStateM_list::"('a::comm_ring_1) QStateM \<Rightarrow> 'a list" is "(\<lambda>s. QState_list (snd s))" .
+lift_definition QStateM_vector::"('a::comm_ring_1) QStateM \<Rightarrow> 'a vec" is "(\<lambda>s. QState_vector (snd s))" .
 
-lift_definition QStateM ::"q_vars \<times> ('a::field QState) \<Rightarrow> 'a QStateM" is
+lift_definition QStateM ::"q_vars \<times> ('a::comm_ring_1 QState) \<Rightarrow> 'a QStateM" is
 "\<lambda>s. if QStateM_wf s then (fst s, snd s) else (\<lambda>s. {}, QState ({},[1]))"
   unfolding Q_domain_def by (auto simp add:  QState_vars_empty)
 
-
-abbreviation QStateM_unfold::"('a::field) QStateM \<Rightarrow> (q_vars \<times> 'a QState)"
+abbreviation QStateM_unfold::"('a::comm_ring_1) QStateM \<Rightarrow> (q_vars \<times> 'a::comm_ring_1 QState)"
   where "QStateM_unfold q \<equiv> (QStateM_map q, qstate q)"
 
 lemma eq_QStateM_vars:"QState_vars (snd (QStateM_unfold q)) = QStateM_vars q"
@@ -1015,57 +851,6 @@ lemma a1:"\<Union> (range (0::nat \<Rightarrow> nat set)) = none"
 lemma a2:"QState_vars 0 = 0"
   by (simp add: QState_vars_empty zero_QState zero_set_def)
 
-definition sca_mult_qstatem::"'a::field \<Rightarrow> 'a QStateM \<Rightarrow> 'a QStateM"  (infixl "\<cdot>\<^sub>Q" 70)
-  where "sca_mult_qstatem s qs \<equiv> QStateM(QStateM_map qs, s \<cdot>\<^sub>q (qstate qs))"
-
-lemma sca_mult_qstatem_wf:
-  assumes a0:"(s::'a::field) \<noteq> 0" shows "QStateM_wf (QStateM_map qs, s \<cdot>\<^sub>q (qstate qs))"
-proof-
-  have "QStateM_wf (QStateM_unfold qs)"
-    using QStateM_wf by blast
-  thus ?thesis using sca_mult_qstate_vars a0
-    by (simp add: sca_mult_qstate_vars[OF a0])
-qed
-
-lemma sca_mult_qstatem_var_map:
-  "(s::'a::field) \<noteq> 0 \<Longrightarrow> QStateM_map (s \<cdot>\<^sub>Q qs) = QStateM_map qs"
-  unfolding sca_mult_qstatem_def using sca_mult_qstatem_wf[of s qs]
-  by (auto simp add: QStateM_wf_map)
-
-lemma sca_mult_qstatem_var_qstate:
-  "(s::'a::field) \<noteq> 0 \<Longrightarrow> qstate (s \<cdot>\<^sub>Q qs) = s \<cdot>\<^sub>q qstate qs"
-  unfolding sca_mult_qstatem_def using sca_mult_qstatem_wf[of s qs]
-  by (auto simp add: QStateM_wf_qstate)
-
-lemma QStateM_list_inv: assumes a0:"Q_domain (QStateM_map \<Q>) = {}"
-  shows "inverse(QStateM_list \<Q> ! 0) \<cdot>\<^sub>Q \<Q> = QStateM (\<lambda>x. {}, 0)"
-proof-
-  have "QStateM_map \<Q> = {}\<^sub>q" using a0 unfolding Q_domain_def by auto       
-  moreover have "QStateM_list \<Q> = QState_list (qstate \<Q>)"
-    unfolding qstate_def apply transfer by auto
-  moreover have  "inverse(QState_list (qstate \<Q>) ! 0) \<cdot>\<^sub>q (qstate \<Q>) = 0"  
-    unfolding zero_QState empty_qstate_def
-    using QStateM_rel1 QState_list_inv assms empty_qstate_def by fastforce
-  ultimately show ?thesis unfolding sca_mult_qstatem_def 
-    by auto
-qed
-
-lemma sca_mult_qstatem_assoc: 
-  "a1 \<noteq> 0 \<Longrightarrow> a2\<noteq>0 \<Longrightarrow> (a1::'a::field)* a2 \<cdot>\<^sub>Q Q = a1 \<cdot>\<^sub>Q (a2 \<cdot>\<^sub>Q Q)"
-  by (metis (no_types) sca_mult_qstate_assoc sca_mult_qstatem_def sca_mult_qstatem_var_map sca_mult_qstatem_var_qstate)
-
-
-lemma QStateM_empty_not_zero: assumes a0:"Q_domain (QStateM_map \<Q>) = {}"
-  shows "(QStateM_list \<Q> ! 0) \<noteq> 0"
-proof-
-  have "QStateM_map \<Q> = {}\<^sub>q" using a0 unfolding Q_domain_def by auto       
-  then have "QStateM_list \<Q> = QState_list (qstate \<Q>)"
-    unfolding qstate_def apply transfer by auto  
-  then show ?thesis apply auto unfolding qstate_def
-    by (metis One_nat_def QStateM_rel1 QState_list_empty QState_wf assms 
-        length_Cons list.size(3) nth_Cons_0 qstate_def snd_conv)
-qed
-
 lemma disjoint_x_y_wf1_x_plus_y:
        assumes a0:"QStateM_map x ## QStateM_map y "  and 
               a1:"qstate x ## qstate y"
@@ -1131,7 +916,7 @@ lemma plus_wf: assumes a0:"QStateM_map x ## QStateM_map y "  and
   apply transfer' apply auto 
   sorry *)
 
-instantiation QStateM :: (field) sep_algebra
+instantiation QStateM :: (comm_ring_1) sep_algebra
 begin
 definition zero_QStateM: "0 \<equiv> QStateM (0, 0)"
 definition plus_QStateM: "s1 + s2 \<equiv> QStateM (QStateM_map s1 + QStateM_map s2, qstate s1 + qstate s2)" 
@@ -1166,20 +951,7 @@ instance
   by (smt sep_disj_QStateM Qstate_mapf Qstate_vector 
           disjoint_x_y_wf1_x_plus_y fst_conv plus_QStateM plus_wf 
            sep_disj_add sep_disj_addD)  
-end 
+end
 
-lemma scalar_mult_QStateM_plus_l:
-  "(a::'a::field) \<noteq> 0 \<Longrightarrow> \<Q>' ## \<Q>'' \<Longrightarrow> a  \<cdot>\<^sub>Q (\<Q>' + \<Q>'') = (a  \<cdot>\<^sub>Q \<Q>' + \<Q>'')"
-  unfolding sca_mult_qstatem_def plus_QStateM sep_disj_QStateM
-  by (smt QStateM_wf_map QStateM_wf_qstate plus_wf sca_mult_qstatem_wf 
-          scalar_mult_QState_plus_l)
-  
 
-lemma scalar_mult_QStateM_plus_r:
-  assumes a0:"(a::'a::field) \<noteq> 0" and a1:"\<Q>' ## \<Q>''" 
-  shows "a  \<cdot>\<^sub>Q (\<Q>' + \<Q>'') = ( \<Q>' + a  \<cdot>\<^sub>Q \<Q>'')"
-  by (smt a0 assms(2) plus_QStateM sca_mult_qstatem_def sca_mult_qstatem_var_map 
-       sca_mult_qstatem_var_qstate scalar_mult_QStateM_plus_l 
-         scalar_mult_QState_plus_l scalar_mult_QState_plus_r sep_disj_QStateM)
- 
 end
