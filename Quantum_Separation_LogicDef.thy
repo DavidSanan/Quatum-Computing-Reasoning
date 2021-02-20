@@ -494,7 +494,7 @@ where
               (Alloc q e v) (\<llangle>q\<rrangle> \<mapsto>\<^sub>l Qs)"
 *)
 | QAlloc:"not_access_v v q \<Longrightarrow> not_access_v (\<SS> R) q \<Longrightarrow>         
-          q \<in> variables \<Longrightarrow> q \<in> nat_vars \<Longrightarrow>
+          q \<in> variables \<Longrightarrow> q \<in> nat_vars \<Longrightarrow> \<forall>\<sigma>. length (v \<sigma>) > 1 \<Longrightarrow>
           \<turnstile> R q:=alloc v ((q\<cdot>f \<mapsto>\<^sub>v v) \<smile> 1 \<and>\<^sup>* R)"
 
 
@@ -573,7 +573,7 @@ lemma prob_assert_dest:"s \<in> P \<smile> 1 \<Longrightarrow> get_prob s = 1 \<
 lemma map_assnv_prob:
    "QState_wf (q'_addr, v \<sigma>) \<Longrightarrow> QStateM_wf ((\<lambda>i. {})(q' := q'_addr), QState (q'_addr, v \<sigma>)) \<Longrightarrow> 
        QStateM_map (QStateM ((\<lambda>i. {})(q' := q'_addr), QState (q'_addr, v \<sigma>))) = (\<lambda>i. {})(q' := q'_addr) \<Longrightarrow>
-       q \<in> nat_vars  \<Longrightarrow> q \<in> variables \<Longrightarrow>
+       q \<in> nat_vars  \<Longrightarrow> q \<in> variables \<Longrightarrow> length (v \<sigma>) > 1 \<Longrightarrow>
      v \<sigma> = v (set_value \<sigma> q (from_nat q')) \<Longrightarrow>
       (1, set_value \<sigma> q (from_nat q'),
          QStateM ((\<lambda>i. {})(q' := q'_addr), QState (q'_addr, v \<sigma>)))
@@ -582,23 +582,23 @@ lemma map_assnv_prob:
             Q_domain_var_def set_value_def var_set_def
   apply auto
   apply (simp add: get_set rep_nat)
-     apply (metis QStateM_rel1 QState_var_idem  fst_conv snd_conv)
-  using QStateM_rel1 QState_var_idem  apply fastforce 
-    apply (metis QStateM_rel2 QStateM_wf_qstate QState_list_idem  fst_conv snd_conv )      
-  apply (simp add:  get_set rep_nat set_value_def)
-  by (simp add:  get_set rep_nat )
+  apply (metis (no_types, lifting) QState.rep_eq QStateM_rel1 QState_vars.rep_eq equals0D fst_conv)
+          apply (metis One_nat_def QState.rep_eq QStateM_rel1 QState_vars.rep_eq card_0_eq fst_conv n_not_Suc_n nat_power_eq_Suc_0_iff numeral_2_eq_2 snd_conv)
+  apply (metis One_nat_def QStateM_rel2 QStateM_wf_qstate QState_list_idem card_0_eq equals0D fst_conv n_not_Suc_n nat_power_eq_Suc_0_iff numeral_2_eq_2 snd_conv)
+  apply (simp add: get_set rep_nat)
+  by (simp add: get_set rep_nat)
 
 
 lemma alloc_sound:
   assumes (* a0: "st =(\<lambda>s. get_stack s) " and *) a1:"not_access_v v q" and 
           a2':"not_access_v (\<SS> R) q" and 
-          a3:"q \<in> variables" and  a4:"q \<in> nat_vars"
+          a3:"q \<in> variables" and  a4:"q \<in> nat_vars" and a5:"\<forall>\<sigma>. length (v \<sigma>) > 1"
   shows "\<Turnstile> R q:=alloc v (( (q\<cdot>f \<mapsto>\<^sub>v v)) \<smile> 1 \<and>\<^sup>* R)"  
 proof-
   { fix s s'
     let ?st = "(\<lambda>s. get_stack s) "
      assume a00:"\<turnstile> \<langle>q:=alloc v,s\<rangle> \<Rightarrow> s'" and
-            a01:"s \<in> Normal ` R"     
+            a01:"s \<in> Normal ` R"       
      then obtain sn where a01:"s = Normal sn" and         
          a01a:"sn \<in> R"  using a00 a01
        by auto               
@@ -608,12 +608,14 @@ proof-
                          \<Q> + QStateM ((\<lambda>i. {})(q' := q'_addr), QState (q'_addr, v \<sigma>)))" and
       q':"q' \<notin> dom_q_vars (QStateM_map \<Q>)" and
       q'_addr_in_new: "q'_addr \<in> new_q_addr v \<sigma> (QStateM_map \<Q>)"         
-        by (auto intro: QExec_Normal_elim_cases(9)[OF a00[simplified a01]])    
+       by (auto intro: QExec_Normal_elim_cases(9)[OF a00[simplified a01]])    
     then obtain sn' where 
        sn':"s' = Normal sn' \<and> 
         sn' = (\<delta>, set_value \<sigma> q (from_nat q'), \<Q> + QStateM ((\<lambda>i. {})(q' := q'_addr), QState (q'_addr, v \<sigma>)))" 
        by auto              
      let ?\<Q> = "\<Q> + QStateM ((\<lambda>i. {})(q' := q'_addr), QState (q'_addr, v \<sigma>))" 
+     have h1:"length (v \<sigma>) > 1" using a5
+       by blast
      have \<sigma>:"\<sigma> = ?st sn" and Q:"QStateM_unfold \<Q> = get_qstate sn" and 
           Q':"QStateM_unfold ?\<Q> = get_qstate sn'"
        using sn  sn' unfolding get_qstate_def get_stack_def   by auto
@@ -627,9 +629,10 @@ proof-
      have sn_mod_\<sigma>'_in_R:"(\<delta>, ?\<sigma>', \<Q>) \<in> R" using a01a st' unfolding get_stack_def
        using a2' a3 a4 allocate_preserves_R sn by blast
      have new_state_in_assr:"(1, ?\<sigma>', ?\<Q>') \<in> (q\<cdot>f \<mapsto>\<^sub>v v) \<smile> 1"
-       using map_assnv_prob[OF _ _ _ ]    v_eq a4 a3
+       using map_assnv_prob[OF _ _ _ ]    v_eq a4 a3  h1
 (*          allocate_wf1[of ?\<Q>', OF _  _ _ q'_addr_in_new , of  "(\<lambda>i. {})(q' := q'_addr)" v q' ?\<sigma>' set_value q, simplified] *)
-       allocate_wf1[of ?\<Q>', OF _  _ _ q'_addr_in_new, of "{}\<^sub>q(q' := q'_addr)" q' ?\<sigma>', simplified]
+       allocate_wf1[of ?\<Q>', OF _ _  _ _ q'_addr_in_new, of "{}\<^sub>q(q' := q'_addr)" q' ?\<sigma>', simplified]
+
        by fastforce
      have "sn' \<in> ((q\<cdot>f \<mapsto>\<^sub>v v) \<smile> 1 \<and>\<^sup>* R)"       
      proof-    

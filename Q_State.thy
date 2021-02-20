@@ -246,7 +246,7 @@ definition mapping::"'q set \<Rightarrow> 'q set \<Rightarrow> nat set \<times> 
 
 typedef (overloaded) ('a::comm_ring_1)
   QState = "{(s,v)| (s::nat set) (v::'a list).                                   
-              length v = (2^(card s)) \<and> finite s}"
+              length v = (2^(card s)) \<and> finite s \<and> (length v = 1 \<longrightarrow> v = [1])}"
   morphisms uQState Abs_QState  
   by (rule exI[where x ="({},[1])"], auto)
 
@@ -258,9 +258,9 @@ definition tensor_mat_ord::"'a QState \<Rightarrow> nat set \<Rightarrow> 'a::co
 lemma QState_rel1:"length(snd(uQState x)) = 2 ^ card (fst(uQState x))"
   by (transfer, auto)
 
-(* lemma QState_rel2:"fst (uQState (x::('a::comm_ring_1) QState )) = {} \<longrightarrow> 
-                  (((snd (uQState x)) ! 0) = 1)"
-  by (transfer, auto) *)
+lemma QState_rel2:"length (snd (uQState (x::('a::comm_ring_1) QState ))) = 1 \<longrightarrow> 
+                   snd (uQState x) = [1] "
+  by (transfer, auto) 
 
 lemma QState_rel3:"finite (fst (uQState (x::('a::comm_ring_1) QState )))"
   apply transfer by auto
@@ -272,7 +272,7 @@ lift_definition QState_vector::"('a::comm_ring_1) QState \<Rightarrow> 'a::comm_
 
 abbreviation QState_wf::"nat set \<times> 'a::comm_ring_1 list \<Rightarrow> bool"
   where "QState_wf s \<equiv> 
-      length (snd s) = (2^(card (fst s))) \<and> finite (fst s)"
+      length (snd s) = (2^(card (fst s))) \<and> finite (fst s) \<and> (length (snd s) = 1 \<longrightarrow> (snd s) = [1])"
 
 lift_definition QState :: "nat set \<times> 'a::comm_ring_1 list \<Rightarrow> 'a QState" is  
   "\<lambda>s. if QState_wf s then (fst s, snd s)
@@ -311,9 +311,9 @@ lemma QState_rel3':"finite (QState_vars (x::('a::comm_ring_1) QState ))"
 lemma QState_rel1':"length(QState_list x) = 2 ^ card (QState_vars x)"
   by (transfer, auto)
 
-(* lemma QState_rel2':"QState_vars x = {} \<Longrightarrow> 
-                  (((QState_list x) ! 0) = 1)"
-  by (transfer, auto) *)
+lemma QState_rel2':"length (QState_list x) = 1 \<Longrightarrow> 
+                    (QState_list x) = [1]"
+  by (transfer, auto) 
 
 (* lemma QState_empty0:"QState_vars x = {} \<Longrightarrow> 
                      QState_list x = [1]"
@@ -321,8 +321,8 @@ lemma QState_rel1':"length(QState_list x) = 2 ^ card (QState_vars x)"
   apply auto
   by (metis Suc_length_conv list_exhaust_size_eq0 nth_Cons_0) *)
 
-lemma QState_empty1:"QState_list x = [1] \<Longrightarrow> QState_vars x = {}"
-  using QState_rel1' QState_rel3'
+lemma QState_empty1:"(QState_list x = [1]) = (QState_vars x = {})"
+  using QState_rel1' QState_rel3' QState_rel2'
   by (metis One_nat_def card_eq_0_iff length_Cons list.size(3) nat_power_eq_Suc_0_iff 
      numeral_eq_one_iff semiring_norm(85)) 
 
@@ -534,8 +534,8 @@ lemma QState_vars_Plus:"(QState_vars q1 \<inter> QState_vars q2 \<noteq> {} \<lo
            QState_vars (plus_QState q1 q2) = fst (plus_QState_vector q1 q2))"  
     apply (auto simp add: plus_QState_def ) apply transfer
     apply simp 
-   apply transfer' using plus_QState_vector_set_wf plus_QState_vector_wf  
-   apply (smt fst_conv)
+   apply transfer' using plus_QState_vector_set_wf plus_QState_vector_wf
+  apply (smt QState_id_fst_empty empty_iff prod.collapse snd_uQState_empty)     
    apply transfer' using plus_QState_vector_set_wf plus_QState_vector_wf
   by fastforce
 
@@ -547,8 +547,10 @@ lemma QState_list_Plus:"(QState_vars q1 \<inter> QState_vars q2 \<noteq> {} \<lo
     apply auto
   apply transfer 
   apply auto 
-  using plus_QState_vector_set_wf     
-  by (auto simp add: plus_QState_vector_wf) 
+  using plus_QState_vector_set_wf
+  apply blast
+  apply (simp add: plus_QState_vector_wf)
+  by (metis QState_empty1 QState_refl bot_eq_sup_iff plus_QState_vector_a_idem plus_QState_vector_vars)
 
 lemma neutral_vector_wf:"length [1] = (2^(card {}))" by auto
 

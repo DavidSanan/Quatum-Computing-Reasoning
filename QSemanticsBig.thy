@@ -79,8 +79,9 @@ proof-
     unfolding matrix_sep_def Let_def apply auto
     unfolding ps2.d0_def ps2.dims0_def ps2.vars0_def apply transfer   
     unfolding Q_domain_def apply auto
-     apply (metis UN_Un Un_UNIV_right)       
-    by (transfer, simp add: QState_rel3')    
+     apply (metis UN_Un Un_UNIV_right)
+    using Diff_infinite_finite ps2.finite_v1 ps2.finite_v2 apply blast
+    using a0 ps2.finite_v1 ps2.finite_v2 by auto
   then have f1:"QState_vars (QState (QStateM_vars q, list_of_vec (?m *\<^sub>v ?v))) = 
              QStateM_vars q"
     using QState_var_idem
@@ -91,7 +92,7 @@ proof-
     using  f1 a1 a2 a3 a4
     apply (auto simp add:  QStateM_wf_map QStateM_wf_vars )
     using a1 a2 a3 a4 Q_wf
-    by (auto simp add: QState_list_idem  QStateM_wf_list)
+    by (metis QStateM_wf_list QState_list_idem q)    
 qed
 
 
@@ -144,7 +145,7 @@ definition measure_vars::"nat \<Rightarrow>  nat set \<Rightarrow> complex QStat
        (\<delta>k, QStateM(qm, QState (vars_dom, qnprod)))" 
 
 lemma allocate_wf1:
-  assumes a0:"\<Q>' = QStateM(\<vv>', QState (q'_addr,(v \<sigma>)))" and       
+  assumes a0:"\<Q>' = QStateM(\<vv>', QState (q'_addr,(v \<sigma>)))" and a1:"length (v \<sigma>) > 1" and      
        a2:"\<vv>' = (\<lambda>i. {})(q' := q'_addr)" and a2':"\<sigma>' = set_value \<sigma> q (from_nat q')" and
       a3:"q'_addr \<in> new_q_addr v \<sigma> (QStateM_map \<Q>) " 
     shows "QState_wf (q'_addr, v \<sigma>) \<and> 
@@ -155,7 +156,7 @@ proof-
      using assms
      unfolding new_q_addr_def
      using assms snd_conv
-     using card_infinite by force
+     using card_infinite a1 by force
    moreover have QStateM_wf:"QStateM_wf ((\<lambda>i. {})(q' := q'_addr), QState (q'_addr, v \<sigma>))"
      using calculation
      unfolding Q_domain_def using QState_var_idem by auto
@@ -167,7 +168,7 @@ proof-
  qed
 
 lemma allocate_wf:
-  assumes a0:"\<Q>' = QStateM(\<vv>', QState (q'_addr,(v \<sigma>)))" and
+  assumes a0:"\<Q>' = QStateM(\<vv>', QState (q'_addr,(v \<sigma>)))" and a1':"length (v \<sigma>) > 1" and
        a1:"q' \<notin> (dom_q_vars (QStateM_map \<Q>))" and
        a2:"\<vv>' = (\<lambda>i. {})(q' := q'_addr)" and a2':"\<sigma>' = set_value \<sigma> q (from_nat q')" and
       a3:"q'_addr \<in> new_q_addr v \<sigma> (QStateM_map \<Q>) "
@@ -177,7 +178,7 @@ proof-
   have "QState_wf (q'_addr, v \<sigma>) \<and> 
            QStateM_wf ((\<lambda>i. {})(q' := q'_addr), QState (q'_addr, v \<sigma>))  \<and>
            QStateM_map \<Q>' = (\<lambda>i. {})(q' := q'_addr)"
-    using allocate_wf1[of  \<Q>' \<vv>' q'_addr v \<sigma>, OF a0  a2 _ a3 , of \<sigma>' set_value q, OF a2']
+    using allocate_wf1[of  \<Q>' \<vv>' q'_addr v \<sigma>, OF a0  a1' a2 _ a3 , of \<sigma>' set_value q, OF a2']
     by auto
   moreover have d1:"QStateM_map \<Q> ## QStateM_map \<Q>'"
     using assms calculation
@@ -195,7 +196,7 @@ proof-
 qed
 
 lemma disjoint_allocate: 
-  assumes a0:"\<Q>' = QStateM(\<vv>', QState (q'_addr,(v \<sigma>)))" and
+  assumes a0:"\<Q>' = QStateM(\<vv>', QState (q'_addr,(v \<sigma>)))" and a1':"length (v \<sigma>) > 1" and
        a1:"q' \<notin> (dom_q_vars (QStateM_map \<Q>))" and
        a2:"\<vv>' = (\<lambda>i. {})(q' := q'_addr)" and a2':"\<sigma>' = set_value \<sigma> q (from_nat q')" and
       a3:"q'_addr \<in> new_q_addr v \<sigma> (QStateM_map \<Q>) " 
@@ -204,7 +205,7 @@ proof-
   have "QState_wf (q'_addr, v \<sigma>) \<and> 
            QStateM_wf ((\<lambda>i. {})(q' := q'_addr), QState (q'_addr, v \<sigma>))  \<and>
            QStateM_map \<Q>' = (\<lambda>i. {})(q' := q'_addr)"
-    using allocate_wf1[of \<Q>' \<vv>' q'_addr v \<sigma>, OF a0 a2 _ a3, of \<sigma>' set_value, OF a2']
+    using allocate_wf1[of \<Q>' \<vv>' q'_addr v \<sigma>, OF a0 a1' a2 _ a3, of \<sigma>' set_value, OF a2']
     by auto
   moreover have d1:"QStateM_map \<Q> ## QStateM_map \<Q>'"
     using assms calculation
@@ -268,7 +269,7 @@ inductive QExec::"('v, 's) com \<Rightarrow> 's XQState \<Rightarrow> 's XQState
           q'_addr \<in> new_q_addr e \<sigma> (QStateM_map \<Q>)  \<Longrightarrow> e \<sigma> \<noteq> 0 \<Longrightarrow> length (v \<sigma>) = 2^(e \<sigma>) \<Longrightarrow>                     
           \<turnstile> \<langle>Alloc q e v, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Normal (\<delta>, \<sigma>',\<Q> + QStateM(\<vv>', QState (q'_addr,(v \<sigma>)) ))" *)
 
-| Alloc:"q' \<notin> (dom_q_vars (QStateM_map \<Q>)) \<Longrightarrow>
+| Alloc:"q' \<notin> (dom_q_vars (QStateM_map \<Q>)) \<Longrightarrow> (length (v \<sigma>) > 1) \<Longrightarrow>
               \<vv>' = (\<lambda>i. {})(q' := q'_addr) \<and>  \<sigma>' = set_value \<sigma> q (from_nat q') \<Longrightarrow> 
           q'_addr \<in> new_q_addr v \<sigma> (QStateM_map \<Q>)  \<Longrightarrow>                     
           \<turnstile> \<langle>Alloc q v, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Normal (\<delta>, \<sigma>',\<Q> + QStateM(\<vv>', QState (q'_addr,(v \<sigma>)) ))"
