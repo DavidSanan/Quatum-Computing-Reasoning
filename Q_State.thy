@@ -254,9 +254,9 @@ lemma idempoten_qstate:
 definition mapping::"'q set \<Rightarrow> 'q set \<Rightarrow> nat set \<times> nat set"
   where "mapping s1 s2 \<equiv>({},{})"
 
-typedef (overloaded) ('a::field)
-  QState = "{(s,v)| (s::nat set) (v::'a list).                                   
-              length v = (2^(card s)) \<and> finite s \<and> (length v = 1 \<longrightarrow> v\<noteq>[0])}"
+typedef  
+  QState = "{(s,v)| (s::nat set) (v::complex list).                                   
+              length v = (2^(card s)) \<and> finite s \<and> (length v = 1 \<longrightarrow> Im (v!0) = 0 \<and> Re (v!0) > 0)}"
   morphisms uQState Abs_QState  
   by (rule exI[where x ="({},[1])"], auto)
 
