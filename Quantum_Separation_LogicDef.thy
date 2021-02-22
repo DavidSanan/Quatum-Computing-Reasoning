@@ -376,7 +376,7 @@ where "empty_state_norm_expr n \<equiv> (\<lambda>s. (n s) \<cdot>\<^sub>q |>)" 
 
 definition empty_qstatem_norm_expr::"('s, complex) expr \<Rightarrow> ('s , complex QStateM) expr"
 ("|>\<^sub>_" 50)
-where "empty_qstatem_norm_expr n \<equiv> (\<lambda>s. QStateM ({}\<^sub>q, (n s) \<cdot>\<^sub>q |>))"
+where "empty_qstatem_norm_expr n \<equiv> (\<lambda>s. (n s) \<cdot>\<^sub>Q 0)"
 
 
 definition empty_qstatem_norm_ass::"('s, complex) expr \<Rightarrow> (('s state) set)"
@@ -713,6 +713,8 @@ proof-
     by (metis (no_types, lifting) SUP_cong Sep_Prod_Instance.none_def  plus_fun_def sep_add_commute)
 qed
 
+  
+
 lemma dispose_sound:
   assumes a0:"q \<in> variables" and  a1:"q \<in> nat_vars \<or> q \<in> nat_list_vars" and
     a4:"n = (\<lambda>s. vec_norm (vec_of_list (v s)))" 
@@ -728,7 +730,7 @@ proof-
     note dest_assign = map_assnv_dest[OF a01a]
     moreover obtain \<Q>' \<Q>''  where 
         step:"\<Q> =  \<Q>' + \<Q>'' \<and>
-          s' = Normal (\<rho>, \<sigma>, QStateM (QStateM_map \<Q>'', vec_norm (QStateM_vector \<Q>') \<cdot>\<^sub>q qstate \<Q>'')) \<and>
+          s' = Normal (\<rho>, \<sigma>, vec_norm (QStateM_vector \<Q>') \<cdot>\<^sub>Q \<Q>'') \<and>
           \<Q>' ## \<Q>'' \<and>  Q_domain_var (var_set q i \<sigma>) (QStateM_map \<Q>') \<noteq> {} \<and>
           QStateM_vars \<Q>' = Q_domain_var (var_set q i \<sigma>) (QStateM_map \<Q>') \<and>
           (\<forall>e \<in> (var_set q i \<sigma>). (QStateM_map \<Q>') e \<noteq> {})"                 
@@ -740,19 +742,36 @@ proof-
       apply (drule spec[of _ \<Q>], auto)               
       apply (frule spec[of _ 0])
       by auto         
-    moreover have "Q_domain (QStateM_map \<Q>') =  Q_domain (QStateM_map \<Q>)"
+    moreover have q_domain:"Q_domain (QStateM_map \<Q>') =  Q_domain (QStateM_map \<Q>)"
       using calculation Q_domain_Q
-      by (simp add: Q_domain_Q)                   
-    ultimately have "\<Q> = ((QStateM_list \<Q>'' ! 0)) \<cdot>\<^sub>Q \<Q>' \<and> (inverse(QStateM_list \<Q>'' ! 0)) \<cdot>\<^sub>Q \<Q>'' = 0"
-      using sep_eq by auto               
+      by (simp add: Q_domain_Q)   
+    ultimately have Q:"\<Q> = ((QStateM_list \<Q>'' ! 0)) \<cdot>\<^sub>Q \<Q>' \<and> (inverse(QStateM_list \<Q>'' ! 0)) \<cdot>\<^sub>Q \<Q>'' = 0"
+      using sep_eq by auto     
+        
+    have "QStateM_list \<Q> = v \<sigma> "
+      using dest_assign by blast
+    then have "vec_norm (vec_of_list (v \<sigma>)) \<cdot>\<^sub>Q 0 = 
+               vec_norm (QStateM_vector \<Q>) \<cdot>\<^sub>Q 0" 
+      apply transfer'
+      by (simp add: QState_vector.rep_eq uqstate_snd)
+    also have "vec_norm (QStateM_vector \<Q>) \<cdot>\<^sub>Q 0  = 
+               vec_norm (QStateM_vector \<Q>) \<cdot>\<^sub>Q ((inverse(QStateM_list \<Q>'' ! 0)) \<cdot>\<^sub>Q \<Q>'')"
+      using Q by simp 
+    also have "vec_norm (QStateM_vector \<Q>) \<cdot>\<^sub>Q ((inverse(QStateM_list \<Q>'' ! 0)) \<cdot>\<^sub>Q \<Q>'') = 
+               vec_norm (QStateM_vector (((QStateM_list \<Q>'' ! 0)) \<cdot>\<^sub>Q \<Q>')) \<cdot>\<^sub>Q ((inverse(QStateM_list \<Q>'' ! 0)) \<cdot>\<^sub>Q \<Q>'')"
+      using Q by simp
+    finally have 
+       "vec_norm (QStateM_vector \<Q>') \<cdot>\<^sub>Q \<Q>'' =
+         vec_norm (vec_of_list (v \<sigma>)) \<cdot>\<^sub>Q 0 "
+      using sep_Q_eq_Q'_Q''_empty
+      using local.step q_domain sorry
     moreover obtain sn where 
-       s':"s' = Normal sn \<and> sn = (\<rho>, \<sigma>, QStateM (QStateM_map \<Q>'', vec_norm (QStateM_vector \<Q>') \<cdot>\<^sub>q qstate \<Q>''))"
+       s':"s' = Normal sn \<and> sn = (\<rho>, \<sigma>, vec_norm (QStateM_vector \<Q>') \<cdot>\<^sub>Q \<Q>'')"
       using step by auto
-    then have  "sn \<in> ( |>a\<^sub>n) "
+    ultimately have  "sn \<in> ( |>a\<^sub>n) "
       using a4 
-      unfolding  empty_qstatem_norm_ass_def empty_qstatem_norm_expr_def get_QStateM_def
-      apply auto
-      sorry
+      unfolding  empty_qstatem_norm_ass_def empty_qstatem_norm_expr_def get_QStateM_def get_stack_def
+      by auto      
      then have "s' \<in> Normal ` (( |>a\<^sub>n))" using s' by auto
    }
    thus ?thesis  unfolding valid_def by auto
