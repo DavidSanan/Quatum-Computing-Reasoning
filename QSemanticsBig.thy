@@ -145,9 +145,9 @@ definition measure_vars::"nat \<Rightarrow>  nat set \<Rightarrow> complex QStat
        (\<delta>k, QStateM(qm, QState (vars_dom, qnprod)))" 
 
 lemma allocate_wf1:
-  assumes a0:"\<Q>' = QStateM(\<vv>', QState (q'_addr,(v \<sigma>)))" and       
+  assumes a0:"\<Q>' = QStateM(\<vv>', QState (q'_addr,(v \<sigma>)))" and  a1:"length (v \<sigma>) > 1" and     
        a2:"\<vv>' = (\<lambda>i. {})(q' := q'_addr)" and 
-      a3:"q'_addr \<in> new_q_addr e \<sigma> (QStateM_map \<Q>) " and a4:"0 < e \<sigma> " and a5:"length (v \<sigma>) = 2^(e \<sigma>)"
+      a3:"q'_addr \<in> new_q_addr v \<sigma> (QStateM_map \<Q>) " 
     shows "QState_wf (q'_addr, v \<sigma>) \<and> 
            QStateM_wf ((\<lambda>i. {})(q' := q'_addr), QState (q'_addr, v \<sigma>))  \<and>
            QStateM_map \<Q>' = (\<lambda>i. {})(q' := q'_addr)"
@@ -168,27 +168,27 @@ proof-
  qed
 
 lemma allocate_wf:
-  assumes a0:"\<Q>' = QStateM(\<vv>', QState (q'_addr,(v \<sigma>)))" and
+  assumes a0:"\<Q>' = QStateM(\<vv>', QState (q'_addr,(v \<sigma>)))" and a1':"length (v \<sigma>) > 1" and
        a1:"q' \<notin> (dom_q_vars (QStateM_map \<Q>))" and
        a2:"\<vv>' = (\<lambda>i. {})(q' := q'_addr)" and 
-      a3:"q'_addr \<in> new_q_addr e \<sigma> (QStateM_map \<Q>) " and a4:"0 < e \<sigma> " and a5:"length (v \<sigma>) = 2^(e \<sigma>)"
+      a3:"q'_addr \<in> new_q_addr v \<sigma> (QStateM_map \<Q>) " 
     shows "QStateM_wf (QStateM_map \<Q> + QStateM_map \<Q>',
                   qstate \<Q> + qstate \<Q>')"
 proof-  
   have "QState_wf (q'_addr, v \<sigma>) \<and> 
            QStateM_wf ((\<lambda>i. {})(q' := q'_addr), QState (q'_addr, v \<sigma>))  \<and>
            QStateM_map \<Q>' = (\<lambda>i. {})(q' := q'_addr)"
-    using allocate_wf1[of  \<Q>' \<vv>' q'_addr v \<sigma>, OF a0  a2  a3 a4 a5]
+    using allocate_wf1[of  \<Q>' \<vv>' q'_addr v \<sigma>, OF a0  a1' a2  a3 ]
     by auto
   moreover have d1:"QStateM_map \<Q> ## QStateM_map \<Q>'"
     using assms calculation
     unfolding dom_q_vars_def sep_disj_fun_def opt_class.domain_def
     by auto 
   moreover have d2:"qstate \<Q> ## qstate \<Q>'" 
-    unfolding sep_disj_QState disj_QState_def calculation
+unfolding sep_disj_QState disj_QState_def calculation
     using QStateM_wf QState_wf a3 unfolding new_q_addr_def
     apply auto
-    by (smt QStateM_rel1 QState_rel3' QState_var_idem a3 a4 
+    by (smt QStateM_rel1 QState_rel3' QState_var_idem a3  
            calculation(1) fst_conv new_q_addr_gt_old_q_addr not_less_iff_gr_or_eq snd_conv)                        
   ultimately show ?thesis   
     using plus_wf
@@ -196,16 +196,16 @@ proof-
 qed
 
 lemma disjoint_allocate: 
-  assumes a0:"\<Q>' = QStateM(\<vv>', QState (q'_addr,(v \<sigma>)))" and
+  assumes a0:"\<Q>' = QStateM(\<vv>', QState (q'_addr,(v \<sigma>)))" and a1':"length (v \<sigma>) > 1" and
        a1:"q' \<notin> (dom_q_vars (QStateM_map \<Q>))" and
        a2:"\<vv>' = (\<lambda>i. {})(q' := q'_addr)" and
-      a3:"q'_addr \<in> new_q_addr e \<sigma> (QStateM_map \<Q>) " and a4:"0 < e \<sigma> " and a5:"length (v \<sigma>) = 2^(e \<sigma>)"
+      a3:"q'_addr \<in> new_q_addr v \<sigma> (QStateM_map \<Q>) " 
     shows "\<Q> ## \<Q>'"
 proof-  
   have "QState_wf (q'_addr, v \<sigma>) \<and> 
            QStateM_wf ((\<lambda>i. {})(q' := q'_addr), QState (q'_addr, v \<sigma>))  \<and>
            QStateM_map \<Q>' = (\<lambda>i. {})(q' := q'_addr)"
-    using allocate_wf1[of  \<Q>' \<vv>' q'_addr v \<sigma>, OF a0  a2 a3 a4 a5]
+    using allocate_wf1[of  \<Q>' \<vv>' q'_addr v \<sigma>, OF a0  a1' a2 a3 ]
     by auto
   moreover have d1:"QStateM_map \<Q> ## QStateM_map \<Q>'"
     using assms calculation
@@ -215,11 +215,25 @@ proof-
     unfolding sep_disj_QState disj_QState_def calculation
     using QStateM_wf QState_wf a3 unfolding new_q_addr_def
     apply auto
-    by (smt QStateM_rel1 QState_rel3' QState_var_idem a3 a4 
+    by (smt QStateM_rel1 QState_rel3' QState_var_idem a3  
            calculation(1) fst_conv new_q_addr_gt_old_q_addr not_less_iff_gr_or_eq snd_conv)                        
   ultimately show ?thesis   
     using plus_wf
     by (simp add: sep_disj_QStateM)
+qed
+
+lemma sep_Q_eq_Q'_Q''_empty: 
+     assumes a0:"\<Q> =  \<Q>' + \<Q>'' " and 
+              a1:"\<Q>' ## \<Q>''" and
+              a2:"Q_domain (QStateM_map \<Q>') = Q_domain (QStateM_map \<Q>)"
+      shows "(QStateM_map \<Q>'') = {}\<^sub>q" 
+proof-
+  have Q''0:"Q_domain (QStateM_map \<Q>'') = {}"
+    using a0 a1 a2 unfolding  plus_QStateM sep_disj_QStateM     
+    by (smt QStateM_rel1  Qstate_vector disj_QState_def 
+           disjoint_x_y_wf1_x_plus_y fst_conv inf.idem plus_wf 
+           sep_add_disjD sep_disj_QState)
+  then show ?thesis unfolding Q_domain_def by auto
 qed
 
 lemma sep_eq: 
@@ -329,6 +343,7 @@ context vars
 begin
 
 
+
 inductive QExec::"('v, 's) com \<Rightarrow> 's XQState \<Rightarrow> 's XQState \<Rightarrow> bool" 
   ("\<turnstile> \<langle>_,_\<rangle> \<Rightarrow> _"  [20,98,98] 89)  
   where 
@@ -361,9 +376,9 @@ inductive QExec::"('v, 's) com \<Rightarrow> 's XQState \<Rightarrow> 's XQState
           q'_addr \<in> new_q_addr e \<sigma> (QStateM_map \<Q>)  \<Longrightarrow> e \<sigma> \<noteq> 0 \<Longrightarrow> length (v \<sigma>) = (e \<sigma>) \<Longrightarrow>                     
           \<turnstile> \<langle>Alloc q e v, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Normal (\<delta>, \<sigma>',QStateM(\<vv>',\<qq> + QState (q'_addr,(v \<sigma>)) ))" *)
 
-| Alloc:"q' \<notin> (dom_q_vars (QStateM_map \<Q>)) \<Longrightarrow>
+| Alloc:"q' \<notin> (dom_q_vars (QStateM_map \<Q>)) \<Longrightarrow> (length (v \<sigma>) > 1) \<Longrightarrow>
               \<vv>' = (\<lambda>i. {})(q' := q'_addr) \<and>  \<sigma>' = set_value \<sigma> q (from_nat q') \<Longrightarrow> 
-          q'_addr \<in> new_q_addr e \<sigma> (QStateM_map \<Q>)  \<Longrightarrow> e \<sigma> \<noteq> 0 \<Longrightarrow> length (v \<sigma>) = 2^(e \<sigma>) \<Longrightarrow>                     
+          q'_addr \<in> new_q_addr v \<sigma> (QStateM_map \<Q>)  \<Longrightarrow>                     
           \<turnstile> \<langle>Alloc q e v, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Normal (\<delta>, \<sigma>',\<Q> + QStateM(\<vv>', QState (q'_addr,(v \<sigma>)) ))"
 (* | Alloc:"q' \<notin> (dom_q_vars (QStateM_map \<Q>)) \<Longrightarrow> q'_addr \<in> new_q_addr e \<sigma> (QStateM_map \<Q>)  \<Longrightarrow> e \<sigma> \<noteq> 0 \<Longrightarrow>
           \<vv>' = (QStateM_map \<Q>)(q' := q'_addr)  \<Longrightarrow> length (v \<sigma>) = (e \<sigma>) \<Longrightarrow> \<sigma>' = set_value \<sigma> q (from_nat q') \<Longrightarrow>                    
@@ -371,7 +386,7 @@ inductive QExec::"('v, 's) com \<Rightarrow> 's XQState \<Rightarrow> 's XQState
 \<comment>\<open>Alloc will fail if the length of the initial value is not equal to the number of qubits allocated \<close>
 
 
- | Alloc_F:"length (v \<sigma>) \<noteq> 2^(e \<sigma>) \<or> e \<sigma> = 0 \<Longrightarrow>                    
+ | Alloc_F:"length (v \<sigma>) \<le> 1 \<Longrightarrow>                    
           \<turnstile> \<langle>Alloc q e v, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Fault"
 
 \<comment>\<open>the conditional, while, and seq statements follow the standard definitions\<close>
@@ -402,9 +417,10 @@ inductive QExec::"('v, 's) com \<Rightarrow> 's XQState \<Rightarrow> 's XQState
              \<turnstile> \<langle>Dispose q, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Normal (\<delta>,\<sigma>,QStateM(m', n \<cdot>\<^sub>q Q'))" *)
 
  | Dispose: "  \<Q> = \<Q>' + \<Q>'' \<Longrightarrow> \<Q>' ## \<Q>'' \<Longrightarrow> n = vec_norm (QStateM_vector \<Q>') \<Longrightarrow>
-              Q_domain (QStateM_map \<Q>') \<noteq> {} \<Longrightarrow> 
-              Q_domain (QStateM_map \<Q>') = (Q_domain_var (var_set q v \<sigma>) (QStateM_map \<Q>')) \<Longrightarrow>                                      
-             \<turnstile> \<langle>Dispose q v, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Normal (\<delta>,\<sigma>,QStateM(QStateM_map \<Q>'', n \<cdot>\<^sub>q (qstate \<Q>'')))"
+              QStateM_vars \<Q>' \<noteq> {} \<Longrightarrow> 
+              QStateM_vars \<Q>' = (Q_domain_var (var_set q i \<sigma>) (QStateM_map \<Q>')) \<Longrightarrow>                                      
+              \<forall>e \<in> (var_set q i \<sigma>). (QStateM_map \<Q>') e \<noteq> {} \<Longrightarrow>
+             \<turnstile> \<langle>Dispose q i, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Normal (\<delta>,\<sigma>, n \<cdot>\<^sub>Q  \<Q>'')"
 
 \<comment>\<open>Dispose dispose will fail if it is not possible to find such states \<qq>',  \<qq>''\<close>
 
@@ -413,9 +429,10 @@ inductive QExec::"('v, 's) com \<Rightarrow> 's XQState \<Rightarrow> 's XQState
                \<Q> = \<Q>' + \<Q>'' \<and> \<Q>' ## \<Q>'' \<Longrightarrow>
                \<turnstile> \<langle>Dispose q, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Fault" *)
 
- | Dispose_F: "\<nexists>\<Q>' \<Q>''. Q_domain (QStateM_map \<Q>'') \<noteq> {} \<and>  \<Q> = \<Q>' + \<Q>'' \<and> \<Q>' ## \<Q>'' \<and>
-                Q_domain (QStateM_map \<Q>'') = ((QStateM_map \<Q>'') (to_nat (get_value \<sigma> q))) \<Longrightarrow>
-               \<turnstile> \<langle>Dispose q v, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Fault"
+| Dispose_F: "\<nexists>\<Q>' \<Q>''.  \<Q> = \<Q>' + \<Q>'' \<and> \<Q>' ## \<Q>'' \<and> QStateM_vars \<Q>' \<noteq> {} \<and> 
+               QStateM_vars \<Q>' = (Q_domain_var (var_set q i \<sigma>) (QStateM_map \<Q>')) \<and>
+               (\<forall>e \<in> (var_set q i \<sigma>). (QStateM_map \<Q>') e \<noteq> {}) \<Longrightarrow>
+               \<turnstile> \<langle>Dispose q i, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Fault"
 
 \<comment>\<open>Measure measures the value of the set of qubits given by q \<sigma> and it stores the result in 
   the stack variable v. Similar to allocate, we will require that the construct is well formed
@@ -454,7 +471,7 @@ inductive_cases QExec_elim_cases [cases set]:
   "\<turnstile>\<langle>IF b c1 c2,s\<rangle> \<Rightarrow>  t"
   "\<turnstile>\<langle>Measure v q,s\<rangle> \<Rightarrow>  t"
   "\<turnstile>\<langle>Alloc v q e,s\<rangle> \<Rightarrow>  t"
-  "\<turnstile>\<langle>Dispose q v,s\<rangle> \<Rightarrow>  t"
+  "\<turnstile>\<langle>Dispose q i,s\<rangle> \<Rightarrow>  t"
 
 inductive_cases QExec_Normal_elim_cases [cases set]:
  "\<turnstile>\<langle>c,Fault\<rangle> \<Rightarrow>  t"  

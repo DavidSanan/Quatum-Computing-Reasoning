@@ -1181,5 +1181,12 @@ lemma scalar_mult_QStateM_plus_r:
   by (smt a0 assms(2) plus_QStateM sca_mult_qstatem_def sca_mult_qstatem_var_map 
        sca_mult_qstatem_var_qstate scalar_mult_QStateM_plus_l 
          scalar_mult_QState_plus_l scalar_mult_QState_plus_r sep_disj_QStateM)
- 
+
+lemma "vec_norm( u \<cdot>\<^sub>v v) = \<bar>u\<bar> * vec_norm v"
+  sorry
+lemma 
+  "vec_norm (QStateM_vector (QStateM_list \<Q>'' ! 0 \<cdot>\<^sub>Q \<Q>')) \<cdot>\<^sub>Q
+   (inverse (QStateM_list \<Q>'' ! 0) \<cdot>\<^sub>Q \<Q>'') = 
+  vec_norm (QStateM_vector \<Q>') \<cdot>\<^sub>Q \<Q>''"
+  sorry
 end

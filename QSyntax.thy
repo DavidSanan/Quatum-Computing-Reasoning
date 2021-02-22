@@ -85,34 +85,32 @@ type_synonym ('v,'b,'s) QConf = "('v,'s) com \<times> 's XQState"
 
 
 
-definition new_q_addr::"('s \<Rightarrow> nat) \<Rightarrow> 's  \<Rightarrow> q_vars \<Rightarrow> (nat set) set"
-  where "new_q_addr f \<sigma> m \<equiv> {s.  card s = (f \<sigma>) \<and> (Min s > Max (Q_domain m))}"  
+definition new_q_addr::"('s \<Rightarrow> complex list) \<Rightarrow> 's  \<Rightarrow> q_vars \<Rightarrow> (nat set) set"
+  where "new_q_addr f \<sigma> m \<equiv> {s.  finite s \<and> 2^card s = length (f \<sigma>) \<and> (Min s > Max (Q_domain m))}"  
 
 lemma all_gt: "finite s' \<Longrightarrow> finite s \<Longrightarrow> 
        Min s > Max s' \<Longrightarrow> e \<in> s \<Longrightarrow> e' \<in> s' \<Longrightarrow> e > e'"
   using Max_less_iff less_le_trans by fastforce
 
-lemma neq_q_addr_finites:"f \<sigma> \<noteq> 0 \<Longrightarrow> S \<in> new_q_addr f \<sigma> m \<Longrightarrow> finite S"
+lemma neq_q_addr_finites:" S \<in> new_q_addr f \<sigma> m \<Longrightarrow> finite S"
   unfolding new_q_addr_def
   using card_infinite by force
 
 lemma new_q_addr_gt_old_q_addr:
-  "f \<sigma> \<noteq>0 \<Longrightarrow> finite (Q_domain m) \<Longrightarrow> 
+  "finite (Q_domain m) \<Longrightarrow> 
    S \<in> new_q_addr f \<sigma> m \<Longrightarrow> e \<in> S \<Longrightarrow>
    e' \<in> (Q_domain m) \<Longrightarrow> e > e'"
   unfolding new_q_addr_def using all_gt 
-  by (metis (mono_tags, lifting) card_infinite mem_Collect_eq)
+  by (metis (mono_tags, lifting) mem_Collect_eq)
 
 lemma new_q_addr_ortho_old_q_addr:
-  assumes a0:"f \<sigma> \<noteq> 0" and a1:"finite  (Q_domain m)" and a2:"S \<in> new_q_addr f \<sigma> m" 
+  assumes a1:"finite  (Q_domain m)" and a2:"S \<in> new_q_addr f \<sigma> m" 
   shows "S \<subseteq> - (Q_domain m)"
 proof - 
-  have f4: "card S = f \<sigma> \<and> Max (Q_domain m) < Min S"
-    using a2 unfolding new_q_addr_def  by fastforce
-  then have "card S \<noteq> 0"
-    using a0 by simp
+  have f4: "2^card S = length (f \<sigma>) \<and> Max (Q_domain m) < Min S"
+    using a2 unfolding new_q_addr_def  by fastforce  
   then have "finite S"
-    by (meson card_infinite)
+    by (meson local.a2 neq_q_addr_finites)
   then show ?thesis
     using f4 a1 by (meson ComplI Max.coboundedI Min.coboundedI le_less_trans 
                     less_le_not_le subsetI)
