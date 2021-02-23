@@ -31,9 +31,9 @@ of the different variables, the vector dimension is the product of the size of e
 variable\<close> 
 
 type_synonym q_vars = "(nat \<Rightarrow>nat set)"
-type_synonym qstate = "q_vars \<times> (complex) QState"
+type_synonym qstate = "q_vars \<times>  QState"
 type_synonym qheap = "nat set \<times> complex vec"
-type_synonym 's state = "real \<times> 's \<times>  (complex) QStateM"
+type_synonym 's state = "real \<times> 's \<times>   QStateM"
 type_synonym 's pred = "'s \<Rightarrow> bool" 
 type_synonym 's assn = "'s set"
 type_synonym 's expr_q = "'s \<Rightarrow> nat set"
@@ -46,7 +46,7 @@ type_synonym ('s,'b) expr = "'s \<Rightarrow> 'b"
 definition get_prob ::"'s state \<Rightarrow> real"
   where "get_prob \<sigma> \<equiv> fst \<sigma>"
 
-definition get_QStateM ::"'s state \<Rightarrow> complex QStateM"
+definition get_QStateM ::"'s state \<Rightarrow>  QStateM"
   where "get_QStateM \<sigma> \<equiv> snd (snd \<sigma>)"
 
 definition get_qstate ::"'s state \<Rightarrow> qstate"
@@ -58,7 +58,7 @@ definition get_stack::"'s state \<Rightarrow> 's"
 definition set_prob ::"'s state \<Rightarrow> real \<Rightarrow> 's state"
   where "set_prob \<sigma> v = (v, get_stack \<sigma>, get_QStateM \<sigma>)"
 
-definition set_qstate ::"'s state \<Rightarrow>  complex QStateM \<Rightarrow> 's state"
+definition set_qstate ::"'s state \<Rightarrow>   QStateM \<Rightarrow> 's state"
   where "set_qstate \<sigma> v = (get_prob \<sigma>, get_stack \<sigma>,  v)"
 
 definition set_stack::"'s state \<Rightarrow> 's \<Rightarrow> 's state"
@@ -155,7 +155,7 @@ definition lin_sets::"'q::linorder set \<Rightarrow> 'q::linorder set \<Rightarr
 definition sorted_list_from_set::"'q::linorder set \<Rightarrow> 'q::linorder list"
   where "sorted_list_from_set s \<equiv> THE l. strict_sorted l \<and> set l = s"
 
-definition to_heap::"qstate \<Rightarrow> (complex) QState"
+definition to_heap::"qstate \<Rightarrow>  QState"
   where "to_heap q \<equiv> (snd q)"
 
 

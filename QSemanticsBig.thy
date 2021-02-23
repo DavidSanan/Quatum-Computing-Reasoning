@@ -22,7 +22,7 @@ definition
 definition Q_domain_var::"nat set \<Rightarrow> q_vars \<Rightarrow> nat set "
   where "Q_domain_var q qvars \<equiv> \<Union> (qvars ` q)"
 
-definition matrix_sep :: "nat set \<Rightarrow> complex QStateM \<Rightarrow> complex mat \<Rightarrow> complex QStateM" 
+definition matrix_sep :: "nat set \<Rightarrow>  QStateM \<Rightarrow> complex mat \<Rightarrow>  QStateM" 
   where "matrix_sep heap_ind q M \<equiv>
            let sep_vars = \<Union> ((QStateM_map q) ` heap_ind)  in
            let var_d = QStateM_vars q in 
@@ -131,7 +131,7 @@ definition measure_vars1::"nat \<Rightarrow>  nat set \<Rightarrow> qstate  \<Ri
     let qnprod = list_of_vec (((sqrt \<delta>k)::complex) \<cdot>\<^sub>v v') in
        (\<delta>k, (fst q, QState (vars_dom, qnprod)))" 
 
-definition measure_vars::"nat \<Rightarrow>  nat set \<Rightarrow> complex QStateM  \<Rightarrow> (real \<times> complex QStateM)"
+definition measure_vars::"nat \<Rightarrow>  nat set \<Rightarrow>  QStateM  \<Rightarrow> (real \<times>  QStateM)"
   where "measure_vars k  sep_addr q \<equiv>
    let (qm, qs) = QStateM_unfold q in
    let vars_dom = QState_vars qs in
@@ -255,19 +255,24 @@ proof-
     by (simp add: QState_refl QState_vector.rep_eq a0 idem_QState list_vec uqstate_snd)
   moreover have "\<And>a::'a::field. a \<noteq> 0 \<Longrightarrow> a * inverse a = 1"
     using right_inverse by blast
-  moreover have "QStateM_list \<Q>'' ! 0 \<noteq> 0" using Q''0 QStateM_empty_not_zero by auto
+  moreover have n_zero:"Im (QStateM_list \<Q>'' ! 0) = 0 \<and> Re (QStateM_list \<Q>'' ! 0) > 0"
+    using Q''0 QStateM_empty_not_zero
+    by fastforce
   ultimately have "\<Q> = ((QStateM_list \<Q>'' ! 0) * (inverse (QStateM_list \<Q>'' ! 0))) \<cdot>\<^sub>Q 
                         (\<Q>' + \<Q>'')"
-    by (metis QState_list.rep_eq QState_refl QState_vector.rep_eq a0 
-              idem_QState list_vec one_smult_vec sca_mult_qstate_def 
-              sca_mult_qstatem_def) 
-  then have "\<Q> = (QStateM_list \<Q>'' ! 0) \<cdot>\<^sub>Q 
+    by (smt local.a1 one_complex.simps(1) one_complex.simps(2)
+             scalar_mult_QStateM_plus_l zero_complex.simps(1))              
+  moreover have "Im (inverse (QStateM_list \<Q>'' ! 0)) = 0 \<and> 
+                 Re (inverse (QStateM_list \<Q>'' ! 0)) > 0"
+    using n_zero by auto
+  ultimately have "\<Q> = (QStateM_list \<Q>'' ! 0) \<cdot>\<^sub>Q 
                   ( inverse (QStateM_list \<Q>'' ! 0) \<cdot>\<^sub>Q (\<Q>' + \<Q>''))"
-    using \<open>QStateM_list \<Q>'' ! 0 \<noteq> 0\<close> inverse_nonzero_iff_nonzero sca_mult_qstatem_assoc by blast
-       
+    using n_zero inverse_nonzero_iff_nonzero sca_mult_qstatem_assoc
+    by auto     
   then have "\<Q> = (QStateM_list \<Q>'' ! 0) \<cdot>\<^sub>Q 
                   (\<Q>' + (inverse (QStateM_list \<Q>'' ! 0) \<cdot>\<^sub>Q \<Q>''))"
-    by (simp add: \<open>QStateM_list \<Q>'' ! 0 \<noteq> 0\<close> local.a1 scalar_mult_QStateM_plus_r)    
+    using \<open>Im (inverse (QStateM_list \<Q>'' ! 0)) = 0 \<and> 0 < Re (inverse (QStateM_list \<Q>'' ! 0))\<close> 
+          local.a1 scalar_mult_QStateM_plus_r by auto        
   then have "\<Q> = ((QStateM_list \<Q>'' ! 0) \<cdot>\<^sub>Q \<Q>' + (inverse (QStateM_list \<Q>'' ! 0) \<cdot>\<^sub>Q \<Q>''))"
     by (simp add: \<open>inverse (QStateM_list \<Q>'' ! 0) \<cdot>\<^sub>Q \<Q>'' = 0\<close>)
   thus ?thesis
