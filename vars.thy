@@ -31,7 +31,7 @@ class nat_list_abs= nat_abs +
   assumes abs_nat_list:"a \<in> subset_nat_list \<Longrightarrow> from_nat_list (to_nat_list a) = a "
   assumes rep_nat_list:"to_nat_list (from_nat_list b) = b" 
 
-class real_abs= nat_abs+
+class real_abs= nat_list_abs+
   fixes from_real ::"real \<Rightarrow> 'a"
   fixes to_real ::"'a \<Rightarrow> real"
   fixes subset_real :: "'a set"
@@ -135,13 +135,20 @@ proof-
     by (metis UNIV_I bij_betw_def imageE)
 qed
 
-definition var_set::"'v \<Rightarrow> ('s \<Rightarrow> nat set) \<Rightarrow> 's \<Rightarrow> nat set"
-  where "var_set v f \<sigma> \<equiv> (if (v \<in> nat_vars) then {to_nat (get_value \<sigma> v )} 
-                          else set (nths (to_nat_list (get_value \<sigma> v )) (f \<sigma>)))" 
+definition in_list::"nat set \<Rightarrow> nat list \<Rightarrow> bool"
+  where "in_list vs list \<equiv> \<forall>i\<in>vs. i<length list"
+
+definition var_set::"'v \<Rightarrow> ('s \<Rightarrow> nat set) \<Rightarrow> 's \<Rightarrow> (nat set) option"
+  where "var_set v f \<sigma> \<equiv> (if (v \<in> nat_vars) then Some {to_nat (get_value \<sigma> v )} 
+                          else 
+                             let list_state = (to_nat_list (get_value \<sigma> v )) in
+                               (if (v \<in> nat_list_vars \<and> in_list (f \<sigma>) list_state) then 
+                                   Some (set (nths list_state (f \<sigma>)))
+                               else None))" 
 
 end
 
-locale vars_plus = vars +
+(* locale vars_plus = vars +
   fixes from_real ::"real \<Rightarrow> 'c"
   fixes to_real ::"'c \<Rightarrow> real"
   fixes subset_real :: "'c set"
@@ -155,6 +162,6 @@ begin
   definition real_set::"'a set"
     where "real_set \<equiv> {v. var_types v = 2}"
 end
-
+*)
 end
 
