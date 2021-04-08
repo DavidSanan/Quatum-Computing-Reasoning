@@ -1663,6 +1663,14 @@ qed
   sorry
 *)
 
+lemma frame_sound: 
+  assumes a0:"\<Turnstile>P c Q" and
+    a1:"{v. \<exists>p q. access_v (\<lambda>s. (p, s, q) \<in> A) v = True} \<inter> modify_locals c = {}"
+  shows "\<Turnstile>(P \<and>\<^sup>* A) c (Q \<and>\<^sup>* A)"
+proof-
+  show ?thesis sorry
+qed
+
 lemma quantum_separation_logic_sound:
  "\<turnstile> P c Q \<Longrightarrow> \<Turnstile> P c Q"
 proof(induct rule:hoarep.induct)
