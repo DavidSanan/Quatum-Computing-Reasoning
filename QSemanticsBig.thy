@@ -205,6 +205,94 @@ proof-
   ultimately show ?thesis by auto
 qed
 
+
+lemma i_less_union: 
+  assumes a0:"(i::nat) < 2 ^ card v1 * 2 ^ card v2" and
+    a1:"v1 \<inter> v2 = {}" and
+    a2:"finite v1" and
+    a3:"finite v2"
+  shows"i < 2 ^ card (v1 \<union> v2)"
+  using a0 a1 a2 a3
+  by (simp add: card_Un_disjoint power_add)
+
+lemma mat_extend_M_1k_zero: 
+     assumes a0:"finite v1" and a1:"finite v2" and a2:"v1 \<inter> v2 = {}" and
+       a3:"i < (2^(card v1)) * (2^(card v2))" and
+       a4:"j < (2^(card v1)) * (2^(card v2))" and 
+       a7:"partial_state.encode2 (list_dims (v1 \<union> v2)) (partial_state2.vars1' v1 v2) i \<noteq>
+           partial_state.encode2 (list_dims (v1 \<union> v2)) (partial_state2.vars1' v1 v2) j"
+       shows "ptensor_mat v1 v2 M (1\<^sub>m (2^(card v2))) $$ (i,j) = 0"
+proof-
+  let ?m1 = "M" and ?m2 = "1\<^sub>m (2^(card v2))" and ?d = "list_dims (v1 \<union> v2)"
+  let ?v = "partial_state2.vars1' v1 v2"   
+
+  interpret ps2:partial_state2 "list_dims (v1 \<union> v2)" v1 v2
+    apply standard using a0 a1 a2 unfolding list_dims_def by auto
+
+ let ?enc1 = "partial_state.encode1 ps2.dims0 ?v" and
+     ?enc2 = "partial_state.encode2 ps2.dims0 ?v"
+
+  have "ps2.dims0 = ?d" unfolding ps2.dims0_def list_dims_def ps2.vars0_def by auto
+  moreover have "ps2.ptensor_mat ?m1 ?m2 $$ (i,j) = 
+        ?m1 $$ (?enc1 i, ?enc1 j) * ?m2 $$ (?enc2 i, ?enc2  j)"
+    unfolding ps2.ptensor_mat_def 
+    apply (rule  partial_state.tensor_mat_eval, auto simp add: ps2.dims0_def state_sig.d_def ps2.vars0_def) 
+    using i_less_union[OF _ a2 a0 a1] a3 a4 by auto
+  moreover have " ?m2 $$ (?enc2 i, ?enc2  j) = 0"
+    by (metis a3 a4 a7 calculation(1) index_one_mat(1) partial_state.d2_def partial_state.dims2_def 
+              partial_state.encode2_lt prod_list_replicate ps2.d0_def 
+                ps2.d1_def ps2.d2_def ps2.d_def ps2.dims1_def ps2.dims2_def 
+              ps2.dims_product ps2.nths_vars2')
+  ultimately show ?thesis
+    using mult_not_zero by auto   
+qed
+
+
+lemma mat_extend_M_1k_M: 
+     assumes a0:"finite v1" and a1:"finite v2" and a2:"v1 \<inter> v2 = {}" and
+       a3:"i < (2^(card v1)) * (2^(card v2))" and
+       a4:"j < (2^(card v1)) * (2^(card v2))" and 
+       a7:"partial_state.encode2 (list_dims (v1 \<union> v2)) (partial_state2.vars1' v1 v2) i =
+           partial_state.encode2 (list_dims (v1 \<union> v2)) (partial_state2.vars1' v1 v2) j"
+     shows "ptensor_mat v1 v2 M (1\<^sub>m (2^(card v2))) $$ (i,j) = 
+            M $$ (partial_state.encode1 (list_dims (v1 \<union> v2)) (partial_state2.vars1' v1 v2) i,
+                 (partial_state.encode1 (list_dims (v1 \<union> v2)) (partial_state2.vars1' v1 v2) j))"
+proof-
+  let ?m1 = "M" and ?m2 = "1\<^sub>m (2^(card v2))" and ?d = "list_dims (v1 \<union> v2)"
+  let ?v = "partial_state2.vars1' v1 v2"   
+
+  interpret ps2:partial_state2 "list_dims (v1 \<union> v2)" v1 v2
+    apply standard using a0 a1 a2 unfolding list_dims_def by auto
+
+ let ?enc1 = "partial_state.encode1 ps2.dims0 ?v" and
+     ?enc2 = "partial_state.encode2 ps2.dims0 ?v"
+
+  have "ps2.dims0 = ?d" unfolding ps2.dims0_def list_dims_def ps2.vars0_def by auto
+  moreover have "ps2.ptensor_mat ?m1 ?m2 $$ (i,j) = 
+        ?m1 $$ (?enc1 i, ?enc1 j) * ?m2 $$ (?enc2 i, ?enc2  j)"
+    unfolding ps2.ptensor_mat_def 
+    apply (rule  partial_state.tensor_mat_eval, auto simp add: ps2.dims0_def state_sig.d_def ps2.vars0_def) 
+    using i_less_union[OF _ a2 a0 a1] a3 a4 by auto
+  moreover have " ?m2 $$ (?enc2 i, ?enc2  j) = 1"
+    by (metis  a4 a7 calculation(1) index_one_mat(1) partial_state.d2_def partial_state.dims2_def 
+              partial_state.encode2_lt prod_list_replicate ps2.d0_def 
+                ps2.d1_def ps2.d2_def ps2.d_def ps2.dims1_def ps2.dims2_def 
+              ps2.dims_product ps2.nths_vars2')
+  ultimately show ?thesis using mult.comm_neutral by metis    
+qed
+
+lemma inn_mat_extend_M_1k_M_v: 
+     assumes a0:"finite v1" and a1:"finite v2" and a2:"v1 \<inter> v2 = {}" and
+       a3:"i < (2^(card v1)) * (2^(card v2))" and
+       a5:"dim_vec (V::complex vec) = (2^(card v1)) * (2^(card v2))"
+     shows "(ptensor_mat v1 v2 M (1\<^sub>m (2^(card v2))) *\<^sub>v V) $ i = 
+             row (ptensor_mat v1 v2 M (1\<^sub>m (2^(card v2)))) i \<bullet> V"
+proof -
+  have "i < dim_row (ptensor_mat v1 v2 M (1\<^sub>m (2 ^ card v2)))"
+    by (simp add: a0 a3 local.a1 local.a2 ptensor_mat_dim_row)
+  then show ?thesis
+    by (meson index_mult_mat_vec)
+qed
 (* definition matrix_sep :: "nat set \<Rightarrow> qstate \<Rightarrow> complex mat \<Rightarrow> qstate" 
   where "matrix_sep sep_vars q M \<equiv>
            let qs = snd q in
@@ -519,15 +607,7 @@ lemma one_mat_one:
 lemma one_mat_zero:
   "i < 2^(card v) \<Longrightarrow> j < 2^(card v) \<Longrightarrow> i\<noteq>j \<Longrightarrow>  1\<^sub>m (2^(card v)) $$ (i,j) = 0"
   by auto
-  
-lemma i_less_union: 
-  assumes a0:"(i::nat) < 2 ^ card v1 * 2 ^ card v2" and
-    a1:"v1 \<inter> v2 = {}" and
-    a2:"finite v1" and
-    a3:"finite v2"
-  shows"i < 2 ^ card (v1 \<union> v2)"
-  using a0 a1 a2 a3
-  by (simp add: card_Un_disjoint power_add)
+
 
 lemma mat_extend_1k_zero1: 
      assumes a0:"finite v1" and a1:"finite v2" and a2:"v1 \<inter> v2 = {}" and
@@ -1294,7 +1374,7 @@ proof-
      apply auto
      by (auto simp add: QStateM_wf_map a0 local.a2)
    ultimately show ?thesis by auto
- qed
+ qed 
 
 lemma allocate_wf:
   assumes a0:"\<Q>' = QStateM(\<vv>', QState (q'_addr,(v \<sigma>)))" and a1':"length (v \<sigma>) > 1" and
@@ -1317,8 +1397,7 @@ proof-
 unfolding sep_disj_QState disj_QState_def calculation
     using QStateM_wf QState_wf a3 unfolding new_q_addr_def
     apply auto
-    by (smt QStateM_rel1 QState_rel3' QState_var_idem a3  
-           calculation(1) fst_conv new_q_addr_gt_old_q_addr not_less_iff_gr_or_eq snd_conv)                        
+    by (metis IntI QState_var_idem calculation(1) empty_iff fst_conv snd_conv)             
   ultimately show ?thesis   
     using plus_wf
     by metis 
@@ -1343,9 +1422,8 @@ proof-
   moreover have d2:"qstate \<Q> ## qstate \<Q>'" 
     unfolding sep_disj_QState disj_QState_def calculation
     using QStateM_wf QState_wf a3 unfolding new_q_addr_def
-    apply auto
-    by (smt QStateM_rel1 QState_rel3' QState_var_idem a3  
-           calculation(1) fst_conv new_q_addr_gt_old_q_addr not_less_iff_gr_or_eq snd_conv)                        
+    apply auto  
+    by (metis IntI QState_var_idem calculation(1) empty_iff fst_conv snd_conv)            
   ultimately show ?thesis   
     using plus_wf
     by (simp add: sep_disj_QStateM)
@@ -1476,8 +1554,6 @@ qed
 context vars
 begin
 
-
-
 inductive QExec::"('v, 's) com \<Rightarrow> 's XQState \<Rightarrow> 's XQState \<Rightarrow> bool" 
   ("\<turnstile> \<langle>_,_\<rangle> \<Rightarrow> _"  [20,98,98] 89)  
   where 
@@ -1489,12 +1565,12 @@ inductive QExec::"('v, 's) com \<Rightarrow> 's XQState \<Rightarrow> 's XQState
 \<comment>\<open>QMod modifies the set of qubits of the Quantum State given by q \<sigma> with the 
   transformation matrix M, any qubit not included in q \<sigma> remains the same\<close>
 
- | QMod:"\<Union>(QStateM_map \<Q> ` (q \<sigma>)) \<noteq> {} \<Longrightarrow> 
+ | QMod:"\<Inter>(QStateM_map \<Q> ` (q \<sigma>)) \<noteq> {} \<Longrightarrow> (q \<sigma>)\<noteq>{} \<Longrightarrow> 
          \<Q>' = matrix_sep (q \<sigma>) \<Q> M \<Longrightarrow>
          \<turnstile> \<langle>QMod M q, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Normal (\<delta>, \<sigma>, \<Q>')"
 
 \<comment>\<open>QMod fails if the set of qubits to be modified is not included in the quantum state\<close>
- | QMod_F:"(QStateM_map \<Q> ` (q \<sigma>)) = {} \<Longrightarrow>          
+ | QMod_F:"\<Inter>(QStateM_map \<Q> ` (q \<sigma>)) = {} \<or> (q \<sigma>) = {} \<Longrightarrow>          
           \<turnstile> \<langle>QMod M q, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Fault"
 
 \<comment>\<open>Alloc takes a normal variable "q" representing the variable where the index to the qubits is store
@@ -1513,7 +1589,7 @@ inductive QExec::"('v, 's) com \<Rightarrow> 's XQState \<Rightarrow> 's XQState
 | Alloc:"q' \<notin> (dom_q_vars (QStateM_map \<Q>)) \<Longrightarrow> (length (v \<sigma>) > 1) \<Longrightarrow>
               \<vv>' = (\<lambda>i. {})(q' := q'_addr) \<and>  \<sigma>' = set_value \<sigma> q (from_nat q') \<Longrightarrow> 
           q'_addr \<in> new_q_addr v \<sigma> (QStateM_map \<Q>)  \<Longrightarrow>                     
-          \<turnstile> \<langle>Alloc q e v, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Normal (\<delta>, \<sigma>',\<Q> + QStateM(\<vv>', QState (q'_addr,(v \<sigma>)) ))"
+          \<turnstile> \<langle>Alloc q v, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Normal (\<delta>, \<sigma>',\<Q> + QStateM(\<vv>', QState (q'_addr,(v \<sigma>)) ))"
 (* | Alloc:"q' \<notin> (dom_q_vars (QStateM_map \<Q>)) \<Longrightarrow> q'_addr \<in> new_q_addr e \<sigma> (QStateM_map \<Q>)  \<Longrightarrow> e \<sigma> \<noteq> 0 \<Longrightarrow>
           \<vv>' = (QStateM_map \<Q>)(q' := q'_addr)  \<Longrightarrow> length (v \<sigma>) = (e \<sigma>) \<Longrightarrow> \<sigma>' = set_value \<sigma> q (from_nat q') \<Longrightarrow>                    
           \<turnstile> \<langle>Alloc q e v, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Normal (\<delta>, \<sigma>',QStateM(\<vv>',\<qq> + QState (q'_addr,(v \<sigma>)) ))" *)
@@ -1521,7 +1597,7 @@ inductive QExec::"('v, 's) com \<Rightarrow> 's XQState \<Rightarrow> 's XQState
 
 
  | Alloc_F:"length (v \<sigma>) \<le> 1 \<Longrightarrow>                    
-          \<turnstile> \<langle>Alloc q e v, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Fault"
+          \<turnstile> \<langle>Alloc q v, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Fault"
 
 \<comment>\<open>the conditional, while, and seq statements follow the standard definitions\<close>
 
@@ -1602,7 +1678,7 @@ inductive_cases QExec_elim_cases [cases set]:
   "\<turnstile>\<langle>While b c,s\<rangle> \<Rightarrow>  t"
   "\<turnstile>\<langle>IF b c1 c2,s\<rangle> \<Rightarrow>  t"
   "\<turnstile>\<langle>Measure v q,s\<rangle> \<Rightarrow>  t"
-  "\<turnstile>\<langle>Alloc v q e,s\<rangle> \<Rightarrow>  t"
+  "\<turnstile>\<langle>Alloc v  e,s\<rangle> \<Rightarrow>  t"
   "\<turnstile>\<langle>Dispose q i,s\<rangle> \<Rightarrow>  t"
 
 inductive_cases QExec_Normal_elim_cases [cases set]:
@@ -1614,7 +1690,7 @@ inductive_cases QExec_Normal_elim_cases [cases set]:
   "\<turnstile>\<langle>While b c1,Normal s\<rangle> \<Rightarrow>  t"
   "\<turnstile>\<langle>IF b c1 c2,Normal s\<rangle> \<Rightarrow>  t"
   "\<turnstile>\<langle>Measure v q,Normal s\<rangle> \<Rightarrow>  t"
-  "\<turnstile>\<langle>Alloc v q e,Normal s\<rangle> \<Rightarrow>  t"
+  "\<turnstile>\<langle>Alloc v  e,Normal s\<rangle> \<Rightarrow>  t"
   "\<turnstile>\<langle>Dispose q v,Normal s\<rangle> \<Rightarrow>  t"
 
 primrec modify_locals :: "('v, 's) com  \<Rightarrow> 'v set" where 
@@ -1625,7 +1701,7 @@ primrec modify_locals :: "('v, 's) com  \<Rightarrow> 'v set" where
 | "modify_locals (While b c) = modify_locals c"
 | "modify_locals (Seq c1 c2) = modify_locals c1 \<union> modify_locals c2"
 | "modify_locals (Measure v e) = {v}"
-| "modify_locals (Alloc v e val) = {v}"
+| "modify_locals (Alloc v val) = {v}"
 | "modify_locals (Dispose q v) = {}"
 
 thm QExec_Normal_elim_cases

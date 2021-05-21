@@ -1687,6 +1687,24 @@ proof -
     done
 qed
 
+lemma tensor_mat_dim:
+  assumes a0:"vars1 \<inter> vars2 = {}" and a1:"finite vars1" and a2:"finite vars2"
+  shows "ptensor_mat vars1 vars2 M1 M2 \<in> 
+         carrier_mat (prod_list (replicate (card (vars1 \<union> vars2)) 2)) 
+                     (prod_list (replicate (card (vars1 \<union> vars2)) 2))"
+proof-
+  let ?dims = "replicate (card (vars1 \<union> vars2)) 2"
+  have f_v1:"finite vars1" and f_v2:"finite vars2" 
+    using assms
+    using subset_eq_atLeast0_lessThan_finite by blast+
+  interpret ps2: partial_state2 ?dims vars1 vars2
+    apply unfold_locales using assms f_v1 f_v2  by auto
+  have "ps2.d0 = prod_list ?dims" 
+    unfolding ps2.d0_def ps2.dims0_def ps2.vars0_def by auto    
+  then show ?thesis using ps2.ptensor_mat_carrier
+    by auto                             
+qed
+
 lemma ptensor_mat_assoc:
   assumes "vars1 \<inter> vars2 = {}" and 
           "(vars1 \<union> vars2) \<inter> vars3 = {}" and "finite vars1" and "finite vars2" and "finite vars3"     

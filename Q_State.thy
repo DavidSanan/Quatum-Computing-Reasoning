@@ -907,7 +907,22 @@ instance
   done
 end 
 
+lemma assumes a0:"vs1 \<inter> vs2 = {}" and a1:"finite vs1" and a2:"finite vs2" and              
+              a3:"ptensor_vec vs1 vs2 v1 v2 = 
+                  ptensor_vec vs1 vs2 v1' v2'" and
+              a4:"ptensor_vec vs1 vs2 v1 v2 \<noteq> 0\<^sub>v (2^card(vs1 \<union> vs2))"
+  shows "\<exists>k. k\<noteq> 0 \<and> v1' = k \<cdot>\<^sub>v v1 \<and> v2' = inverse k \<cdot>\<^sub>v v2"
+proof-
 
+qed
+
+lemma assumes a0:"vs1 \<inter> vs2 = {}" and a1:"finite vs1" and a2:"finite vs2" and 
+              a3:"ptensor_vec vs1 vs2 v1 v2 = 
+                  ptensor_vec vs1 vs2 v1' v2'"
+  shows "\<exists>k. v1' = k \<cdot>\<^sub>v v1 \<and> v2' = inverse k \<cdot>\<^sub>v v2"
+proof-
+
+qed
 
 lemma QState_plus_intro:assumes a0:"vars1 \<inter> vars2 = {}" and a1:"QState_wf (vars1, v1)" and a2:"QState_wf (vars2, v2)" and
        a3:"QState_vars \<Q> = vars1 + vars2" and
@@ -1226,6 +1241,20 @@ lemma eq_QStateM_dest1: "
        vs = vs' \<and> v = v'" 
    apply transfer' by auto
 
+
+lemma eq_QStateMap_vars:
+  assumes a0:"QStateM_map Q1 = QStateM_map Q2" 
+  shows "QStateM_vars Q1 = QStateM_vars Q2"
+  by (metis QStateM_rel1 QStateM_vars.rep_eq assms qstate_def)
+
+lemma QStateM_eq_intro[intro]:
+  assumes a0:"QStateM_map Q1 = QStateM_map Q2" and
+          a1:"QStateM_list Q1 = QStateM_list Q2"
+        shows "Q1 = Q2"
+  by (metis QStateM_list.rep_eq QStateM_rel1 a0 a1 idem_QState q_state_eq qstate_def)
+
+   
+
 lemma Qstate_mapf:
   assumes a0:"Q_domain (f (QStateM_map q)) =  QState_vars (g (qstate q))" and 
           a1:"(\<forall>x y. x\<noteq>y \<and> x\<in> domain (f (QStateM_map q)) \<and> 
@@ -1289,6 +1318,12 @@ lemma domain_qr:"q  \<inter> qr  = {} \<Longrightarrow>
   using QStateM_rel1 unfolding Q_domain_def Q_domain_var_def   
   by (auto simp add: QStateM_vars.rep_eq qstate_def)
 
+lemma Q_domain_var_in_vars:
+  assumes a1:"\<Inter> (QStateM_map Q1 ` q) \<noteq> {}" and a2:"q\<noteq>{}" 
+  shows "Q_domain_var q (QStateM_map Q1) \<subseteq> QStateM_vars Q1"
+    using QStateM_rel1 a1 a2 apply auto
+    unfolding Q_domain_def Q_domain_var_def qstate_def apply transfer
+    using iso_tuple_UNIV_I by blast
 
 lemma a1:"\<Union> (range (0::nat \<Rightarrow> nat set)) = none"
   unfolding zero_set_def zero_fun_def by auto
@@ -1412,7 +1447,8 @@ proof-
     by (metis IntI Sup_upper disj_QState_def empty_iff range_eqI sep_disj_QState subsetD)+
 
 qed
-  
+
+
 
 lemma plus_wf: assumes a0:"QStateM_map x ## QStateM_map y "  and 
               a1:"qstate x ## qstate y"
@@ -1468,6 +1504,56 @@ instance
           disjoint_x_y_wf1_x_plus_y fst_conv plus_QStateM plus_wf 
            sep_disj_add sep_disj_addD)  
 end 
+
+lemma QStateM_disj_dest:
+  assumes a0:"Q1 ## Q2"
+  shows "QStateM_map Q1 ## QStateM_map Q2" and "qstate Q1 ## qstate Q2"
+  using assms sep_disj_QStateM by auto
+
+lemma QStateM_map_qstate:assumes a0:"Q1 ## Q2"  
+     shows "qstate (Q1 + Q2) = qstate Q1 + qstate Q2"
+  using plus_wf[OF QStateM_disj_dest[OF a0]]
+  by (simp add: QStateM_wf_qstate plus_QStateM)
+
+lemma QStateM_map_plus:assumes a0:"Q1 ## Q2" 
+     shows "QStateM_map (Q1 + Q2) = QStateM_map Q1 + QStateM_map Q2"
+  using plus_wf[OF QStateM_disj_dest[OF a0]]
+  by (simp add: QStateM_wf_map plus_QStateM)
+
+lemma QState_vars_plus:
+  assumes a0:"Q1 ## Q2"
+  shows "QState_vars (Q1 + Q2) = QState_vars Q1 + QState_vars Q2"
+  using QState_vars_Plus assms disj_QState_def plus_QState plus_QState_vector_vars 
+         plus_set_def sep_disj_QState by fastforce
+
+lemma QStateM_vars_plus:assumes a0:"Q1 ## Q2" 
+     shows "QStateM_vars (Q1 + Q2) = QStateM_vars Q1 \<union> QStateM_vars Q2"
+  using plus_wf[OF QStateM_disj_dest[OF a0]]
+  using QStateM_map_qstate QStateM_vars.rep_eq 
+        QState_vars_plus assms qstate_def sep_disj_QStateM
+  by (simp add: plus_set_def) 
+ 
+
+lemma QState_list_plus:
+  assumes a0:"Q1 ## Q2"
+  shows "QState_list (Q1 + Q2) = 
+         list_of_vec
+           (partial_state2.ptensor_vec 
+                (QState_vars Q1) (QState_vars Q2) 
+                (QState_vector Q1) (QState_vector Q2) )"
+  by (metis (no_types) QState_list_Plus assms disj_QState_def 
+       plus_QState plus_QState_vector_vector sep_disj_QState)
+
+lemma QStateM_list_plus:
+  assumes a0:"Q1 ## Q2" 
+  shows "QStateM_list (Q1 + Q2) = 
+         list_of_vec
+           (partial_state2.ptensor_vec 
+                (QStateM_vars Q1) (QStateM_vars Q2) 
+                (QStateM_vector Q1) (QStateM_vector Q2) )"
+  using QStateM_disj_dest(2) QStateM_list.rep_eq QStateM_map_qstate 
+        QStateM_vars.rep_eq QStateM_vector.rep_eq QState_list_plus 
+       assms qstate_def by auto
 
 lemma scalar_mult_QStateM_plus_l:
   "Im a = 0 \<and> Re a > 0  \<Longrightarrow> \<Q>' ## \<Q>'' \<Longrightarrow> a  \<cdot>\<^sub>Q (\<Q>' + \<Q>'') = (a  \<cdot>\<^sub>Q \<Q>' + \<Q>'')"

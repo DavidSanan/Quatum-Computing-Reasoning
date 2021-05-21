@@ -75,7 +75,7 @@ datatype ('a, 's) com =
   | While "'s assn" "('a, 's) com"
   | Seq "('a, 's) com" "('a, 's) com"  ("_;;/ _" [60, 61] 60)
   | Measure "'a"   "'s expr_q" ("_:=meassure / _" [60, 61] 60)
-  | Alloc "'a"  "('s,nat) expr"  "('s,complex list) expr"  ("_:=alloc[_] (_)" [60, 61] 60)
+  | Alloc "'a"   "('s,complex list) expr"  ("_:=alloc (_)" [61] 60)
   | Dispose "'a" "('s,nat set) expr"
 
 
@@ -86,7 +86,7 @@ type_synonym ('v,'b,'s) QConf = "('v,'s) com \<times> 's XQState"
 
 
 definition new_q_addr::"('s \<Rightarrow> complex list) \<Rightarrow> 's  \<Rightarrow> q_vars \<Rightarrow> (nat set) set"
-  where "new_q_addr f \<sigma> m \<equiv> {s.  finite s \<and> 2^card s = length (f \<sigma>) \<and> (Min s > Max (Q_domain m))}"  
+  where "new_q_addr f \<sigma> m \<equiv> {s.  finite s \<and> 2^card s = length (f \<sigma>) \<and> (s \<inter> (Q_domain m) = {})}"  
 
 lemma all_gt: "finite s' \<Longrightarrow> finite s \<Longrightarrow> 
        Min s > Max s' \<Longrightarrow> e \<in> s \<Longrightarrow> e' \<in> s' \<Longrightarrow> e > e'"
@@ -96,24 +96,23 @@ lemma neq_q_addr_finites:" S \<in> new_q_addr f \<sigma> m \<Longrightarrow> fin
   unfolding new_q_addr_def
   using card_infinite by force
 
-lemma new_q_addr_gt_old_q_addr:
+(* lemma new_q_addr_gt_old_q_addr:
   "finite (Q_domain m) \<Longrightarrow> 
    S \<in> new_q_addr f \<sigma> m \<Longrightarrow> e \<in> S \<Longrightarrow>
    e' \<in> (Q_domain m) \<Longrightarrow> e > e'"
   unfolding new_q_addr_def using all_gt 
-  by (metis (mono_tags, lifting) mem_Collect_eq)
+  by (metis (mono_tags, lifting) mem_Collect_eq) *)
 
 lemma new_q_addr_ortho_old_q_addr:
   assumes a1:"finite  (Q_domain m)" and a2:"S \<in> new_q_addr f \<sigma> m" 
   shows "S \<subseteq> - (Q_domain m)"
 proof - 
-  have f4: "2^card S = length (f \<sigma>) \<and> Max (Q_domain m) < Min S"
+  have f4: "2^card S = length (f \<sigma>) \<and> (S \<inter> (Q_domain m) = {})"
     using a2 unfolding new_q_addr_def  by fastforce  
   then have "finite S"
     by (meson local.a2 neq_q_addr_finites)
   then show ?thesis
-    using f4 a1 by (meson ComplI Max.coboundedI Min.coboundedI le_less_trans 
-                    less_le_not_le subsetI)
+    using f4 a1 by auto
 qed 
 
 (* definition list_dims_set::"'q set \<Rightarrow> nat list"
