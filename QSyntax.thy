@@ -94,7 +94,7 @@ lemma all_gt: "finite s' \<Longrightarrow> finite s \<Longrightarrow>
 
 lemma neq_q_addr_finites:" S \<in> new_q_addr f \<sigma> m \<Longrightarrow> finite S"
   unfolding new_q_addr_def
-  using card_infinite by force
+  using card.infinite by force
 
 (* lemma new_q_addr_gt_old_q_addr:
   "finite (Q_domain m) \<Longrightarrow> 
