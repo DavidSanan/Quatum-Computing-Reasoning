@@ -158,9 +158,7 @@ proof-
     unfolding ps2.d0_def ps2.dims0_def ps2.vars0_def apply transfer   
     unfolding Q_domain_def apply auto
      apply (metis UN_Un Un_UNIV_right )
-       apply (simp add: QStateM_vars.rep_eq QState_rel3')    
-    using a0 a4 ps2.finite_v1 ps2.finite_v2 unfolding matrix_sep_not_zero_def
-    by  (auto simp add: matrix_sep_not_zero_def )
+    by (simp add: QStateM_vars.rep_eq QState_rel3')        
   then have f1:"QState_vars (QState (QStateM_vars q, list_of_vec (?m *\<^sub>v ?v))) = 
              QStateM_vars q"
     using QState_var_idem
@@ -1502,24 +1500,22 @@ proof-
     by (simp add: QState_refl QState_vector.rep_eq a0 idem_QState list_vec uqstate_snd)
   moreover have "\<And>a::'a::field. a \<noteq> 0 \<Longrightarrow> a * inverse a = 1"
     using right_inverse by blast
-  moreover have n_zero:"Im (QStateM_list \<Q>'' ! 0) = 0 \<and> Re (QStateM_list \<Q>'' ! 0) > 0"
+  moreover have n_zero:"(QStateM_list \<Q>'' ! 0) \<noteq> 0"
     using Q''0 QStateM_empty_not_zero
     by fastforce
   ultimately have "\<Q> = ((QStateM_list \<Q>'' ! 0) * (inverse (QStateM_list \<Q>'' ! 0))) \<cdot>\<^sub>Q 
                         (\<Q>' + \<Q>'')"
     by (smt local.a1 one_complex.simps(1) one_complex.simps(2)
              scalar_mult_QStateM_plus_l zero_complex.simps(1))              
-  moreover have "Im (inverse (QStateM_list \<Q>'' ! 0)) = 0 \<and> 
-                 Re (inverse (QStateM_list \<Q>'' ! 0)) > 0"
+  moreover have "(inverse (QStateM_list \<Q>'' ! 0)) \<noteq> 0"
     using n_zero by auto
   ultimately have "\<Q> = (QStateM_list \<Q>'' ! 0) \<cdot>\<^sub>Q 
                   ( inverse (QStateM_list \<Q>'' ! 0) \<cdot>\<^sub>Q (\<Q>' + \<Q>''))"
     using n_zero inverse_nonzero_iff_nonzero sca_mult_qstatem_assoc
-    by auto     
+    by presburger
   then have "\<Q> = (QStateM_list \<Q>'' ! 0) \<cdot>\<^sub>Q 
                   (\<Q>' + (inverse (QStateM_list \<Q>'' ! 0) \<cdot>\<^sub>Q \<Q>''))"
-    using \<open>Im (inverse (QStateM_list \<Q>'' ! 0)) = 0 \<and> 0 < Re (inverse (QStateM_list \<Q>'' ! 0))\<close> 
-          local.a1 scalar_mult_QStateM_plus_r by auto        
+    using \<open>inverse (QStateM_list \<Q>'' ! 0) \<noteq> 0\<close> a1 scalar_mult_QStateM_plus_r by presburger           
   then have "\<Q> = ((QStateM_list \<Q>'' ! 0) \<cdot>\<^sub>Q \<Q>' + (inverse (QStateM_list \<Q>'' ! 0) \<cdot>\<^sub>Q \<Q>''))"
     by (simp add: \<open>inverse (QStateM_list \<Q>'' ! 0) \<cdot>\<^sub>Q \<Q>'' = 0\<close>)
   thus ?thesis
@@ -1593,6 +1589,15 @@ qed
 
 context vars
 begin
+
+value "(Q,0)"
+lemma "(Q::QState) + 0 = Q" by auto
+
+lemma assumes a0:" \<Q> = \<Q>' + \<Q>''" and a1:"\<Q>' ## \<Q>''" and "vec_norm \<Q>' = 1"
+  shows "False"
+proof-
+  
+qed
 
 inductive QExec::"('v, 's) com \<Rightarrow> 's XQState \<Rightarrow> 's XQState \<Rightarrow> bool" 
   ("\<turnstile> \<langle>_,_\<rangle> \<Rightarrow> _"  [20,98,98] 89)  
@@ -1668,9 +1673,10 @@ inductive QExec::"('v, 's) com \<Rightarrow> 's XQState \<Rightarrow> 's XQState
 
  | Dispose: "  \<Q> = \<Q>' + \<Q>'' \<Longrightarrow> \<Q>' ## \<Q>'' \<Longrightarrow> n = vec_norm (QStateM_vector \<Q>') \<Longrightarrow>
               QStateM_vars \<Q>' \<noteq> {} \<Longrightarrow> 
+              (length (QStateM_list \<Q>'') = 1 \<longrightarrow> (Im (QStateM_list \<Q>'' ! 0) = 0 \<and> Re (QStateM_list \<Q>'' !0)>0)) \<Longrightarrow>
               QStateM_vars \<Q>' = (Q_domain_var (the (var_set q i \<sigma>)) (QStateM_map \<Q>')) \<Longrightarrow>                                      
               \<forall>e \<in> (the (var_set q i \<sigma>)). (QStateM_map \<Q>') e \<noteq> {} \<Longrightarrow>
-             \<turnstile> \<langle>Dispose q i, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Normal (\<delta>,\<sigma>, n \<cdot>\<^sub>Q  \<Q>'')"
+             \<turnstile> \<langle>Dispose q i, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Normal (\<delta>,\<sigma>, n \<cdot>\<^sub>Q \<Q>'')"
 
 \<comment>\<open>Dispose dispose will fail if it is not possible to find such states \<qq>',  \<qq>''\<close>
 
@@ -1679,7 +1685,8 @@ inductive QExec::"('v, 's) com \<Rightarrow> 's XQState \<Rightarrow> 's XQState
                \<Q> = \<Q>' + \<Q>'' \<and> \<Q>' ## \<Q>'' \<Longrightarrow>
                \<turnstile> \<langle>Dispose q, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Fault" *)
 
-| Dispose_F: "(\<nexists>\<Q>' \<Q>''.  \<Q> = \<Q>' + \<Q>'' \<and> \<Q>' ## \<Q>'' \<and> QStateM_vars \<Q>' \<noteq> {} \<and> 
+| Dispose_F: "(\<nexists>\<Q>' \<Q>''.  \<Q> = \<Q>' + \<Q>'' \<and> \<Q>' ## \<Q>'' \<and> QStateM_vars \<Q>' \<noteq> {} \<and>
+               (length (QStateM_list \<Q>'') = 1 \<longrightarrow> Im (QStateM_list \<Q>'' ! 0) = 0 \<and> Re (QStateM_list \<Q>'' !0)>0) \<and> 
                QStateM_vars \<Q>' = (Q_domain_var (the (var_set q i \<sigma>)) (QStateM_map \<Q>')) \<and>
                (\<forall>e \<in> (the (var_set q i \<sigma>)). (QStateM_map \<Q>') e \<noteq> {})) \<Longrightarrow>
                \<turnstile> \<langle>Dispose q i, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Fault"
