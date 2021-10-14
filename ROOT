@@ -4,6 +4,8 @@ session Quantum = QHLProver +
    Jordan_Normal_Form
    "HOL-Statespace"
    "HOL-Eisbach"
+   Separation_Algebra
+   Separata
   theories
     QSyntax
  
