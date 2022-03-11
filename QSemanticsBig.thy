@@ -158,9 +158,9 @@ proof-
     unfolding ps2.d0_def ps2.dims0_def ps2.vars0_def apply transfer   
     unfolding Q_domain_def apply auto
      apply (metis UN_Un Un_UNIV_right )
-       apply (simp add: QStateM_vars.rep_eq QState_rel3')    
-    using a0 a4 ps2.finite_v1 ps2.finite_v2 unfolding matrix_sep_not_zero_def
-    by  (auto simp add: matrix_sep_not_zero_def )
+    by (simp add: QStateM_vars.rep_eq QState_rel3')    
+    (* using a0 a4 ps2.finite_v1 ps2.finite_v2 unfolding matrix_sep_not_zero_def
+    by  (auto simp add: matrix_sep_not_zero_def ) *)
   then have f1:"QState_vars (QState (QStateM_vars q, list_of_vec (?m *\<^sub>v ?v))) = 
              QStateM_vars q"
     using QState_var_idem
@@ -1483,7 +1483,8 @@ proof-
   then show ?thesis unfolding Q_domain_def by auto
 qed
 
-lemma sep_eq: 
+
+lemma sep_eq:
      assumes a0:"\<Q> =  \<Q>' + \<Q>'' " and 
               a1:"\<Q>' ## \<Q>''" and
               a2:"Q_domain (QStateM_map \<Q>') = Q_domain (QStateM_map \<Q>)"
@@ -1502,24 +1503,26 @@ proof-
     by (simp add: QState_refl QState_vector.rep_eq a0 idem_QState list_vec uqstate_snd)
   moreover have "\<And>a::'a::field. a \<noteq> 0 \<Longrightarrow> a * inverse a = 1"
     using right_inverse by blast
-  moreover have n_zero:"Im (QStateM_list \<Q>'' ! 0) = 0 \<and> Re (QStateM_list \<Q>'' ! 0) > 0"
-    using Q''0 QStateM_empty_not_zero
-    by fastforce
+  moreover have n_zero:"(QStateM_list \<Q>'' ! 0) \<noteq>0"
+    using Q''0
+    using QStateM_list_no_vars_not_zero QStateM_rel1 QStateM_vars.rep_eq qstate_def by auto
   ultimately have "\<Q> = ((QStateM_list \<Q>'' ! 0) * (inverse (QStateM_list \<Q>'' ! 0))) \<cdot>\<^sub>Q 
                         (\<Q>' + \<Q>'')"
     by (smt local.a1 one_complex.simps(1) one_complex.simps(2)
              scalar_mult_QStateM_plus_l zero_complex.simps(1))              
-  moreover have "Im (inverse (QStateM_list \<Q>'' ! 0)) = 0 \<and> 
+  (* moreover have "Im (inverse (QStateM_list \<Q>'' ! 0)) = 0 \<and> 
                  Re (inverse (QStateM_list \<Q>'' ! 0)) > 0"
-    using n_zero by auto
-  ultimately have "\<Q> = (QStateM_list \<Q>'' ! 0) \<cdot>\<^sub>Q 
+    using n_zero by auto *)
+  then have "\<Q> = (QStateM_list \<Q>'' ! 0) \<cdot>\<^sub>Q 
                   ( inverse (QStateM_list \<Q>'' ! 0) \<cdot>\<^sub>Q (\<Q>' + \<Q>''))"
     using n_zero inverse_nonzero_iff_nonzero sca_mult_qstatem_assoc
-    by auto     
+    by (smt (verit, ccfv_threshold) QStateM.rep_eq QStateM_rel1 QStateM_rel2 QStateM_wf_map
+        \<open>\<Q> = QStateM_list \<Q>'' ! 0 * inverse (QStateM_list \<Q>'' ! 0) \<cdot>\<^sub>Q (\<Q>' + \<Q>'')\<close> prod.sel(1) qstate_def sca_mult_qstate_def sca_mult_qstate_quantum sca_mult_qstate_vars sca_mult_qstatem_def smult_smult_assoc snd_conv)       
   then have "\<Q> = (QStateM_list \<Q>'' ! 0) \<cdot>\<^sub>Q 
                   (\<Q>' + (inverse (QStateM_list \<Q>'' ! 0) \<cdot>\<^sub>Q \<Q>''))"
-    using \<open>Im (inverse (QStateM_list \<Q>'' ! 0)) = 0 \<and> 0 < Re (inverse (QStateM_list \<Q>'' ! 0))\<close> 
-          local.a1 scalar_mult_QStateM_plus_r by auto        
+    using local.a1 scalar_mult_QStateM_plus_r
+    by (smt (verit, ccfv_threshold) QStateM_disj_dest(2) QStateM_map_plus QStateM_map_qstate QStateM_rel1 QStateM_rel2 QStateM_wf_map QStateM_wf_qstate \<open>inverse (QStateM_list \<Q>'' ! 0) \<cdot>\<^sub>Q \<Q>'' = 0\<close> n_zero nonzero_imp_inverse_nonzero prod.sel(1) sca_mult_qstate_vars 
+       sca_mult_qstatem_def scalar_mult_QState_plus_r sep_disj_zero snd_conv)        
   then have "\<Q> = ((QStateM_list \<Q>'' ! 0) \<cdot>\<^sub>Q \<Q>' + (inverse (QStateM_list \<Q>'' ! 0) \<cdot>\<^sub>Q \<Q>''))"
     by (simp add: \<open>inverse (QStateM_list \<Q>'' ! 0) \<cdot>\<^sub>Q \<Q>'' = 0\<close>)
   thus ?thesis

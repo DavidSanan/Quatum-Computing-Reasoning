@@ -933,7 +933,7 @@ proof-
     have map:"(QStateM_map \<Q>'') = {}\<^sub>q"
       using sep_Q_eq_Q'_Q''_empty step q_domain by auto
     then have len:"length (QStateM_list \<Q>'') = 1"
-      using QStateM_rel1  QState_rel1 unfolding Q_domain_def qstate_def apply auto
+      using QStateM_rel1  QState_rel1 unfolding Q_domain_def qstate_def apply auto      
       by (metis QStateM_list.rep_eq QState_list.rep_eq QState_vars.rep_eq 
            SUP_bot_conv(2) card.empty nat_power_eq_Suc_0_iff)
 
@@ -955,7 +955,7 @@ proof-
          Q'' = inverse k \<cdot>\<^sub>v 0
         vec_norm (k \<cdot>\<^sub>v vec_of_list (v \<sigma>)) \<cdot>\<^sub>Q (inverse k \<cdot>\<^sub>v 0)
        inverse k \<cdot>\<^sub>v (k \<cdot>\<^sub>v vec_norm (vec_of_list (v \<sigma>)) \<cdot>\<^sub>Q ( 0)) 0 = [1] 
-      vec_norm (vec_of_list (v \<sigma>)) \<cdot>\<^sub>Q ( 0) *)
+      vec_norm (vec_of_list (v \<sigma>)) \<cdot>\<^sub>Q ( 0) *) 
       using  eq_vec_norm_q_empty[of \<Q>'' \<Q>', OF len]
       by simp
     moreover obtain sn where 
