@@ -150,7 +150,7 @@ lemma tensor_neutral:
              (ptensor_vec  {} {} (vec_of_list [1])
                (vec_of_list [1])) = [1::'a::comm_ring_1]"
 proof-
-  interpret ps2:partial_state2 "[]" "{}" "{}" apply standard by auto
+  interpret ps2:partial_state2  "{}" "{}" apply standard by auto
   show ?thesis  unfolding ps2.ptensor_vec_def unfolding  
    ind_in_set_def partial_state.tensor_vec_def  state_sig.d_def 
    partial_state.encode1_def partial_state.dims1_def 
@@ -160,7 +160,7 @@ qed
 
 lemma ptensor_empty:"(ptensor_vec {} {} q1 q2) $ 0 = q1 $ 0 * q2 $ 0"
 proof-
-  interpret ps2:partial_state2 "[]" "{}" "{}" apply standard by auto
+  interpret ps2:partial_state2 "{}" "{}" apply standard by auto
   show ?thesis  unfolding ps2.ptensor_vec_def unfolding  
     partial_state.tensor_vec_def  state_sig.d_def 
    partial_state.encode1_def partial_state.dims1_def 
@@ -224,11 +224,9 @@ lemma idempoten_qstate1:
     a0:"dim_vec (v::('a::comm_ring_1) vec) = (2::nat) ^ card (d1)" and
     a1:"i < dim_vec v" and a2:"finite d1"
   shows 
-     "partial_state2.ptensor_vec 
-             d1 {} v (vCons 1 vNil) $ i = 
-         v $ i"
+     "partial_state2.ptensor_vec d1 {} v (vCons 1 vNil) $ i =  v $ i"
 proof-
-  interpret ps2:partial_state2 "(replicate (card d1) (2::nat))" d1 "{}" apply standard
+  interpret ps2:partial_state2  d1 "{}" apply standard
     using a2 by auto
   let  ?d0 = "digit_decode (nths ps2.dims0 (- ps2.vars1'))
                  (nths (digit_encode ps2.dims0 i) (- ps2.vars1'))" 
@@ -306,8 +304,8 @@ lemma idempoten_qstate2:
   shows "dim_vec (partial_state2.ptensor_vec  d {} v (vCons 1 vNil)) =
    dim_vec v"
 proof-
-  interpret ps2:partial_state2 "(replicate (card d) (2::nat))" 
-                               d "{}" apply standard using a2 by auto
+  interpret ps2:partial_state2 d "{}" 
+    apply standard using a2 by auto
   show ?thesis unfolding vCons_def        
     using  ps2.ptensor_vec_dim a1  
     unfolding  ps2.d1_def ps2.d2_def ps2.dims1_def ps2.dims2_def ps2.dims_product
@@ -330,7 +328,7 @@ lemma ptensor_mat_dim_row:
   shows "dim_row (ptensor_mat sep_vars var_r M1 M2) = 
          2^(card sep_vars) * 2^(card var_r)"
 proof-
-  interpret ps2:partial_state2 "replicate (card ((sep_vars \<union> var_r))) 2" "sep_vars" "var_r"
+  interpret ps2:partial_state2  "sep_vars" "var_r"
     apply standard 
     using a0 a1 a2 by auto 
   show ?thesis unfolding ps2.ptensor_mat_def  partial_state.tensor_mat_def 
@@ -347,7 +345,7 @@ lemma ptensor_mat_dim_col:
   shows "dim_col (ptensor_mat sep_vars var_r M1 M2) = 
          2^(card sep_vars) * 2^(card var_r)"
 proof-
-  interpret ps2:partial_state2 "replicate (card ((sep_vars \<union> var_r))) 2" "sep_vars" "var_r"
+  interpret ps2:partial_state2  "sep_vars" "var_r"
     apply standard 
     using a0 a1 a2 by auto 
   show ?thesis unfolding ps2.ptensor_mat_def  partial_state.tensor_mat_def 
@@ -368,8 +366,7 @@ lemma tensor_norm:
           a3:"dim_vec v1 = 2 ^ card vars1" and a4:"dim_vec v2 = 2 ^ card vars2"
   shows "vec_norm (ptensor_vec vars1 vars2 v1 v2) = vec_norm v1 * vec_norm v2"
 proof-
-  interpret ps2:partial_state2 "replicate (card (((vars1) \<union> (vars2)))) 2" 
-                  "vars1" "vars2"
+  interpret ps2:partial_state2 "vars1" "vars2"
     apply standard using a0 a1 a2 by auto
   let ?i = "\<lambda>i. partial_state.encode1 ps2.dims0 (partial_state2.vars1' vars1 vars2) i"
   let ?j = "\<lambda>j. partial_state.encode2  ps2.dims0  (partial_state2.vars1' vars1 vars2) j"
@@ -804,7 +801,6 @@ qed
 definition sca_mult_qstate::"complex \<Rightarrow>  QState \<Rightarrow>  QState"  (infixl "\<cdot>\<^sub>q" 70) 
   where "sca_mult_qstate s qs \<equiv> QState(QState_vars qs, list_of_vec (s \<cdot>\<^sub>v (QState_vector qs)))"
 
-
 lemma sca_mult_qstate_wf:
   assumes a0:"\<bar>s\<bar> = 1" 
   shows "QState_wf (QState_vars qs, list_of_vec (s \<cdot>\<^sub>v (QState_vector qs)))"
@@ -848,6 +844,30 @@ lemma QState_list_inv: assumes a0:"QState_vars Q = {}"
   done
 
 
+definition mult_mat_qstate::"complex mat \<Rightarrow>  QState \<Rightarrow>  QState"  (infixl "*\<^sub>q" 70) 
+  where "mult_mat_qstate M Q \<equiv> QState(QState_vars Q, list_of_vec (vec_normalize (M *\<^sub>v (QState_vector Q))))"
+
+lemma mult_mat_qstate_wf:
+  assumes a1:"dim_row M = 2^card (QState_vars Q)" and 
+          a2:"M *\<^sub>v (QState_vector Q)\<noteq> 0\<^sub>v (dim_row M)"
+  shows "QState_wf (QState_vars Q, list_of_vec (vec_normalize (M *\<^sub>v (QState_vector Q))))"
+  unfolding QState_wf_def  a1 apply auto
+  apply (metis  a1 dim_mult_mat_vec index_smult_vec(2) vec_normalize_def)
+  apply (simp add: QState_rel2') apply (simp add: vec_list)
+  by (metis a2 carrier_vec_dim_vec csqrt_eq_1 dim_mult_mat_vec normalized_vec_norm vec_norm_def)
+
+lemma mult_mat_no_wf_empty:
+  assumes 
+    a0:"dim_row M \<noteq> 2^card (QState_vars Q) \<or> M *\<^sub>v (QState_vector Q) = 0\<^sub>v (dim_row M)"
+  shows "M *\<^sub>q Q = |>"
+  using a0 
+  unfolding mult_mat_qstate_def empty_qstate_def 
+  apply transfer' apply auto unfolding QState_wf_def apply auto
+  apply (metis dim_mult_mat_vec index_smult_vec(2) vec_eq_norm_smult_normalized)
+    apply (metis dim_mult_mat_vec index_smult_vec(2) vec_eq_norm_smult_normalized)
+  apply (metis index_zero_vec(2) vec_list vec_norm_zero vec_normalize_def zero_carrier_vec zero_neq_one)
+  by (metis class_field.zero_not_one index_zero_vec(2) vec_list vec_norm_zero vec_normalize_def zero_carrier_vec)
+
 definition plus_QState_vector::"QState \<Rightarrow>  QState \<Rightarrow>nat set \<times> complex list"
   where "plus_QState_vector q1 q2 \<equiv> 
      let d1 = QState_vars q1; 
@@ -861,21 +881,31 @@ definition vector_element_12::"QState \<Rightarrow> nat set \<Rightarrow> nat \<
          d2 = d - d1; 
          l1 = QState_vector v in l1$(partial_state2.pencode12 d1 d2 p)"
 
+context partial_state2
+begin
+
+interpretation state_sig dims0 .
+
+lemma "state_sig.d dims0  = d0"
+  unfolding state_sig.d_def dims0_def vars0_def d0_def by auto
+end
+
 lemma vector_element12_equiv:
   assumes a0:"dim_vec v  = 2^(card d)" and a1:"d1 \<subseteq> d" and a2:"finite d" and 
          a3:"i < 2^(card d1)" and a4:"j < 2^(card (d - d1))"
   shows "partial_state2.pencode12 d1 (d - d1) (i,j) < dim_vec v"
-proof-
-  interpret ps2:partial_state2 "(replicate (card d) (2::nat))" "d1" "(d - d1)" apply standard
+proof-                    
+  interpret ps2:partial_state2  "d1" "(d - d1)" apply standard
     using a2 a1 infinite_super by auto
-  show ?thesis unfolding  ps2.pencode12_def                                      
-    using a1 a0 a2 a3 partial_state.encode12_lt          
-     apply auto
-    by (metis Diff_partition Un_Diff_cancel a4 partial_state.d1_def 
-         partial_state.d2_def partial_state.dims1_def partial_state.dims2_def 
-         partial_state2.nths_vars1' partial_state2.nths_vars2' prod_list_replicate 
-      ps2.d_def ps2.dims0_def ps2.dims1_def 
-         ps2.dims2_def ps2.partial_state2_axioms ps2.vars0_def ps2.vars1'_def) 
+  interpret ps:partial_state ps2.dims0 ps2.vars1' .
+   show ?thesis unfolding  ps2.pencode12_def                                      
+    using a1 a0 a2 a3 partial_state.encode12_lt[of i ps2.dims0 ps2.vars1' j]    
+      a4 prod_list_replicate   ps2.length_dims0  ps2.dims0_def  ps.d_def 
+    unfolding ps.d1_def ps.dims1_def  ps.d2_def ps2.dims1_def ps.dims2_def 
+             ps2.nths_vars2' ps2.dims2_def ps2.nths_vars1' 
+    by (metis card_Diff_subset card_mono le_add_diff_inverse length_replicate
+    prod_list_replicate ps2.finite_v1 )
+   
 qed
 
 
@@ -961,7 +991,7 @@ lemma dim_vec_plus_2_pow_s:
   assumes a0:"d1 =  QState_vars q1" and 
           a1:"d2 =  QState_vars q2" and
           a2:"s = d1 \<union> d2" and a3:"l1 = QState_vector q1" and a4:"l2 = QState_vector q2" and
-          a5:"ds = list_dims s" and
+          
           a6:"v = partial_state2.ptensor_vec  d1 d2 l1 l2"  and 
           a7:"QState_vars q1 \<inter> QState_vars q2 = {}"
   shows "dim_vec v = (2^(card ((QState_vars q1) \<union> (QState_vars q2))))"
@@ -971,19 +1001,20 @@ proof-
   have int_d1_d2:"d1 \<inter> d2 = {}" using a0 a1 a7 
     by (smt disjoint_iff_not_equal image_iff ind_in_set_inj subset_eq 
           sup_commute sup_ge1)       
-  interpret ps2:partial_state2 ds  d1 d2  apply standard using int_d1_d2 
-    using f1 f2 a0 a1 a5 f1 f2 unfolding list_dims_def
+  interpret ps2:partial_state2  d1 d2  apply standard using int_d1_d2 
+    using f1 f2 a0 a1  f1 f2 unfolding list_dims_def
     by auto    
  
-   have "dim_vec v = prod_list ds"
-    using a6  a5 a7 a2 unfolding ps2.ptensor_vec_def partial_state.tensor_vec_def   
+   have "dim_vec v = prod_list ps2.dims0"
+    using a6   a7 a2 unfolding ps2.ptensor_vec_def partial_state.tensor_vec_def   
       state_sig.d_def 
    partial_state.encode1_def partial_state.dims1_def ps2.dims0_def ps2.vars0_def
     partial_state.encode2_def partial_state.dims2_def list_dims_def
     by auto    
   moreover have "card s = card ((QState_vars q1) \<union> (QState_vars q2))"
     using a0 a1 a2 by blast
-  ultimately show ?thesis using a5 unfolding list_dims_def by auto
+  ultimately show ?thesis  unfolding list_dims_def
+    by (simp add: a2 ps2.dims0_def ps2.vars0_def)
 qed    
   
 
@@ -992,10 +1023,10 @@ lemma plus_QState_vector_wf':
           a0:"d1 = QState_vars q1" and 
           a1:"d2 = QState_vars q2" and
           a2:"s = d1 \<union> d2" and a3:"l1 = QState_vector q1" and a4:"l2 = QState_vector q2" and
-          a5:"ds = list_dims s" and
+          
           a6:"v = partial_state2.ptensor_vec  d1 d2 l1 l2" 
         shows "dim_vec v =  2 ^ card (QState_vars q1 \<union> QState_vars q2)"
-  using dim_vec_plus_2_pow_s[OF a0 a1 a2 a3 a4 a5 a6 a9] by auto
+  using dim_vec_plus_2_pow_s[OF a0 a1 a2 a3 a4  a6 a9] by auto
 
 lemma plus_QState_vector_wf: assumes a0: "QState_vars q1 \<inter> QState_vars q2 = {}"
   shows "length (snd (plus_QState_vector q1 q2)) =
@@ -1050,31 +1081,31 @@ lemma plus_QState_vector_wf_pencode_not_zero:
               snd (plus_QState_vector q1 q2) ! 
                 (partial_state2.pencode12 (QState_vars q1) (QState_vars q2) (i,j)) \<noteq> 0"
 proof-
-  interpret ps2:partial_state2 "replicate (card (((QState_vars q1) \<union> (QState_vars q2)))) 2" 
+  interpret ps2:partial_state2  
                   "QState_vars q1" "QState_vars q2"
     apply standard using a4 apply auto
     by (auto simp add: QState_rel2')
-  have "partial_state2.pencode12 (QState_vars q1) (QState_vars q2) (i,j) < 
+  interpret ps:partial_state ps2.dims0 ps2.vars1' .
+  have "ps2.pencode12  (i,j) < 
                    length (snd (plus_QState_vector q1 q2))"
-    by (metis QState_rel1' a0 a2 partial_state.d1_def partial_state.d2_def 
+    by (metis QState_rel1' a0 a2 ps.d1_def ps.d2_def 
          partial_state.dims1_def partial_state.dims2_def 
-        partial_state.encode12_lt plus_QState_vector_vars plus_QState_vector_wf 
+        ps.encode12_lt plus_QState_vector_vars plus_QState_vector_wf 
         prod_list_replicate ps2.dims0_def ps2.dims1_def ps2.dims2_def ps2.disjoint 
         ps2.nths_vars1' ps2.nths_vars2' ps2.pencode12_def ps2.vars0_def state_sig.d_def) 
   moreover have "snd (plus_QState_vector q1 q2) ! 
             (partial_state2.pencode12 (QState_vars q1) (QState_vars q2) (i,j)) \<noteq> 0"
     using calculation
     unfolding plus_QState_vector_def Let_def
-    using a0 a1 a2 a3 apply auto
-    by (metis QState_list.rep_eq QState_rel1' QState_vector.rep_eq 
-              mult_eq_0_iff partial_state.d1_def partial_state.d2_def 
-              partial_state.dims1_def partial_state.dims2_def 
-              partial_state.encode12_inv1 partial_state.encode12_inv2 
-              partial_state.tensor_vec_eval partial_state2.dims1_def 
-              partial_state2.dims2_def partial_state2.ptensor_vec_def 
-              prod_list_replicate ps2.d0_def ps2.d_def ps2.dims0_def 
-              ps2.nths_vars1' ps2.nths_vars2' ps2.partial_state2_axioms 
-              ps2.pencode12_def ps2.vars0_def vec_of_list_index)
+    using a0 a1 a2 a3  apply auto 
+    using  ps.tensor_vec_eval ps.encode12_inv1 ps.encode12_inv2 QState_list.rep_eq  
+          QState_vector.rep_eq
+          mult_eq_0_iff vec_of_list_index prod_list_replicate QState_rel1'
+    unfolding ps.d1_def ps.d2_def ps.dims1_def  ps.dims2_def ps.d_def  
+              ps2.ptensor_vec_def ps2.pencode12_def ps2.d0_def
+              ps2.dims1_def ps2.dims2_def  ps2.vars0_def
+              ps2.nths_vars1' ps2.nths_vars2' 
+    by metis
   ultimately show ?thesis by auto 
 qed
 
@@ -1099,8 +1130,7 @@ lemma plus_QState_vector_wf_norm_one:
   assumes a0:"QState_vars q1 \<inter> QState_vars q2 = {}" 
   shows "vec_norm (vec_of_list (snd (plus_QState_vector q1 q2))) = 1"
 proof-
-   interpret ps2:partial_state2 "replicate (card (((QState_vars q1) \<union> (QState_vars q2)))) 2" 
-                  "QState_vars q1" "QState_vars q2"
+   interpret ps2:partial_state2 "QState_vars q1" "QState_vars q2"
     apply standard using a0 apply auto
     by (auto simp add: QState_rel2')
   have n_q1_1:"vec_norm (QState_vector q1) = 1" and
@@ -1321,7 +1351,7 @@ lemma encode_lt_card:
   shows "(partial_state.encode1 (list_dims (vs1 \<union> vs2)) (partial_state2.vars1' vs1 vs2) i) < 2 ^ card vs1" and
         "(partial_state.encode2 (list_dims (vs1 \<union> vs2)) (partial_state2.vars1' vs1 vs2) i) < 2 ^ card vs2"    
 proof-
-  interpret ps2:partial_state2 "list_dims (vs1 \<union> vs2)" vs1 vs2
+  interpret ps2:partial_state2 vs1 vs2
     apply standard using a0 a1 a2 unfolding list_dims_def by auto    
   interpret ps:partial_state "ps2.dims0" "ps2.vars1'" .
   have "prod_list ps2.dims0 = 2 ^ card (vs1 \<union> vs2)"
@@ -1361,7 +1391,7 @@ lemma not_zero_tensor_product_index:
               a3:"ptensor_vec vs1 vs2 v1 v2 \<noteq> 0\<^sub>v (2^card(vs1 \<union> vs2))"
    shows "\<exists>i<(2^card(vs1 \<union> vs2)). ptensor_vec vs1 vs2 v1 v2 $ i \<noteq> 0"
 proof-
-  interpret ps2:partial_state2 "list_dims (vs1 \<union> vs2)" vs1 vs2
+  interpret ps2:partial_state2 vs1 vs2
     apply standard using a0 a1 a2 unfolding list_dims_def by auto
   have "dim_vec (ptensor_vec vs1 vs2 v1 v2) = 2^card(vs1 \<union> vs2)"
     by (simp add: ps2.d0_def ps2.dims0_def ps2.vars0_def)
@@ -1374,7 +1404,7 @@ lemma not_zero_tensor_product_comp_index:
               a3:"ptensor_vec vs1 vs2 (v1::('a::comm_ring_1) vec) v2 \<noteq> 0\<^sub>v (2^card(vs1 \<union> vs2))"            
             shows "\<exists>i<(2^card vs1). v1 $ i \<noteq> 0" and "\<exists>i<(2^card vs2). v2 $ i \<noteq> 0"
 proof-
-  interpret ps2:partial_state2 "list_dims (vs1 \<union> vs2)" vs1 vs2
+  interpret ps2:partial_state2 vs1 vs2
     apply standard using a0 a1 a2 unfolding list_dims_def by auto  
   obtain i where i:"i < 2^card(vs1 \<union> vs2) \<and>  (ptensor_vec vs1 vs2 v1 v2 $ i \<noteq> 0)"
     using not_zero_tensor_product_index[OF a0 a1 a2 a3] by auto
@@ -1406,7 +1436,7 @@ lemma not_zero_tensor_product_comp_index_1:
           shows "v1 $(partial_state.encode1 (list_dims (vs1 \<union> vs2)) (partial_state2.vars1' vs1 vs2) i) \<noteq> 0" and 
                 "v2 $(partial_state.encode2 (list_dims (vs1 \<union> vs2)) (partial_state2.vars1' vs1 vs2) i) \<noteq> 0"
 proof-
-  interpret ps2:partial_state2 "list_dims (vs1 \<union> vs2)" vs1 vs2
+  interpret ps2:partial_state2  vs1 vs2
     apply standard using a0 a1 a2 unfolding list_dims_def by auto    
   interpret ps:partial_state "ps2.dims0" "ps2.vars1'" .
   have "prod_list ps2.dims0 = 2 ^ card (vs1 \<union> vs2)"
@@ -1439,7 +1469,7 @@ lemma not_zero_tensor_product_comp_index_2:
               a6:"v2 $(partial_state.encode2 (list_dims (vs1 \<union> vs2)) (partial_state2.vars1' vs1 vs2) i) \<noteq> 0" 
             shows "ptensor_vec vs1 vs2 v1 v2 $ i \<noteq> 0"
 proof-
-  interpret ps2:partial_state2 "list_dims (vs1 \<union> vs2)" vs1 vs2
+  interpret ps2:partial_state2  vs1 vs2
     apply standard using a0 a1 a2 unfolding list_dims_def by auto      
   interpret ps:partial_state "ps2.dims0" "ps2.vars1'" .  
   have prod_list:"prod_list ps2.dims0 = 2 ^ card (vs1 \<union> vs2)"
@@ -1463,7 +1493,7 @@ proof-
   have a3':"ptensor_vec vs1 vs2 v1' v2' \<noteq> 0\<^sub>v (2^card(vs1 \<union> vs2))"
     using a3 a4 by auto
   { assume a00:"v1 $ i = 0" and a01:"v1' $ i \<noteq> 0"
-    interpret ps2:partial_state2 "list_dims (vs1 \<union> vs2)" vs1 vs2
+    interpret ps2:partial_state2  vs1 vs2
       apply standard using a0 a1 a2 unfolding list_dims_def by auto      
     interpret ps:partial_state "ps2.dims0" "ps2.vars1'" . 
     have i_lt_d1:"i< ps.d1"
@@ -1507,7 +1537,7 @@ proof-
   have a3':"ptensor_vec vs1 vs2 v1' v2' \<noteq> 0\<^sub>v (2^card(vs1 \<union> vs2))"
     using a3 a4 by auto
   { assume a00:"v1 $ i \<noteq> 0" and a01:"v1' $ i = 0"
-    interpret ps2:partial_state2 "list_dims (vs1 \<union> vs2)" vs1 vs2
+    interpret ps2:partial_state2 vs1 vs2
       apply standard using a0 a1 a2 unfolding list_dims_def by auto      
     interpret ps:partial_state "ps2.dims0" "ps2.vars1'" . 
     have i_lt_d1:"i< ps.d1"
@@ -1606,7 +1636,7 @@ proof-
     assume a00:"i < 2 ^ card vs1" and a01:"j < 2 ^ card vs2" and a02:"v1$i\<noteq>0" and a03:"v2$j\<noteq>0"
     have a02':"v1'$i \<noteq> 0" using v1_neq_0_nv1'_neq_0[OF a0 a1 a2 a3 a4  a00] a02 by auto
     have a03':"v2'$j \<noteq> 0" using v2_nv2'[OF a0 a1 a2 a3 a4 a01] a03 by auto
-    interpret ps2:partial_state2 "list_dims (vs1 \<union> vs2)" vs1 vs2
+    interpret ps2:partial_state2 vs1 vs2
       apply standard using a0 a1 a2 unfolding list_dims_def by auto      
     interpret ps:partial_state "ps2.dims0" "ps2.vars1'" . 
     have "ps2.ptensor_vec v1 v2 $ ps.encode12 (i, j) = v1 $ i * v2 $ j" using a00 a01
@@ -1637,7 +1667,7 @@ proof-
     assume a00:"i < 2 ^ card vs1" and a01:"j < 2 ^ card vs1" and a02:"v1$i\<noteq>0" and a03:"v1$j\<noteq>0"
     have a02':"v1'$i \<noteq> 0" using v1_neq_0_nv1'_neq_0[OF a0 a1 a2 a3 a4  a00] a02 by auto
     moreover have a03':"v1'$j \<noteq> 0" using v1_neq_0_nv1'_neq_0[OF a0 a1 a2 a3 a4 a01] a03 by auto
-    interpret ps2:partial_state2 "list_dims (vs1 \<union> vs2)" vs1 vs2
+    interpret ps2:partial_state2  vs1 vs2
       apply standard using a0 a1 a2 unfolding list_dims_def by auto      
     interpret ps:partial_state "ps2.dims0" "ps2.vars1'" . 
     obtain k where "k<2^card vs2" and "v2$k\<noteq>0"
@@ -1662,7 +1692,7 @@ proof-
     assume a00:"i < 2 ^ card vs2" and a01:"j < 2 ^ card vs2" and a02:"v2$i\<noteq>0" and a03:"v2$j\<noteq>0"
     have a02':"v2'$i \<noteq> 0" using v2_nv2'[OF a0 a1 a2 a3 a4  a00] a02 by auto
     moreover have a03':"v2'$j \<noteq> 0" using v2_nv2'[OF a0 a1 a2 a3 a4  a01] a03 by auto
-    interpret ps2:partial_state2 "list_dims (vs1 \<union> vs2)" vs1 vs2
+    interpret ps2:partial_state2 vs1 vs2
       apply standard using a0 a1 a2 unfolding list_dims_def by auto      
     interpret ps:partial_state "ps2.dims0" "ps2.vars1'" . 
     obtain k where "k<2^card vs1" and "v1$k\<noteq>0"
@@ -2150,49 +2180,6 @@ lemma "QState_vector a = c \<cdot>\<^sub>v QState_vector b \<and> \<bar>c\<bar> 
 
 *)
 
-definition equiv_qstate::"QState \<Rightarrow> QState \<Rightarrow> bool"
-  where "equiv_qstate k l \<equiv> 
-          (\<exists>c. QState_vector k = c \<cdot>\<^sub>v (QState_vector l) \<and>  QState_vars k = QState_vars l)"
-
-
-
-definition equiv_qstatea::"QState \<Rightarrow> QState \<Rightarrow> bool"
-  where "equiv_qstatea k l \<equiv> \<exists>c. k = c \<cdot>\<^sub>q l \<and> \<bar>c\<bar> = 1"
-
-lemma equiv_qstates:"equiv_qstatea k l = equiv_qstate k l"
-  unfolding equiv_qstatea_def equiv_qstate_def sca_mult_qstate_def 
-  apply auto
-  using sca_mult_qstate_def sca_mult_qstate_quantum apply auto[1]
-  apply (simp add: QState_var_idem sca_mult_qstate_wf)
-  using QState_var_idem sca_mult_qstate_wf apply blast
-  by (metis QState_list.rep_eq QState_refl QState_rel3' QState_vector.rep_eq list_vec
-         mult.right_neutral norm_complex_absolutely_homogenous)
-
-lemma equiv_qstate_sym:"equiv_qstate k l = equiv_qstate l k"
-  unfolding equiv_qstate_def 
-  apply auto
-  by (metis QState_rel3' equiv_comm equiv_vectors_def mult_cancel_left2 
-      norm_complex_absolutely_homogenous)+ 
-  
-
-quotient_type (overloaded) QState_equiv = "QState" / equiv_qstate
-  morphisms rep QState_equiv
-  apply (rule equivpI)
-  apply (rule reflpI)
-    apply (metis  equiv_qstate_def one_smult_vec)
-   apply (simp add: sympI equiv_qstate_sym) 
-  apply (auto simp add: transp_def equiv_qstate_def)
-  by (metis  smult_smult_assoc)
-
-
-lemma "QState_equiv a = QState_equiv b  \<Longrightarrow>
-      \<exists>c. QState_vector a = c \<cdot>\<^sub>v QState_vector b \<and>  QState_vars a = QState_vars b"
-  by (simp add: QState_equiv.abs_eq_iff equiv_qstate_def)
-
-lemma "QState_vector a = c \<cdot>\<^sub>v QState_vector b \<and> QState_vars a = QState_vars b \<Longrightarrow>
-       QState_equiv a = QState_equiv b"
-  using QState_equiv.abs_eq_iff equiv_qstate_def by blast
- 
 
 (* definition equiv_qstate::"QState \<Rightarrow> QState \<Rightarrow> bool"
   where "equiv_qstate k l \<equiv> \<exists>c. k = c \<cdot>\<^sub>q l \<and> c\<noteq>0 "
@@ -2232,19 +2219,6 @@ lemma sca_mult_qstate_one: "x = 1 \<cdot>\<^sub>q x"
 lift_definition QState_list :: "QState \<Rightarrow> complex list" is snd .
 lift_definition QState_vector::"QState \<Rightarrow> complex vec" is "\<lambda>s. vec_of_list (snd s)" .
 *)
-
-quotient_definition "QVector :: QState_equiv \<Rightarrow> complex list" is "QState_list" 
-  sorry
-
-quotient_definition "sca_mult :: complex \<Rightarrow> QState_equiv \<Rightarrow> QState_equiv" 
-is "sca_mult_qstate"  using sca_mult_qstate_quantum 
-  unfolding equiv_qstate_def equiv_qstatea_def sca_mult_qstate_def   
-  apply auto 
-  apply (metis QState.rep_eq QState_list.rep_eq QState_rel3' QState_vector.rep_eq mult.commute mult.right_neutral norm_complex_absolutely_homogenous one_smult_vec sca_mult_qstate_def sca_mult_qstate_quantum smult_smult_assoc snd_conv vec_list)
-  apply (smt (verit, best) QState.rep_eq QState_rel3' QState_vars.rep_eq QState_wf_def fst_conv index_smult_vec(2) length_list_of_vec norm_complex_absolutely_homogenous sca_mult_qstate_def snd_conv vec_list)
-  by (metis QState_list.rep_eq QState_refl QState_rel3 QState_vector.rep_eq QState_wf eq_QState_dest mult_cancel_left2 norm_complex_absolutely_homogenous sca_mult_qstate_def sca_mult_qstate_vars vec_list)
-
-
 
 
 type_synonym q_vars = "(nat \<Rightarrow>nat set)"
@@ -2856,7 +2830,8 @@ proof-
   have "v \<bullet> conjugate v = 1" using a0 a1
     by (metis csqrt_eq_1 vec_norm_def)
   then show ?thesis using a0 a1 unfolding vec_norm_def apply auto
-qed
+  qed
+
 lemma eq_vec_norm_q_empty:
   assumes a0:"length (QStateM_list \<Q>'') = 1"
   shows "vec_norm (QStateM_vector (QStateM_list \<Q>'' ! 0 \<cdot>\<^sub>Q \<Q>')) \<cdot>\<^sub>Q
@@ -2936,10 +2911,12 @@ lemma eq_tensor_inverse_QStateM_vector:
        a1:"QStateM_map Q1 = QStateM_map Q1'" and
        a2:"QStateM_map Q2 = QStateM_map Q2'" and
        a3:"Q1 + Q2 = Q1' + Q2'" 
-     shows "\<exists>k. k \<noteq> 0 \<and> (QStateM_vector Q1') = k \<cdot>\<^sub>v(QStateM_vector Q1) \<and> 
+     shows "\<exists>k.  (QStateM_vector Q1') = k \<cdot>\<^sub>v(QStateM_vector Q1) \<and> 
                 (QStateM_vector Q2') = inverse k \<cdot>\<^sub>v(QStateM_vector Q2)"
-  by (metis QStateM_map_qstate QStateM_rel1 QStateM_vars.rep_eq QStateM_vector.rep_eq a0 a3
-       disj_QState_def eq_tensor_inverse_QState_vector local.a1 local.a2 qstate_def sep_disj_QState sep_disj_QStateM)
+  using  QStateM_map_qstate QStateM_rel1 QStateM_vars.rep_eq QStateM_vector.rep_eq a0 a3
+       disj_QState_def eq_tensor_inverse_QState_vector local.a1 local.a2
+       qstate_def sep_disj_QState sep_disj_QStateM 
+  by (metis)
 
 (* 
 temporal comment
