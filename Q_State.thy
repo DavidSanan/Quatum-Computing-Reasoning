@@ -545,6 +545,8 @@ quotient_type (overloaded) QState_equiv = "qstate_prod" /
   by (metis abs_0 abs_mult mult.left_neutral sca_mult_qstate_assoc zero_neq_one)
   
 *)
+
+
 \<comment>\<open>QState definition\<close>
 \<comment>\<open>We define a quantum state as a pair composed of 
    a finise set of quantum variables that are represented by an index, 
@@ -608,7 +610,6 @@ definition QState_wf::"nat set \<times> complex list \<Rightarrow> bool"
 lift_definition QState :: "nat set \<times> complex list \<Rightarrow> QState" is  
   "\<lambda>s. if QState_wf s then (fst s, snd s)
        else ({}, [1])" unfolding QState_wf_def vec_norm_def by auto
-
 
 abbreviation QState_unfold ::"QState \<Rightarrow> nat set \<times> complex list"
   where "QState_unfold x \<equiv> (QState_vars x, QState_list x)"
@@ -843,30 +844,30 @@ lemma QState_list_inv: assumes a0:"QState_vars Q = {}"
    zero_carrier_vec zero_vec_Suc zero_vec_zero)
   done
 
-
 definition mult_mat_qstate::"complex mat \<Rightarrow>  QState \<Rightarrow>  QState"  (infixl "*\<^sub>q" 70) 
-  where "mult_mat_qstate M Q \<equiv> QState(QState_vars Q, list_of_vec (vec_normalize (M *\<^sub>v (QState_vector Q))))"
+  where "mult_mat_qstate M Q \<equiv> 
+     if  M \<in> carrier_mat (2^(card (QState_vars Q))) (2^(card (QState_vars Q))) \<and>
+         M *\<^sub>v (QState_vector Q) \<noteq> 0\<^sub>v (dim_col M) then
+      QState(QState_vars Q, list_of_vec (vec_normalize (M *\<^sub>v (QState_vector Q))))
+     else  |>"
 
 lemma mult_mat_qstate_wf:
-  assumes a1:"dim_row M = 2^card (QState_vars Q)" and 
+  assumes a1:"M \<in> carrier_mat (2^(card (QState_vars Q))) (2^(card (QState_vars Q)))" and 
           a2:"M *\<^sub>v (QState_vector Q)\<noteq> 0\<^sub>v (dim_row M)"
   shows "QState_wf (QState_vars Q, list_of_vec (vec_normalize (M *\<^sub>v (QState_vector Q))))"
   unfolding QState_wf_def  a1 apply auto
-  apply (metis  a1 dim_mult_mat_vec index_smult_vec(2) vec_normalize_def)
+  apply (metis a1 carrier_matD(1) dim_mult_mat_vec index_smult_vec(2) vec_eq_norm_smult_normalized)
   apply (simp add: QState_rel2') apply (simp add: vec_list)
   by (metis a2 carrier_vec_dim_vec csqrt_eq_1 dim_mult_mat_vec normalized_vec_norm vec_norm_def)
 
 lemma mult_mat_no_wf_empty:
   assumes 
-    a0:"dim_row M \<noteq> 2^card (QState_vars Q) \<or> M *\<^sub>v (QState_vector Q) = 0\<^sub>v (dim_row M)"
+    a0:"\<not> (M \<in> carrier_mat (2^(card (QState_vars Q))) (2^(card (QState_vars Q))) \<and>
+         M *\<^sub>v (QState_vector Q) \<noteq> 0\<^sub>v (dim_row M))"
   shows "M *\<^sub>q Q = |>"
   using a0 
   unfolding mult_mat_qstate_def empty_qstate_def 
-  apply transfer' apply auto unfolding QState_wf_def apply auto
-  apply (metis dim_mult_mat_vec index_smult_vec(2) vec_eq_norm_smult_normalized)
-    apply (metis dim_mult_mat_vec index_smult_vec(2) vec_eq_norm_smult_normalized)
-  apply (metis index_zero_vec(2) vec_list vec_norm_zero vec_normalize_def zero_carrier_vec zero_neq_one)
-  by (metis class_field.zero_not_one index_zero_vec(2) vec_list vec_norm_zero vec_normalize_def zero_carrier_vec)
+  apply transfer' by auto 
 
 definition plus_QState_vector::"QState \<Rightarrow>  QState \<Rightarrow>nat set \<times> complex list"
   where "plus_QState_vector q1 q2 \<equiv> 
@@ -2009,6 +2010,17 @@ lemma eq_tensor_inverse_QState:
   using eq_tensor_inverse_QState_vector[OF a0 a1 a2 a3] 
   by (metis QState_list.rep_eq QState_refl QState_vector.rep_eq a1 a2 list_vec sca_mult_qstate_def)
 
+lemma eq_tensor_inverse_QState': 
+  assumes a0:"Q1 ## Q2" and
+       a1:"QState_vars Q1 = QState_vars Q1'" and
+       a2:"QState_vars Q2 = QState_vars Q2'" and
+       a3:"Q1 + Q2 = Q1' + Q2'" 
+     shows "\<exists>k. Q1 = k \<cdot>\<^sub>q Q1' \<and> Q2 = inverse k \<cdot>\<^sub>q Q2' \<and> \<bar>k\<bar> = 1"
+  using eq_tensor_inverse_QState[OF a0 a1 a2 a3]
+  by (metis QState_list.rep_eq QState_refl QState_vector.rep_eq abs_eq_0_iff 
+            abs_inverse inverse_1 left_inverse list_vec one_neq_zero one_smult_vec 
+            sca_mult_qstate_assoc sca_mult_qstate_def) 
+
 thm norm_complex_def abs_complex_def
 
 lemma k_norm:
@@ -2220,635 +2232,35 @@ lift_definition QState_list :: "QState \<Rightarrow> complex list" is snd .
 lift_definition QState_vector::"QState \<Rightarrow> complex vec" is "\<lambda>s. vec_of_list (snd s)" .
 *)
 
-
-type_synonym q_vars = "(nat \<Rightarrow>nat set)"
-type_synonym qstate = "q_vars \<times>  QState"
-
-definition Q_domain::"q_vars \<Rightarrow> nat set" 
-  where "Q_domain q_vars \<equiv> \<Union> (range q_vars)"
-
-definition ket_dim ::"q_vars \<Rightarrow> nat"
-  where "ket_dim q_vars \<equiv>  card (Q_domain q_vars)"
-
-definition Q_domain_var::"nat set \<Rightarrow> q_vars \<Rightarrow> nat set "
-  where "Q_domain_var q qvars \<equiv> \<Union> (qvars ` q)"
-
-definition Q_domain_set::"('s \<Rightarrow> nat set) \<Rightarrow> q_vars \<Rightarrow> ('s \<Rightarrow> nat set)"
-  where "Q_domain_set q qvars \<equiv> (\<lambda>s. \<Union> (qvars ` q s))"
-
-\<comment>\<open>\<close>
-abbreviation QStateM_wf::"q_vars \<times>  QState \<Rightarrow> bool"
-  where "QStateM_wf s \<equiv> 
-        Q_domain (fst s) = QState_vars (snd s) \<and>
-        (\<forall>x y. x\<noteq>y \<and> x\<in> domain (fst s) \<and> y \<in> domain (fst s) \<longrightarrow> (fst s) x \<inter> (fst s) y = {})"
-
-
-typedef 
-  QStateM = "{(m,q)| (m::q_vars) (q:: QState). QStateM_wf (m,q)}"
-  morphisms uQStateM Abs_QStateM              
-  unfolding Q_domain_def  apply auto apply transfer
-  apply (rule exI[where x ="\<lambda>x. {}"], auto)
-  by (metis QState_rel3 length_Cons list.size(3) snd_uQState_empty)
-
-setup_lifting type_definition_QStateM
-
-lift_definition QStateM_map :: "QStateM \<Rightarrow> q_vars" is fst .
-
-abbreviation empty_map::"q_vars" ("{}\<^sub>q")
-  where "empty_map \<equiv> (\<lambda>n. {})"
-
-definition qstate :: "QStateM \<Rightarrow> QState" 
-  where "qstate s \<equiv> snd (uQStateM s)"
-
-lift_definition QStateM_vars::"QStateM \<Rightarrow> nat set" is "(\<lambda>s. QState_vars (snd s))" .
-lift_definition QStateM_list::"QStateM \<Rightarrow> complex list" is "(\<lambda>s. QState_list (snd s))" .
-lift_definition QStateM_vector::" QStateM \<Rightarrow> complex vec" is "(\<lambda>s. QState_vector (snd s))" .
-
-lift_definition QStateM ::"q_vars \<times>  QState \<Rightarrow> QStateM" is
-"\<lambda>s. if QStateM_wf s then (fst s, snd s) else (\<lambda>s. {}, QState ({},[1]))"
-  unfolding Q_domain_def by (auto simp add:  QState_vars_empty)
-
-definition constrain_map::"q_vars \<Rightarrow> nat set \<Rightarrow> q_vars"
-  where "constrain_map m q \<equiv> (\<lambda>x. if x \<in> q then m x else none)"
-
-definition split_map::"q_vars \<Rightarrow> nat set \<Rightarrow> q_vars \<times> q_vars"
-  where "split_map q_vars q \<equiv> (constrain_map q_vars q, constrain_map q_vars (-q))"
-
-lemma q_map_split:"\<forall>e\<in>q. q_map e \<noteq> {} \<Longrightarrow> 
-       q_map = fst (split_map q_map q) + snd (split_map q_map q)"
-  unfolding split_map_def constrain_map_def none_def plus_fun_def apply auto  
-proof -
-  have "\<forall>n na. n \<in> q \<and> na \<notin> q \<and> q_map na \<noteq> {} \<or> 
-               n \<in> q \<and> fst (\<lambda>n. if n \<in> q then q_map n else {}, 
-                            \<lambda>n. if n \<in> - q then q_map n else {}) na = q_map na \<or> 
-              snd (\<lambda>n. if n \<in> q then q_map n else {}, 
-                               \<lambda>n. if n \<in> - q then q_map n else {}) n = q_map n \<and>
-                 na \<notin> q \<and> q_map na \<noteq> {} \<or> 
-              snd (\<lambda>n. if n \<in> q then q_map n else {}, 
-                       \<lambda>n. if n \<in> - q then q_map n else {}) n = q_map n \<and> 
-              fst (\<lambda>n. if n \<in> q then q_map n else {}, 
-                   \<lambda>n. if n \<in> - q then q_map n else {}) na = q_map na"
-    by simp
-  then show "q_map = 
-             (\<lambda>n. if (if n \<notin> q then q_map n else {}) = {} then 
-                  fst (\<lambda>n. if n \<in> q then q_map n else {}, 
-                       \<lambda>n. if n \<in> - q then q_map n else {}) n else 
-                  snd (\<lambda>n. if n \<in> q then q_map n else {}, 
-                           \<lambda>n. if n \<in> - q then q_map n else {}) n)"
-  by (metis (no_types))
-qed 
-
-lemma q_map_int:"\<forall>e\<in>q. q_map e \<noteq> {} \<Longrightarrow> 
-       fst (split_map q_map q) ## snd (split_map q_map q)"
-  unfolding split_map_def constrain_map_def none_def plus_fun_def sep_disj_fun_def domain_def
-  by auto
-
-lemma q_var_inter_empty:
-  " \<forall>x y. x\<in> domain q_map \<and> y \<in> domain q_map \<and> x\<noteq>y  \<longrightarrow> q_map x \<inter> q_map y = {} \<Longrightarrow>
-     q  \<inter> qr  = {} \<Longrightarrow>   
-     Q_domain_var q q_map \<inter> 
-     Q_domain_var qr q_map = {}"
-  unfolding Q_domain_var_def domain_def Q_domain_def by auto
-
-lemma q_var_in_q1_q2: assumes      
-      a2:"Q_domain q_map = Q_domain_var (q1 \<union> q2) q_map" and
-      a3:"q_map x \<noteq> {}" and a4:"\<forall>x y. x\<in> domain q_map \<and> y \<in> domain q_map \<and> x\<noteq>y  \<longrightarrow> q_map x \<inter> q_map y = {}"
-    shows "x \<in> q1 \<or> x \<in> q2"
-proof-
-  obtain xa where a3:"xa \<in> q_map x" using a3 by auto
-  have f4: "\<forall>N. - (N::nat set) \<inter> N = {}"
-    by simp
-  have "xa \<in> \<Union> (range q_map)"
-    using a3 by blast
-  then have "xa \<notin> \<Union> (q_map ` (- (q1 \<union> q2)))"
-    using f4 using  a2   a3      
-    unfolding  Q_domain_def Q_domain_var_def 
-    by (metis Q_domain_var_def disjoint_iff_not_equal q_var_inter_empty[OF a4])
-  then show ?thesis using a3
-    by blast
-qed
-
-lemma split_q1_constrain_q2:
-  assumes a0:"q1 \<inter> q2 = {}" and 
-              a2:"\<forall>x y. x\<in> domain q_map \<and> y \<in> domain q_map \<and> x\<noteq>y  \<longrightarrow> q_map x \<inter> q_map y = {}" and
-              a3:"q_vars = Q_domain_var (q1 \<union> q2) q_map" and 
-              a4:"Q_domain q_map = q_vars"
-  shows "snd (split_map q_map q1) = constrain_map q_map q2"
-proof-
-  have "q2 \<subseteq> -q1"
-    using a0 by blast
-  moreover have "\<forall>x. x \<notin> q1 \<and> x \<notin> q2 \<longrightarrow> q_map x = {}"
-    apply auto using q_var_in_q1_q2
-    using a4 a2 a3 by blast
-  ultimately show ?thesis 
-    unfolding split_map_def constrain_map_def none_def apply auto
-    by (metis IntI a0 empty_iff)     
-qed
-
-lemma q_vars_q2: assumes 
-      a0:"q1 \<inter> q2 = {}" and
-      a1:"\<forall>x y. x\<in> domain q_map \<and> y \<in> domain q_map \<and> x\<noteq>y  \<longrightarrow> q_map x \<inter> q_map y = {}" and
-      a2:"q_vars = Q_domain_var (q1 \<union> q2) q_map" and      
-      a3:"Q_domain q_map = q_vars" and       
-      a4:"v1 = Q_domain_var q1 q_map" and  
-      a5:"v2 = Q_domain_var q2 q_map"
-    shows "v2 = q_vars - v1"
-proof-
-  note split = split_q1_constrain_q2[OF a0 a1 a2 a3]
-  note q_var_inter = q_var_inter_empty[OF a1 a0]
-  show ?thesis using split q_var_inter
-    using Q_domain_var_def a4 a5 a2 by auto         
-qed
-
-lemma q_domain_constrain_eq_q_domain_var:
- "Q_domain (constrain_map q_map q) = Q_domain_var q q_map"
-  unfolding Q_domain_def Q_domain_var_def constrain_map_def
-  by auto
-
-lemma q_domain_split_eq_q_domain_var:
- "Q_domain (fst (split_map q_map q)) = Q_domain_var q q_map"
-  unfolding split_map_def Q_domain_def Q_domain_var_def constrain_map_def
-  by auto
-
-lemma constrain_map_wf1:
-   "\<forall>x y. x\<noteq>y \<and> x\<in> domain q_map \<and> y \<in> domain q_map \<longrightarrow> q_map x \<inter> q_map y = {} \<Longrightarrow>
-       \<forall>x y. x \<noteq> y \<and>
-          x \<in> opt_class.domain (constrain_map q_map q) \<and>
-          y \<in> opt_class.domain (constrain_map q_map q) \<longrightarrow> 
-          (constrain_map q_map q) x \<inter>
-          (constrain_map q_map q) y = {}"
-  unfolding constrain_map_def
-  apply auto
-  using opt_class.domain_def by fastforce
-
-abbreviation QStateM_unfold::"QStateM \<Rightarrow> (q_vars \<times>  QState)"
-  where "QStateM_unfold q \<equiv> (QStateM_map q, qstate q)"
-
-lemma vec_of_list_QStateM_list:"QStateM_vector Q = vec_of_list (QStateM_list Q)"
-  by (simp add: QStateM_list.rep_eq QStateM_vector.rep_eq QState_list.rep_eq QState_vector.rep_eq)
-
-lemma list_of_vec_QStateM_vec:"QStateM_list Q = list_of_vec (QStateM_vector Q)"
-  by (simp add: list_vec vec_of_list_QStateM_list)
-
-lemma list_of_vec_elim:"list_of_vec Q = list_of_vec Q1 \<Longrightarrow> Q = Q1"
-  by (metis vec_list)
-
-
-lemma eq_QStateM_vars:"QState_vars (snd (QStateM_unfold q)) = QStateM_vars q"
-  unfolding qstate_def
-  by (transfer, auto)
-
-lemma QStateM_wf:"QStateM_wf (QStateM_unfold x)"
-  unfolding qstate_def  apply transfer by fastforce
-
-lemma QStateM_wf_map:"QStateM_wf (vs, v) \<Longrightarrow> QStateM_map (QStateM (vs, v)) = vs"
-  by (transfer, auto)
-
-lemma QStateM_wf_qstate:"QStateM_wf (vs, v) \<Longrightarrow> qstate (QStateM (vs, v)) = v"
-  unfolding qstate_def by (transfer, auto)
-
-lemma QStateM_wf_vars:"QStateM_wf (vs, v) \<Longrightarrow> QStateM_vars (QStateM (vs, v)) = QState_vars v"
-  apply transfer'
-  by simp
-
-lemma QStateM_wf_list:"QStateM_wf (vs, v) \<Longrightarrow> QStateM_list (QStateM (vs, v)) = QState_list v"
-  apply transfer'
-  by simp
-
-lemma QStateM_rel1:"Q_domain (QStateM_map x) = QState_vars (qstate x)" 
-  unfolding qstate_def  apply transfer by fastforce
-
-lemma QStateM_rel2:
-   "x\<in> domain (QStateM_map s) \<and> y \<in> domain (QStateM_map s) \<and> x\<noteq>y \<longrightarrow> 
-    (QStateM_map s) x \<inter> (QStateM_map s) y = {}" 
-  apply transfer 
-  by (fastforce simp add: Q_domain_def)
-
-lemma QStateM_rel2fa:
-   "\<forall>x y. x\<in> domain (QStateM_map s) \<and> y \<in> domain (QStateM_map s) \<and> x\<noteq>y \<longrightarrow> 
-    (QStateM_map s) x \<inter> (QStateM_map s) y = {}" 
-  apply transfer 
-  by (fastforce simp add: Q_domain_def)
-
-lemma Qstate_map_0_0:"QStateM_map (QStateM (0, 0)) = 0"
-  apply transfer' apply (auto, simp add: Q_domain_def)
-  apply (simp add: zero_fun_def)
-  by (auto simp add: QState_vars_empty zero_QState zero_fun_def)
-
-
-lemma idem_QState:"QStateM (QStateM_map x, qstate x) = x"  
-  unfolding qstate_def apply transfer by fastforce
-
-
-lemma eq_QStateM_dest: "Q_domain vs \<noteq> {} \<Longrightarrow> 
-       QStateM_wf (vs, v) \<Longrightarrow> 
-       QStateM(vs, v) = QStateM(vs', v') \<Longrightarrow> 
-       vs = vs' \<and> v = v'" 
-   apply transfer' apply auto
-  apply (metis Pair_inject QState_vars_empty empty_iff prod.collapse)
-  by (metis QState_vars_empty empty_iff snd_conv)
-
-lemma eq_QStateM_dest1: " 
-       QStateM_wf (vs, v) \<Longrightarrow> QStateM_wf (vs', v') \<Longrightarrow> 
-       QStateM(vs, v) = QStateM(vs', v') \<Longrightarrow> 
-       vs = vs' \<and> v = v'" 
-   apply transfer' by auto
-
-
-lemma eq_QStateMap_vars:
-  assumes a0:"QStateM_map Q1 = QStateM_map Q2" 
-  shows "QStateM_vars Q1 = QStateM_vars Q2"
-  by (metis QStateM_rel1 QStateM_vars.rep_eq assms qstate_def)
-
-lemma QStateM_eq_intro[intro]:
-  assumes a0:"QStateM_map Q1 = QStateM_map Q2" and
-          a1:"QStateM_list Q1 = QStateM_list Q2"
-        shows "Q1 = Q2"
-  by (metis QStateM_list.rep_eq QStateM_rel1 a0 a1 idem_QState q_state_eq qstate_def)
-
-   
-
-lemma Qstate_mapf:
-  assumes a0:"Q_domain (f (QStateM_map q)) =  QState_vars (g (qstate q))" and 
-          a1:"(\<forall>x y. x\<noteq>y \<and> x\<in> domain (f (QStateM_map q)) \<and> 
-                      y \<in> domain (f (QStateM_map q)) \<longrightarrow> 
-                     (f (QStateM_map q)) x \<inter> (f (QStateM_map q)) y = {})"
-        shows "QStateM_map (QStateM (f (QStateM_map q), g (qstate q))) = 
-               f (QStateM_map q)"  
-  using a0 a1 apply transfer' by auto 
-   
-
-lemma Qstate_vector:
-  assumes a0:"Q_domain (f (QStateM_map q)) =  QState_vars (g (qstate q))" and 
-          a1:"\<forall>x y. x\<noteq>y \<and> x\<in> domain (f (QStateM_map q)) \<and> 
-                      y \<in> domain (f (QStateM_map q)) \<longrightarrow> 
-                     (f (QStateM_map q)) x \<inter> (f (QStateM_map q)) y = {}"
-        shows "qstate (QStateM (f (QStateM_map q), g (qstate q))) = 
-               g (qstate q)"  
-  using a0 a1 unfolding qstate_def apply transfer' by auto
-  
-lemma Q_domain_unfold_rel1:
-  "Q_domain (fst (QStateM_unfold q)) = QState_vars(snd (QStateM_unfold q))"
-  by (simp add: QStateM_rel1)
-
-lemma Q_domain_unfold_rel2:
-  "\<forall>x y. x\<noteq>y \<and> x\<in> domain (fst (QStateM_unfold q)) \<and> 
-                y \<in> domain (fst (QStateM_unfold q)) \<longrightarrow> 
-        (fst (QStateM_unfold q)) x \<inter> (fst (QStateM_unfold q)) y = {}" 
-  by (simp add: QStateM_rel2)
-
-lemma q_var_in_q_qr:
-  assumes 
-    a0:"Q_domain (QStateM_map \<Q>) =  Q_domain_var (q \<union> qr) (QStateM_map \<Q>)" and    
-    a2:"xa \<in> QStateM_map \<Q> x"
- shows "x \<in> q \<or> x \<in> qr"  using q_var_in_q1_q2
-  using QStateM_rel2 a0 a2 by blast
-
-lemma 
-  assumes a0:"Q_domain (QStateM_map \<Q>) = QStateM_vars \<Q>" and
-          a1:"QStateM_vars \<Q> = Q_domain_var (q \<union> qr) (QStateM_map \<Q>)"
-        shows "\<forall>x. x \<notin> q  \<and> x \<notin> qr \<longrightarrow> QStateM_map \<Q> x = {}"  
-  apply auto
-proof -
-  fix x :: nat and xa :: nat
-  assume a2: "xa \<in> QStateM_map \<Q> x"
-  assume a3: "x \<notin> q"
-  assume a4: "x \<notin> qr"
-  have "\<forall>N. xa \<in> \<Union> (QStateM_map \<Q> ` N) \<or> x \<notin> N"
-    using a2 QStateM_map.rep_eq by force
-  then have "x \<in> q \<union> qr"
-    using a0 a1 a2 q_var_in_q_qr by fastforce
-  then show False
-    using a4 a3 by fastforce
-qed
+lemma  norm_elem_vec_norm_1:
+  assumes a0:"dim_vec v = 1" and a1:"vec_norm v = 1"
+  shows "\<bar>v $ 0\<bar> = 1" 
+    using a0 a1
+    unfolding vec_norm_def scalar_prod_def  abs_complex_def 
+    by (simp add: complex_mod_sqrt_Re_mult_cnj)
  
-
-lemma domain_qr:"q  \<inter> qr  = {} \<Longrightarrow> 
-       QStateM_vars \<Q> = Q_domain_var (q \<union> qr) (QStateM_map \<Q>) \<Longrightarrow>
-       Q_domain_var qr (QStateM_map \<Q>) =
-       Q_domain (QStateM_map \<Q>) - Q_domain_var q (QStateM_map \<Q>)"  
-  apply(frule q_var_inter_empty[of "QStateM_map \<Q>", OF QStateM_rel2fa]) 
-  using QStateM_rel1 unfolding Q_domain_def Q_domain_var_def   
-  by (auto simp add: QStateM_vars.rep_eq qstate_def)
-
-lemma Q_domain_var_in_vars:
-  assumes a1:"\<Inter> (QStateM_map Q1 ` q) \<noteq> {}" and a2:"q\<noteq>{}" 
-  shows "Q_domain_var q (QStateM_map Q1) \<subseteq> QStateM_vars Q1"
-    using QStateM_rel1 a1 a2 apply auto
-    unfolding Q_domain_def Q_domain_var_def qstate_def apply transfer
-    using iso_tuple_UNIV_I by blast
-
-lemma range_0_none:"\<Union> (range (0::nat \<Rightarrow> nat set)) = none"
-  unfolding zero_set_def zero_fun_def by auto
-
-lemma QState_vars_0_0:"QState_vars 0 = 0"
-  by (simp add: QState_vars_empty zero_QState zero_set_def)
-
-lemma QStateM_list_dim:
-   "QStateM_list \<Q> = vl \<Longrightarrow>
-    dim_vec (vec_of_list vl) = 2^card (QStateM_vars \<Q>)"
-  using QStateM_list.rep_eq QStateM_vars.rep_eq QState_rel1' by auto
-
-lemma QStateM_list_dim_union_vars:"QStateM_vars \<Q> = q1 \<union> q2 \<Longrightarrow> q1 \<inter> q2 = {} \<Longrightarrow>
-       dim_vec (vec_of_list (QStateM_list \<Q>)) = 2^card q1 * 2^card q2"
-  using QStateM_list_dim
-  by (metis QStateM_vars.rep_eq QState_rel2' card_Un_disjoint finite_Un power_add)
-
-
-definition sca_mult_qstatem::"complex \<Rightarrow>  QStateM \<Rightarrow> QStateM"  (infixl "\<cdot>\<^sub>Q" 70)
-  where "sca_mult_qstatem s qs \<equiv> QStateM(QStateM_map qs, s \<cdot>\<^sub>q (qstate qs))"
-
-
-lemma sca_mult_qstatem_wf:
-  assumes a0:"QStateM_vars qs\<noteq>{} \<and> \<bar>s\<bar> = 1" 
-  shows "QStateM_wf (QStateM_map qs, s \<cdot>\<^sub>q (qstate qs))"
+(* lemma eq_vec_norm_q_empty:
+  assumes a0:"length (QState_list \<Q>'') = 1"
+  shows "vec_norm (QState_vector (QState_list \<Q>'' ! 0 \<cdot>\<^sub>q \<Q>')) \<cdot>\<^sub>q
+   (inverse (QState_list \<Q>'' ! 0) \<cdot>\<^sub>q \<Q>'') = 
+  vec_norm (QState_vector \<Q>') \<cdot>\<^sub>q \<Q>''"
 proof-
-  have "QStateM_wf (QStateM_unfold qs)"
-    using QStateM_wf by blast
-  thus ?thesis using sca_mult_qstate_vars a0
-    using QStateM_vars.rep_eq assms qstate_def sca_mult_qstate_vars
-    by auto      
-qed
-
-lemma sca_mult_qstatem_var_map:
-  "QStateM_vars qs\<noteq>{} \<and> \<bar>s\<bar> = 1 \<Longrightarrow> QStateM_map (s \<cdot>\<^sub>Q qs) = QStateM_map qs"
-  unfolding sca_mult_qstatem_def using sca_mult_qstatem_wf[of qs s]
-  by (auto simp add: QStateM_wf_map)
-
-lemma sca_mult_qstatem_var_qstate:
-  "QStateM_vars qs\<noteq>{} \<and> \<bar>s\<bar> = 1 \<Longrightarrow> qstate (s \<cdot>\<^sub>Q qs) = s \<cdot>\<^sub>q qstate qs"
-  unfolding sca_mult_qstatem_def using sca_mult_qstatem_wf[of qs s]
-  by (auto simp add: QStateM_wf_qstate)
-
-lemma sca_mult_q_statem_qstate_vars: 
-   "QStateM_vars qs\<noteq>{} \<and> \<bar>s\<bar> = 1 \<Longrightarrow> 
-    QStateM_vars (s \<cdot>\<^sub>Q qs) = QStateM_vars qs"
-  using QStateM_vars.rep_eq qstate_def sca_mult_qstate_vars sca_mult_qstatem_var_qstate
-  by (meson eq_QStateMap_vars sca_mult_qstatem_var_map) 
-
-lemma sca_mult_q_statem_qstate_vector: 
-   "QStateM_vars qs\<noteq>{} \<and> \<bar>s\<bar> = 1  \<Longrightarrow> QStateM_vector (s \<cdot>\<^sub>Q qs) = s  \<cdot>\<^sub>v QStateM_vector qs"
-  using QStateM_vector.rep_eq qstate_def sca_mult_qstate_quantum sca_mult_qstatem_var_qstate
-  using QStateM_vars.rep_eq by auto
-
-
-lemma QStateM_list_inv: assumes a0:"Q_domain (QStateM_map \<Q>) = {}"
-  shows "inverse(QStateM_list \<Q> ! 0) \<cdot>\<^sub>Q \<Q> = QStateM (\<lambda>x. {}, 0)"
-proof-
-  have "QStateM_map \<Q> = {}\<^sub>q" using a0 unfolding Q_domain_def by auto       
-  moreover have "QStateM_list \<Q> = QState_list (qstate \<Q>)"
-    unfolding qstate_def apply transfer by auto
-  moreover have  "inverse(QState_list (qstate \<Q>) ! 0) \<cdot>\<^sub>q (qstate \<Q>) = 0"  
-    unfolding zero_QState empty_qstate_def
-    using QStateM_rel1 QState_list_inv assms empty_qstate_def by fastforce
-  ultimately show ?thesis unfolding sca_mult_qstatem_def 
-    by auto
-qed
-
-lemma sca_mult_qstatem_assoc: 
-  "\<bar>a1\<bar> = 1 \<and> \<bar>a2\<bar> = 1
-   \<Longrightarrow> a1 * a2 \<cdot>\<^sub>Q Q = a1 \<cdot>\<^sub>Q (a2 \<cdot>\<^sub>Q Q)"
-  using QStateM_wf QStateM_wf_map QStateM_wf_qstate sca_mult_qstate_assoc 
-        sca_mult_qstate_vars sca_mult_qstatem_def by auto 
-
-(* lemma QStateM_empty_not_zero: assumes a0:"Q_domain (QStateM_map \<Q>) = {}"
-  shows "Im (QStateM_list \<Q> ! 0) = 0 \<and> Re (QStateM_list \<Q> ! 0) > 0"
-proof-
-  have "QStateM_map \<Q> = {}\<^sub>q" using a0 unfolding Q_domain_def by auto       
-  then have "QStateM_list \<Q> = QState_list (qstate \<Q>)"
-    unfolding qstate_def apply transfer by auto  
-  then show ?thesis apply auto unfolding qstate_def 
-    using QStateM_rel1 QState_wf  assms qstate_def unfolding QState_wf_def
-    apply auto
-qed *)
-
-lemma disjoint_x_y_wf1_x_plus_y:
-       assumes a0:"QStateM_map x ## QStateM_map y "  and 
-              a1:"qstate x ## qstate y"
-      shows "Q_domain (QStateM_map x + QStateM_map y) = 
-                   QState_vars (qstate x + qstate y)"
-proof-
-  have wr_x:"QStateM_wf (QStateM_map x, qstate x)" and
-       wr_y:"QStateM_wf (QStateM_map y, qstate y)"
-    using QStateM_wf by blast+
-  { fix xa 
-    assume a00:"xa \<in> Q_domain (QStateM_map x + QStateM_map y)"        
-    then have "xa \<in> QState_vars (qstate x + qstate y)"
-      using a0 a1 wr_x wr_y unfolding Q_domain_def  plus_fun_def apply auto
-      by (metis QState_vars_Plus UNIV_I UN_iff Un_iff disj_QState_def plus_QState plus_QState_vector_vars sep_disj_QState)+            
-  }
-  moreover 
-  { fix xa 
-    assume a00: "xa \<in> QState_vars (qstate x + qstate y)"         
-    then have "xa \<in> QState_vars (qstate x) \<or> xa \<in> QState_vars (qstate y)"
-      by (metis QState_vars_Plus Un_iff empty_iff plus_QState plus_QState_vector_vars)
-    moreover have "QState_vars (qstate x) \<inter> QState_vars (qstate y) = {}" using a1
-      by (simp add: disj_QState_def sep_disj_QState)      
-    ultimately have "xa \<in> Q_domain (QStateM_map x + QStateM_map y)"
-      using a0 a1 wr_x wr_y unfolding Q_domain_def  domain_def sep_disj_fun_def plus_fun_def 
-      apply (auto simp add:)
-      by (metis (mono_tags) IntI UN_iff empty_iff mem_Collect_eq)+
-  } ultimately show ?thesis by auto
-qed
-
-lemma disjoint_x_y_wf2_x_plus_y:
-      assumes a0:"QStateM_map q1 ## QStateM_map q2"  and 
-              a1:"qstate q1 ## qstate q2" and 
-              a2:"x\<noteq>y \<and> x\<in> domain (QStateM_map q1 + QStateM_map q2)" 
-            shows "((QStateM_map q1 + QStateM_map q2) x) \<inter> ((QStateM_map q1 + QStateM_map q2) y) = {}"  
-proof-
-  have wr_x:"QStateM_wf (QStateM_map q1, qstate q1)" and
-       wr_y:"QStateM_wf (QStateM_map q2, qstate q2)"
-    using QStateM_wf by blast+
-  thus ?thesis using a0 a1 a2   
-    unfolding Q_domain_def  domain_def sep_disj_fun_def plus_fun_def 
-      apply (auto simp add:)
-      apply blast
-    by (metis IntI Sup_upper disj_QState_def empty_iff range_eqI sep_disj_QState subsetD)+
-
-qed
-
-
-
-lemma plus_wf: assumes a0:"QStateM_map x ## QStateM_map y "  and 
-              a1:"qstate x ## qstate y"
-            shows "QStateM_wf (QStateM_map x + QStateM_map y, qstate x + qstate y)"  
-  using disjoint_x_y_wf1_x_plus_y[OF a0 a1] 
-     disjoint_x_y_wf2_x_plus_y[OF a0 a1 ] by force
-
-
-(* lemma assumes a0:"QStateM_map x ## QStateM_map y" 
-  shows "QStateM_map
-               (QStateM
-                 (QStateM_map x + QStateM_map y, qstate x + qstate y)) =
-      QStateM_map x + QStateM_map y"
-   apply transfer'    
-  unfolding plus_fun_def plus_QState plus_QState_def 
-   sep_disj_fun_def opt_class.domain_def Q_domain_def qstate_def Let_def  
-  apply transfer' apply auto 
-  sorry *)
-
-instantiation QStateM ::  sep_algebra
-begin
-definition zero_QStateM: "0 \<equiv> QStateM (0, 0)"
-definition plus_QStateM: "s1 + s2 \<equiv> QStateM (QStateM_map s1 + QStateM_map s2, qstate s1 + qstate s2)" 
-definition sep_disj_QStateM: "s1 ## s2 \<equiv> (QStateM_map s1 ## QStateM_map s2) \<and> qstate s1 ## qstate s2"
-
-lemma h:"QStateM_map x + QStateM_map 0 = QStateM_map x"
-  unfolding zero_QStateM using Qstate_map_0_0
-  by (simp add: Qstate_map_0_0) 
-
-lemma qstate_idem:"qstate x + qstate 0 = qstate x"    
-proof -
-  have "uQStateM (0::QStateM) = (0, 0) \<or> 
-       snd (uQStateM (0::QStateM)) = 0"
-    by (simp add: QStateM.rep_eq zero_QState zero_QStateM)
-  then show ?thesis unfolding qstate_def
-    by fastforce
-qed
-
-instance 
-  apply standard
-        apply (metis (mono_tags, opaque_lifting) sep_disj_QStateM zero_QStateM Qstate_map_0_0 disj_QState_def 
-               plus_QState plus_QState_def qstate_idem sep_add_zero_sym sep_disj_QState sep_disj_zero zero_QState)
-       apply (simp add: sep_disj_QStateM sep_disj_commute)
-      apply (metis plus_QStateM qstate_idem Qstate_map_0_0 idem_QState sep_add_zero zero_QStateM)
-     apply (metis plus_QStateM sep_add_commute sep_disj_QStateM)
-  subgoal for x y z
-    apply  (auto simp add: sep_disj_QStateM plus_QStateM)
-    using plus_wf[of x y] plus_wf[of y z]
-    by (simp add: Qstate_mapf Qstate_vector sep_add_assoc)
-   apply (smt sep_disj_QStateM Qstate_mapf Qstate_vector disjoint_x_y_wf1_x_plus_y 
-             fst_conv plus_QStateM plus_wf sep_disj_addD)
-  by (smt sep_disj_QStateM Qstate_mapf Qstate_vector 
-          disjoint_x_y_wf1_x_plus_y fst_conv plus_QStateM plus_wf 
-           sep_disj_add sep_disj_addD)  
-end 
-
-lemma QStateM_disj_dest:
-  assumes a0:"Q1 ## Q2"
-  shows "QStateM_map Q1 ## QStateM_map Q2" and "qstate Q1 ## qstate Q2"
-  using assms sep_disj_QStateM by auto
-
-lemma QStateM_map_qstate:assumes a0:"Q1 ## Q2"  
-     shows "qstate (Q1 + Q2) = qstate Q1 + qstate Q2"
-  using plus_wf[OF QStateM_disj_dest[OF a0]]
-  by (simp add: QStateM_wf_qstate plus_QStateM)
-
-lemma QStateM_map_plus:assumes a0:"Q1 ## Q2" 
-     shows "QStateM_map (Q1 + Q2) = QStateM_map Q1 + QStateM_map Q2"
-  using plus_wf[OF QStateM_disj_dest[OF a0]]
-  by (simp add: QStateM_wf_map plus_QStateM)
-
-lemma QState_vars_plus:
-  assumes a0:"Q1 ## Q2"
-  shows "QState_vars (Q1 + Q2) = QState_vars Q1 + QState_vars Q2"
-  using QState_vars_Plus assms disj_QState_def plus_QState plus_QState_vector_vars 
-         plus_set_def sep_disj_QState by fastforce
-
-lemma QStateM_vars_plus:assumes a0:"Q1 ## Q2" 
-     shows "QStateM_vars (Q1 + Q2) = QStateM_vars Q1 \<union> QStateM_vars Q2"
-  using plus_wf[OF QStateM_disj_dest[OF a0]]
-  using QStateM_map_qstate QStateM_vars.rep_eq 
-        QState_vars_plus assms qstate_def sep_disj_QStateM
-  by (simp add: plus_set_def) 
- 
-
-lemma QState_list_plus:
-  assumes a0:"Q1 ## Q2"
-  shows "QState_list (Q1 + Q2) = 
-         list_of_vec
-           (partial_state2.ptensor_vec 
-                (QState_vars Q1) (QState_vars Q2) 
-                (QState_vector Q1) (QState_vector Q2) )"
-  by (metis (no_types) QState_list_Plus assms disj_QState_def 
-       plus_QState plus_QState_vector_vector sep_disj_QState)
-
-lemma QStateM_list_plus:
-  assumes a0:"Q1 ## Q2" 
-  shows "QStateM_list (Q1 + Q2) = 
-         list_of_vec
-           (partial_state2.ptensor_vec 
-                (QStateM_vars Q1) (QStateM_vars Q2) 
-                (QStateM_vector Q1) (QStateM_vector Q2) )"
-  using QStateM_disj_dest(2) QStateM_list.rep_eq QStateM_map_qstate 
-        QStateM_vars.rep_eq QStateM_vector.rep_eq QState_list_plus 
-       assms qstate_def by auto
-
-lemma scalar_mult_QStateM_plus_l:
-  "QStateM_vars \<Q>' \<noteq> {} \<and> \<bar>a\<bar> = 1  \<Longrightarrow> 
-    \<Q>' ## \<Q>'' \<Longrightarrow> a  \<cdot>\<^sub>Q (\<Q>' + \<Q>'') = (a  \<cdot>\<^sub>Q \<Q>' + \<Q>'')"  
-  using QStateM_rel1 QStateM_rel2 QStateM_wf_map QStateM_wf_qstate plus_wf 
-         sca_mult_qstate_vars scalar_mult_QState_plus_l sca_mult_qstatem_def
-        QStateM_disj_dest(2) QStateM_map_plus QStateM_map_qstate 
-         QStateM_vars.rep_eq plus_QStateM qstate_def 
-  by (smt (verit, ccfv_threshold) sca_mult_qstatem_var_map sca_mult_qstatem_var_qstate zero_complex.simps(1)) 
-  
-lemma QStateM_list_no_vars_not_zero:
-  assumes a0: "QStateM_vars Q = {}"
-  shows "(QStateM_list Q)!0 \<noteq> 0"
-  using QStateM_list.rep_eq QStateM_vars.rep_eq QState_list_no_vars_not_zero assms by presburger
-  
-
-lemma scalar_mult_QStateM_plus_r:
-  assumes a0:"QStateM_vars \<Q>'' \<noteq> {} \<and> \<bar>a\<bar> = 1" and a1:"\<Q>' ## \<Q>''" 
-  shows "a  \<cdot>\<^sub>Q (\<Q>' + \<Q>'') = ( \<Q>' + a  \<cdot>\<^sub>Q \<Q>'')"
-  using a0 local.a1 plus_QStateM sca_mult_qstatem_var_map 
-        sca_mult_qstatem_var_qstate
-         scalar_mult_QState_plus_r 
-        sep_disj_QStateM QStateM_map_plus QStateM_map_qstate 
-        QStateM_vars.rep_eq qstate_def sca_mult_qstatem_def
-  by (smt (verit, ccfv_threshold) zero_complex.simps(1)) 
-
-value "(5::nat) * ((vec_of_list[3,1,3])\<bullet>(vec_of_list[3,1,3]))"
-value " (((5::nat)\<cdot>\<^sub>v(vec_of_list[3,1,3]))\<bullet>(vec_of_list[3,1,3]))"
-value "((vec_of_list[3::nat,1,3,4])\<bullet>(vec_of_list[3,1,3]))"
-
-lemma "v \<in> carrier_vec n \<Longrightarrow> 
-       w \<in> carrier_vec n \<Longrightarrow> 
-       a * (v \<bullet> w) = (a \<cdot>\<^sub>v v) \<bullet> w"
-  by auto
-
-
-thm complex_norm_square
-lemma "\<bar>u::complex\<bar> = norm u"
-  by (simp add: abs_complex_def  of_real_def)
-
- 
-lemma "(conjugate u::complex)\<cdot>\<^sub>v(conjugate v) = conjugate (u \<cdot>\<^sub>v v) "
-  by auto
-
-
-(* this lemma requires that 
-   vec_norm (QStateM_list \<Q>'' ! 0 \<cdot>\<^sub>v QStateM_vector \<Q>') = 
-   QStateM_list \<Q>'' ! 0 * vec_norm (QStateM_vector \<Q>') and this is only true if
-   QStateM_list \<Q>'' ! 0 =  \<bar>QStateM_list \<Q>'' ! 0\<bar> *)
-
-lemma  assumes a0:"dim_vec v = 1" and a1:"vec_norm v = 1"
-  shows "\<bar>v $ 0\<bar> = 1"
-proof- 
-  have "v \<bullet> conjugate v = 1" using a0 a1
-    by (metis csqrt_eq_1 vec_norm_def)
-  then show ?thesis using a0 a1 unfolding vec_norm_def apply auto
-  qed
-
-lemma eq_vec_norm_q_empty:
-  assumes a0:"length (QStateM_list \<Q>'') = 1"
-  shows "vec_norm (QStateM_vector (QStateM_list \<Q>'' ! 0 \<cdot>\<^sub>Q \<Q>')) \<cdot>\<^sub>Q
-   (inverse (QStateM_list \<Q>'' ! 0) \<cdot>\<^sub>Q \<Q>'') = 
-  vec_norm (QStateM_vector \<Q>') \<cdot>\<^sub>Q \<Q>''"
-proof-
-  have f0:"QStateM_list \<Q>'' ! 0 \<noteq> 0"
-    by (metis QStateM_list.rep_eq QState_rel4' assms less_one)
-  have f1:"inverse (QStateM_list \<Q>'' ! 0) \<noteq> 0"
+  have f0:"QState_list \<Q>'' ! 0 \<noteq> 0"
+    by (metis  QState_rel4' assms less_one)
+  then have fn:"\<bar>QState_list \<Q>'' ! 0\<bar> = 1" 
+    using a0 norm_elem_vec_norm_1 QState_rel3[of \<Q>'']
+    apply transfer'
+    by (metis dim_vec_of_list vec_of_list_index)
+  have f1:"inverse (QState_list \<Q>'' ! 0) \<noteq> 0"
     using f0 by auto
-  then have f2:"QStateM_vector (QStateM_list \<Q>'' ! 0 \<cdot>\<^sub>Q \<Q>') = 
-            QStateM_list \<Q>'' ! 0 \<cdot>\<^sub>v QStateM_vector \<Q>'"
-    using f0
-    by (simp add: QStateM.rep_eq QStateM_rel1 QStateM_rel2 QStateM_vector.rep_eq qstate_def sca_mult_qstate_quantum sca_mult_qstate_vars sca_mult_qstatem_def)
-  also have f3:"vec_norm (QStateM_list \<Q>'' ! 0 \<cdot>\<^sub>v QStateM_vector \<Q>') = 
-                 QStateM_list \<Q>'' ! 0 * vec_norm (QStateM_vector \<Q>')"  
-    using norm_complex_absolutely_homogenous[of "QStateM_list \<Q>'' ! 0" "QStateM_vector \<Q>'"] f0  
+  then have f2:"QState_vector (QState_list \<Q>'' ! 0 \<cdot>\<^sub>q \<Q>') = 
+            QState_list \<Q>'' ! 0 \<cdot>\<^sub>v QState_vector \<Q>'"
+    using  f0 sca_mult_qstate_quantum   fn
+    by presburger
+
+  also have f3:"vec_norm (QState_list \<Q>'' ! 0 \<cdot>\<^sub>v QState_vector \<Q>') = 
+                 QState_list \<Q>'' ! 0 * vec_norm (QState_vector \<Q>')"  
+    using norm_complex_absolutely_homogenous[of "QState_list \<Q>'' ! 0" "QState_vector \<Q>'"] f0  
     apply (simp add: abs_complex_def cmod_eq_Re complex_eq_iff) apply auto sorry
   also have "QStateM_list \<Q>'' ! 0  \<cdot>\<^sub>Q (inverse (QStateM_list \<Q>'' ! 0) \<cdot>\<^sub>Q \<Q>'') = 
             QStateM_list \<Q>'' ! 0 * (inverse (QStateM_list \<Q>'' ! 0))  \<cdot>\<^sub>Q \<Q>''"
@@ -2865,58 +2277,7 @@ proof-
   qed 
   finally show ?thesis
     by (smt divide_complex_def f0 f2 f3 nonzero_mult_div_cancel_left zero_complex.simps(1))
-qed
-
-(* temporal comment 
-
-  lemma eq_vec_norm_q_empty:
-  assumes a0:"length (QStateM_list \<Q>'') = 1"
-  shows "vec_norm (QStateM_vector (QStateM_list \<Q>'' ! 0 \<cdot>\<^sub>Q \<Q>')) \<cdot>\<^sub>Q
-   (inverse (QStateM_list \<Q>'' ! 0) \<cdot>\<^sub>Q \<Q>'') = 
-  vec_norm (QStateM_vector \<Q>') \<cdot>\<^sub>Q \<Q>''"
-proof-
-  have f0:"Im (QStateM_list \<Q>'' ! 0) = 0 \<and> Re (QStateM_list \<Q>'' ! 0) > 0"
-    using a0 apply transfer sorry by (auto;transfer;auto)
-  have f1:"Im (inverse (QStateM_list \<Q>'' ! 0)) = 0 \<and> Re (inverse (QStateM_list \<Q>'' ! 0)) > 0"
-    using f0 by auto
-  then have f2:"QStateM_vector (QStateM_list \<Q>'' ! 0 \<cdot>\<^sub>Q \<Q>') = 
-            QStateM_list \<Q>'' ! 0 \<cdot>\<^sub>v QStateM_vector \<Q>'"
-    using f0
-    by (meson sca_mult_q_statem_qstate_vector)
-  also have f3:"vec_norm (QStateM_list \<Q>'' ! 0 \<cdot>\<^sub>v QStateM_vector \<Q>') = 
-                 QStateM_list \<Q>'' ! 0 * vec_norm (QStateM_vector \<Q>')"  
-    using norm_complex_absolutely_homogenous[of "QStateM_list \<Q>'' ! 0" "QStateM_vector \<Q>'"] f0  
-    apply auto
-    by (simp add: abs_complex_def cmod_eq_Re complex_eq_iff) 
-  also have "QStateM_list \<Q>'' ! 0  \<cdot>\<^sub>Q (inverse (QStateM_list \<Q>'' ! 0) \<cdot>\<^sub>Q \<Q>'') = 
-            QStateM_list \<Q>'' ! 0 * (inverse (QStateM_list \<Q>'' ! 0))  \<cdot>\<^sub>Q \<Q>''"
-    using f0 f1
-    using sca_mult_qstatem_assoc by presburger 
-  then have "QStateM_list \<Q>'' ! 0 * vec_norm (QStateM_vector \<Q>') \<cdot>\<^sub>Q
-             (inverse (QStateM_list \<Q>'' ! 0) \<cdot>\<^sub>Q \<Q>'') = 
-            QStateM_list \<Q>'' ! 0 * vec_norm (QStateM_vector \<Q>') * (inverse (QStateM_list \<Q>'' ! 0))  \<cdot>\<^sub>Q \<Q>''"     
-    using f0
-    by (metis (no_types, lifting) QStateM_rel1 QStateM_vector.rep_eq f1 
-        qstate_def sca_mult_q_statem_qstate_vector sca_mult_qstate_def 
-      sca_mult_qstatem_def sca_mult_qstatem_var_map smult_smult_assoc)
- 
-  finally show ?thesis
-    by (smt divide_complex_def f0 f2 f3 nonzero_mult_div_cancel_left zero_complex.simps(1))
 qed *)
-
-
-
-lemma eq_tensor_inverse_QStateM_vector: 
-  assumes a0:"Q1 ## Q2" and
-       a1:"QStateM_map Q1 = QStateM_map Q1'" and
-       a2:"QStateM_map Q2 = QStateM_map Q2'" and
-       a3:"Q1 + Q2 = Q1' + Q2'" 
-     shows "\<exists>k.  (QStateM_vector Q1') = k \<cdot>\<^sub>v(QStateM_vector Q1) \<and> 
-                (QStateM_vector Q2') = inverse k \<cdot>\<^sub>v(QStateM_vector Q2)"
-  using  QStateM_map_qstate QStateM_rel1 QStateM_vars.rep_eq QStateM_vector.rep_eq a0 a3
-       disj_QState_def eq_tensor_inverse_QState_vector local.a1 local.a2
-       qstate_def sep_disj_QState sep_disj_QStateM 
-  by (metis)
 
 (* 
 temporal comment
