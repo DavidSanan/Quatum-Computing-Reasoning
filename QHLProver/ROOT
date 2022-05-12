@@ -8,7 +8,9 @@ session QHLProver (AFP) = Jordan_Normal_Form +
   sessions
     Deep_Learning
   theories
-    Grover
+    Partial_State
+    Quantum_Hoare
+    Gates
   document_files
     "root.bib"
     "root.tex"
