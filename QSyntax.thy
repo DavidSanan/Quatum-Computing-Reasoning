@@ -150,9 +150,10 @@ definition lin_set::"'q::linorder set \<Rightarrow> nat set"
 definition lin_sets::"'q::linorder set \<Rightarrow> 'q::linorder set \<Rightarrow> nat set"
   where "lin_sets q_vars q_vars' \<equiv> {card (q_vars) ..< card (q_vars')}"
 *)
-
-definition sorted_list_from_set::"'q::linorder set \<Rightarrow> 'q::linorder list"
+ 
+(* definition sorted_list_from_set::"'q::linorder set \<Rightarrow> 'q::linorder list"
   where "sorted_list_from_set s \<equiv> THE l. strict_sorted l \<and> set l = s"
+*)
 
 definition to_heap::"qstate \<Rightarrow>  QState"
   where "to_heap q \<equiv> (snd q)"

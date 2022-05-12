@@ -1,7 +1,7 @@
 theory Q_State
-imports HOL.Complex vars HOL.Orderings  
+imports QAux.QAux Sep_Prod_Instance "HOL.Relation" (*HOL.Complex vars HOL.Orderings  
           Deep_Learning.Tensor_Matricization Separation_Algebra.Separation_Algebra
-          QHLProver.Partial_State  HOL.Finite_Set Sep_Prod_Instance "HOL-Library.Word"
+          QHLProver.Partial_State  HOL.Finite_Set Sep_Prod_Instance "HOL-Library.Word" *)
 begin            
 \<comment>\<open>Function to obtain the index of variables in the vector\<close>
 (* definition to_nat_set::"'q::linorder set \<Rightarrow> ('q \<Rightarrow> nat)"
@@ -2191,35 +2191,35 @@ definition sca_mult_qstatem::"complex \<Rightarrow>  QStateM \<Rightarrow> QStat
 
 
 lemma sca_mult_qstatem_wf:
-  assumes a0:"QStateM_vars qs\<noteq>{} \<and> s\<noteq>0 \<or> Im s = 0 \<and> Re (s::complex) > 0" 
+  assumes a0:"QStateM_vars qs\<noteq>{} \<and> s\<noteq>0" 
   shows "QStateM_wf (QStateM_map qs, s \<cdot>\<^sub>q (qstate qs))"
 proof-
   have "QStateM_wf (QStateM_unfold qs)"
     using QStateM_wf by blast
   thus ?thesis using sca_mult_qstate_vars a0
-    using QStateM_vars.rep_eq assms qstate_def sca_mult_qstate_vars sorry by force       
+    using QStateM_vars.rep_eq assms qstate_def sca_mult_qstate_vars  by force       
 qed
 
 lemma sca_mult_qstatem_var_map:
-  "QStateM_vars qs\<noteq>{} \<and> s\<noteq>0 \<or> Im s = 0 \<and> Re (s::complex) > 0  \<Longrightarrow> QStateM_map (s \<cdot>\<^sub>Q qs) = QStateM_map qs"
+  "QStateM_vars qs\<noteq>{} \<and> s\<noteq>0  \<Longrightarrow> QStateM_map (s \<cdot>\<^sub>Q qs) = QStateM_map qs"
   unfolding sca_mult_qstatem_def using sca_mult_qstatem_wf[of qs s]
   by (auto simp add: QStateM_wf_map)
 
 lemma sca_mult_qstatem_var_qstate:
-  "QStateM_vars qs\<noteq>{} \<and> s\<noteq>0 \<or> Im s = 0 \<and> Re (s::complex) > 0 \<Longrightarrow> qstate (s \<cdot>\<^sub>Q qs) = s \<cdot>\<^sub>q qstate qs"
+  "QStateM_vars qs\<noteq>{} \<and> s\<noteq>0  \<Longrightarrow> qstate (s \<cdot>\<^sub>Q qs) = s \<cdot>\<^sub>q qstate qs"
   unfolding sca_mult_qstatem_def using sca_mult_qstatem_wf[of qs s]
   by (auto simp add: QStateM_wf_qstate)
 
 lemma sca_mult_q_statem_qstate_vars: 
-   "QStateM_vars qs\<noteq>{} \<and> s\<noteq>0 \<or> Im s = 0 \<and> Re (s::complex) > 0 \<Longrightarrow> 
+   "QStateM_vars qs\<noteq>{} \<and> s\<noteq>0  \<Longrightarrow> 
     QStateM_vars (s \<cdot>\<^sub>Q qs) = QStateM_vars qs"
   using QStateM_vars.rep_eq qstate_def sca_mult_qstate_vars sca_mult_qstatem_var_qstate 
   by auto
 
 lemma sca_mult_q_statem_qstate_vector: 
-   "QStateM_vars qs\<noteq>{} \<and> s\<noteq>0 \<or> Im s = 0 \<and> Re (s::complex) > 0 \<Longrightarrow> QStateM_vector (s \<cdot>\<^sub>Q qs) = s  \<cdot>\<^sub>v QStateM_vector qs"
+   "QStateM_vars qs\<noteq>{} \<and> s\<noteq>0  \<Longrightarrow> QStateM_vector (s \<cdot>\<^sub>Q qs) = s  \<cdot>\<^sub>v QStateM_vector qs"
   using QStateM_vector.rep_eq qstate_def sca_mult_qstate_quantum sca_mult_qstatem_var_qstate
-  using QStateM_vars.rep_eq by force
+  using QStateM_vars.rep_eq by force 
 
 
 
@@ -2237,23 +2237,21 @@ proof-
 qed
 
 lemma sca_mult_qstatem_assoc: 
-  "Im a1 = 0 \<and> Re a1 > 0 \<and> Im a2 = 0 \<and> Re a2 > 0 \<or> QStateM_vars Q\<noteq>{} \<and> a1\<noteq>0 \<and> a2\<noteq>0
+  "QStateM_vars Q\<noteq>{} \<and> a1\<noteq>0 \<and> a2\<noteq>0
    \<Longrightarrow> a1 * a2 \<cdot>\<^sub>Q Q = a1 \<cdot>\<^sub>Q (a2 \<cdot>\<^sub>Q Q)"
-  by (metis (no_types, lifting) QStateM_vars.rep_eq QStateM_vector.rep_eq qstate_def 
-        sca_mult_q_statem_qstate_vars sca_mult_q_statem_qstate_vector 
-      sca_mult_qstate_def sca_mult_qstatem_def sca_mult_qstatem_var_map smult_smult_assoc)
-
-
+  using sca_mult_qstate_assoc sca_mult_qstatem_def sca_mult_qstatem_var_map 
+        sca_mult_qstatem_var_qstate by presburger
 
 lemma QStateM_empty_not_zero: assumes a0:"Q_domain (QStateM_map \<Q>) = {}"
-  shows "Im (QStateM_list \<Q> ! 0) = 0 \<and> Re (QStateM_list \<Q> ! 0) > 0"
+  shows "QStateM_list \<Q> ! 0 \<noteq> 0"
 proof-
   have "QStateM_map \<Q> = {}\<^sub>q" using a0 unfolding Q_domain_def by auto       
   then have "QStateM_list \<Q> = QState_list (qstate \<Q>)"
     unfolding qstate_def apply transfer by auto  
   then show ?thesis apply auto unfolding qstate_def 
-    using QStateM_rel1 QState_wf  assms qstate_def unfolding QState_wf_def by auto
-qed
+    using QStateM_rel1 QState_wf  assms qstate_def unfolding QState_wf_def
+    by (metis One_nat_def QState_list_empty length_Cons less_one list.size(3) prod.sel(2))
+qed 
 
 lemma disjoint_x_y_wf1_x_plus_y:
        assumes a0:"QStateM_map x ## QStateM_map y "  and 
@@ -2341,9 +2339,9 @@ proof -
 qed
 
 instance 
-  apply standard
-        apply (metis (mono_tags, hide_lams) sep_disj_QStateM zero_QStateM Qstate_map_0_0 disj_QState_def 
-               plus_QState plus_QState_def qstate_idem sep_add_zero_sym sep_disj_QState sep_disj_zero zero_QState)
+  apply standard 
+  using sep_disj_QStateM sep_disj_zero zero_QState zero_QStateM Qstate_map_0_0 apply auto[1]
+  apply (metis disj_QState_def plus_QState plus_QState_def qstate_idem sep_disj_QState sep_disj_commuteI sep_disj_zero)
        apply (simp add: sep_disj_QStateM sep_disj_commute)
       apply (metis plus_QStateM qstate_idem Qstate_map_0_0 idem_QState sep_add_zero zero_QStateM)
      apply (metis plus_QStateM sep_add_commute sep_disj_QStateM)
@@ -2409,7 +2407,7 @@ lemma QStateM_list_plus:
        assms qstate_def by auto
 
 lemma scalar_mult_QStateM_plus_l:
-  "QStateM_vars \<Q>' \<noteq> {} \<and> a\<noteq>0 \<or> (Im a = 0 \<and> Re a > 0)  \<Longrightarrow> 
+  "QStateM_vars \<Q>' \<noteq> {} \<and> a\<noteq>0  \<Longrightarrow> 
     \<Q>' ## \<Q>'' \<Longrightarrow> a  \<cdot>\<^sub>Q (\<Q>' + \<Q>'') = (a  \<cdot>\<^sub>Q \<Q>' + \<Q>'')"  
   using QStateM_rel1 QStateM_rel2 QStateM_wf_map QStateM_wf_qstate plus_wf 
          sca_mult_qstate_vars scalar_mult_QState_plus_l sca_mult_qstatem_def
@@ -2419,7 +2417,7 @@ lemma scalar_mult_QStateM_plus_l:
   
 
 lemma scalar_mult_QStateM_plus_r:
-  assumes a0:"QStateM_vars \<Q>'' \<noteq> {} \<and> a\<noteq>0 \<or> (Im a = 0 \<and> Re a > 0)" and a1:"\<Q>' ## \<Q>''" 
+  assumes a0:"QStateM_vars \<Q>'' \<noteq> {} \<and> a\<noteq>0 " and a1:"\<Q>' ## \<Q>''" 
   shows "a  \<cdot>\<^sub>Q (\<Q>' + \<Q>'') = ( \<Q>' + a  \<cdot>\<^sub>Q \<Q>'')"
   using a0 local.a1 plus_QStateM sca_mult_qstatem_var_map 
         sca_mult_qstatem_var_qstate
@@ -2506,11 +2504,11 @@ proof-
 qed
 
 
-lemma eq_vec_norm_q_empty:
+(* lemma eq_vec_norm_q_empty:
   assumes a0:"length (QStateM_list \<Q>'') = 1"
   shows "vec_norm (QStateM_vector (QStateM_list \<Q>'' ! 0 \<cdot>\<^sub>Q \<Q>')) \<cdot>\<^sub>Q
    (inverse (QStateM_list \<Q>'' ! 0) \<cdot>\<^sub>Q \<Q>'') = 
-  vec_norm (QStateM_vector \<Q>') \<cdot>\<^sub>Q \<Q>''"
+  vec_norm (QStateM_vector \<Q>') \<cdot>\<^sub>Q \<Q>''" sorry
 proof-
   have f0:"Im (QStateM_list \<Q>'' ! 0) = 0 \<and> Re (QStateM_list \<Q>'' ! 0) > 0"
     using a0 apply transfer by (auto;transfer;auto)
@@ -2540,7 +2538,7 @@ proof-
   finally show ?thesis
     by (smt divide_complex_def f0 f2 f3 nonzero_mult_div_cancel_left zero_complex.simps(1))
 qed
-
+*)
 
 
 lemma eq_tensor_inverse_QStateM_vector: 
@@ -2558,10 +2556,7 @@ lemma eq_tensor_inverse_QStateM:
        a1:"QStateM_map Q1 = QStateM_map Q1'" and
        a2:"QStateM_map Q2 = QStateM_map Q2'" and
        a3:"Q1 + Q2 = Q1' + Q2'" 
-     shows "\<exists>k. k \<noteq> 0 \<and> Q1' = k \<cdot>\<^sub>Q Q1 \<and> 
-                Q2' = inverse k \<cdot>\<^sub>Q Q2 \<and> 
-                 (QStateM_vars Q1 = {} \<or> QStateM_vars Q2 = {} \<longrightarrow> 
-                 Im k = 0 \<and> Re k > 0)"
+     shows "\<exists>k. k \<noteq> 0 \<and> Q1' = k \<cdot>\<^sub>Q Q1 \<and> Q2' = inverse k \<cdot>\<^sub>Q Q2"
   by (smt (verit, ccfv_threshold) QStateM_map_qstate a0 a3 disj_QState_def 
           eq_QStateM_vars eq_QStateMap_vars eq_tensor_inverse_QState idem_QState 
           local.a1 local.a2 sca_mult_qstatem_def sep_disj_QState sep_disj_QStateM snd_conv)
@@ -2571,22 +2566,18 @@ lemma eq_tensor_inverse_QStateM_wf:
        a1:"QStateM_map Q1 = QStateM_map Q1'" and
        a2:"QStateM_map Q2 = QStateM_map Q2'" and
        a3:"Q1 + Q2 = Q1' + Q2'" 
-     shows "\<exists>k. k\<noteq>0 \<and> Q1' = k \<cdot>\<^sub>Q Q1 \<and> Q2' = inverse k \<cdot>\<^sub>Q Q2 \<and> 
-                (QStateM_vars Q1 = {} \<or> QStateM_vars Q2 = {} \<longrightarrow> 
-                 Im k = 0 \<and> Re k > 0) \<and>
+     shows "\<exists>k. k\<noteq>0 \<and> Q1' = k \<cdot>\<^sub>Q Q1 \<and> Q2' = inverse k \<cdot>\<^sub>Q Q2 \<and>
                QStateM_wf (QStateM_map Q1', k \<cdot>\<^sub>q qstate Q1) \<and>
                QStateM_wf (QStateM_map Q2', (inverse k) \<cdot>\<^sub>q qstate Q2)"
 proof-
-  obtain k where k:"k \<noteq> 0" and "Q1' = k \<cdot>\<^sub>Q Q1 \<and> Q2' = inverse k \<cdot>\<^sub>Q Q2 \<and> 
-                (QStateM_vars Q1 = {} \<or> QStateM_vars Q2 = {} \<longrightarrow> 
-                 Im k = 0 \<and> Re k > 0)" using eq_tensor_inverse_QStateM[OF a0 a1 a2 a3] by auto
+  obtain k where k:"k \<noteq> 0" and "Q1' = k \<cdot>\<^sub>Q Q1 \<and> Q2' = inverse k \<cdot>\<^sub>Q Q2" 
+    using eq_tensor_inverse_QStateM[OF a0 a1 a2 a3] by auto
   moreover have " QStateM_wf (QStateM_map Q1', k \<cdot>\<^sub>q qstate Q1)"   
-    using sca_mult_qstatem_wf a1 calculation by metis     
-  moreover have "QStateM_vars Q2 \<noteq> {} \<and> (inverse k) \<noteq> 0 \<or> Im (inverse k) = 0 \<and> Re (inverse k) > 0"
-    using calculation(2) k by force
-  then have "QStateM_wf (QStateM_map Q2', (inverse k) \<cdot>\<^sub>q qstate Q2)"   
+    using sca_mult_qstatem_wf a1 calculation
+    by (metis QStateM_rel1 QStateM_rel2 fst_conv sca_mult_qstate_vars snd_conv)  
+  moreover have "QStateM_wf (QStateM_map Q2', (inverse k) \<cdot>\<^sub>q qstate Q2)"   
     using sca_mult_qstate_wf a2 calculation
-    by (metis sca_mult_qstatem_wf)
+    by (metis QStateM_rel1 QStateM_rel2fa fst_eqD inverse_nonzero_iff_nonzero sca_mult_qstate_vars snd_eqD)
   ultimately show ?thesis by blast
 qed
 
@@ -2597,27 +2588,18 @@ lemma eq_tensor_inverse_QStateM_wf':
        a2:"QStateM_map Q2 = QStateM_map Q2'" and
        a3:"Q1 + Q2 = Q1' + Q2'" 
      shows "\<exists>k. k\<noteq>0 \<and> Q1' = k \<cdot>\<^sub>Q Q1 \<and> Q2' = inverse k \<cdot>\<^sub>Q Q2 \<and> 
-                (QStateM_vars Q1 = {} \<or> QStateM_vars Q2 = {} \<longrightarrow> 
-                 Im k = 0 \<and> Re k > 0) \<and>
                QStateM_wf (QStateM_map Q1', k \<cdot>\<^sub>q qstate Q1) \<and>
                QState_wf (QStateM_vars Q1', list_of_vec (k \<cdot>\<^sub>v QState_vector (qstate Q1))) \<and>
                QStateM_wf (QStateM_map Q2', (inverse k) \<cdot>\<^sub>q qstate Q2) \<and>
                QState_wf (QStateM_vars Q2', list_of_vec (inverse k \<cdot>\<^sub>v QState_vector (qstate Q2)))"
 proof-
   obtain k where q0:"k\<noteq>0" and q1:"Q1' = k \<cdot>\<^sub>Q Q1" and q2:"Q2' = inverse k \<cdot>\<^sub>Q Q2" and 
-                q3:"(QStateM_vars Q1 = {} \<or> QStateM_vars Q2 = {} \<longrightarrow> 
-                 Im k = 0 \<and> Re k > 0)" and
                q4:"QStateM_wf (QStateM_map Q1', k \<cdot>\<^sub>q qstate Q1)" and
                q5:"QStateM_wf (QStateM_map Q2', (inverse k) \<cdot>\<^sub>q qstate Q2)" 
     using eq_tensor_inverse_QStateM_wf[OF a0 a1 a2 a3] by auto
   let ?v1 = "list_of_vec (k \<cdot>\<^sub>v QState_vector (qstate Q1))"
   let ?v2 = "list_of_vec (inverse k \<cdot>\<^sub>v QState_vector (qstate Q2))"
-  have kq1:"QStateM_vars Q1 = {} \<longrightarrow> Im k = 0 \<and> Re k > 0" and kneq0:"k\<noteq>0" and
-            kq2: "QStateM_vars Q2 = {} \<longrightarrow> Im k = 0 \<and> Re k > 0"
-    using q3 q0 by auto
-  then have ikq1:"QStateM_vars Q1 = {} \<longrightarrow> Im (inverse k) = 0 \<and> Re (inverse k) > 0" and kneq0:"inverse k\<noteq>0" and
-            ikq2:"QStateM_vars Q2 = {} \<longrightarrow> Im (inverse k) = 0 \<and> Re (inverse k) > 0" 
-    by auto
+ 
   have "QState_wf (QStateM_vars Q1',?v1)"
   proof-    
     have "2^card (QStateM_vars Q1') = length ?v1"
@@ -2625,16 +2607,10 @@ proof-
       using QStateM_rel1 QState_rel1a' by fastforce
     moreover have "finite (QStateM_vars Q1')" using a1 
       by (simp add: QStateM_vars.rep_eq QState_rel3')
-    moreover have "(\<exists>i<length ?v1. ?v1 !i\<noteq>0)"      
-      by (metis QState_rel4 QState_vector.rep_eq dim_vec_of_list index_smult_vec(1) 
-              index_smult_vec(2) inverse_zero kneq0 length_list_of_vec 
-              list_of_vec_index mult_eq_0_iff vec_of_list_index)
-    moreover have "length ?v1 = 1 \<longrightarrow> 
-         Im (?v1!0) = 0 \<and> Re (?v1!0) > 0"
-      by (metis QStateM_vars.rep_eq QState_list.rep_eq QState_rel1' QState_rel3' 
-                QState_vector.rep_eq QState_wf_def card_0_eq index_smult_vec(2) 
-                length_list_of_vec less_exp less_one list_vec q3 qstate_def 
-                sca_mult_qstate_wf snd_conv) 
+    moreover have "(\<exists>i<length ?v1. ?v1 !i\<noteq>0)"
+      by (metis QState_wf_def q0 sca_mult_qstate_wf snd_conv)
+    moreover have "length ?v1 = 1 \<longrightarrow> ?v1!0 \<noteq> 0"
+      using calculation(3) by fastforce 
     ultimately show ?thesis unfolding QState_wf_def by auto
   qed
   moreover have  "QState_wf (QStateM_vars Q2',?v2)"
@@ -2644,17 +2620,13 @@ proof-
       using QStateM_rel1 QState_rel1a' by fastforce      
     moreover have "finite (QStateM_vars Q2')" using a1 
       by (simp add: QStateM_vars.rep_eq QState_rel3')
-    moreover have "(\<exists>i<length ?v2. ?v2 !i\<noteq>0)"      
-      by (metis QState_rel4 QState_vector.rep_eq dim_vec_of_list index_smult_vec(1) 
-              index_smult_vec(2) kneq0 length_list_of_vec 
-              list_of_vec_index mult_eq_0_iff vec_of_list_index)
-    moreover have "length ?v2 = 1 \<longrightarrow> 
-         Im (?v2!0) = 0 \<and> Re (?v2!0) > 0"
-      by (metis QStateM_vars.rep_eq QState_rel2 QState_vector.rep_eq ikq2 
-              kneq0 list_vec qstate_def sca_mult_qstate_quantum)
+    moreover have "(\<exists>i<length ?v2. ?v2 !i\<noteq>0)"
+      by (metis QState_wf_def nonzero_imp_inverse_nonzero q0 sca_mult_qstate_wf snd_conv)      
+    moreover have "length ?v2 = 1 \<longrightarrow> ?v2 !0 \<noteq> 0"
+      using calculation(3) by fastforce
     ultimately show ?thesis unfolding QState_wf_def by auto
   qed
-  ultimately show ?thesis using q0 q1 q2 q3 q4 q5 by blast
+  ultimately show ?thesis using q0 q1 q2  q4 q5 by blast
 qed
 
 
@@ -2695,8 +2667,6 @@ lemma eq_tensor_inverse_QState_wf_split_Q':
   assumes a0: "Q1'' + Q2 = k \<cdot>\<^sub>q Qb" and a1:"Q1'' ## Q2"              
             shows "\<exists>Qb' Qb'' k'.  k \<cdot>\<^sub>q Qb = Qb' + Qb'' \<and> k'\<noteq>0 \<and> 
                   Q1'' = k' \<cdot>\<^sub>q Qb' \<and> Q2 = inverse k' \<cdot>\<^sub>q (Qb'')  \<and> 
-                 (QState_vars Q1'' = {} \<or> QState_vars Q2 = {} \<longrightarrow> 
-                   Im k' = 0 \<and> Re k' > 0) \<and>
                  QState_wf (QState_vars Q1'',list_of_vec (k' \<cdot>\<^sub>v QState_vector Qb')) \<and>
                  QState_wf (QState_vars Q2, list_of_vec((inverse k') \<cdot>\<^sub>v QState_vector Qb''))"
   using eq_tensor_inverse_QState_wf[OF a1 ] a0
@@ -2706,8 +2676,6 @@ lemma eq_tensor_inverse_QStateM_wf_split_Q':
   assumes a0: "Q1'' + Q2 = k \<cdot>\<^sub>Q Qb" and a1:"Q1'' ## Q2"              
             shows "\<exists>Qb' Qb'' k'.  k \<cdot>\<^sub>Q Qb = Qb' + Qb'' \<and> k'\<noteq>0 \<and> 
                   Q1'' = k' \<cdot>\<^sub>Q Qb' \<and> Q2 = inverse k' \<cdot>\<^sub>Q (Qb'')  \<and> 
-                 (QStateM_vars Q1'' = {} \<or> QStateM_vars Q2 = {} \<longrightarrow> 
-                   Im k' = 0 \<and> Re k' > 0) \<and>
                  QStateM_wf (QStateM_map Q1'',k' \<cdot>\<^sub>q qstate Qb') \<and>                 
                  QStateM_wf (QStateM_map Q2, (inverse k') \<cdot>\<^sub>q qstate Qb'')"
   using eq_tensor_inverse_QStateM_wf[OF a1 ] a0
@@ -2717,8 +2685,6 @@ lemma eq_tensor_inverse_QStateM_wf'_split_Q':
   assumes a0: "Q1'' + Q2 = k \<cdot>\<^sub>Q Qb" and a1:"Q1'' ## Q2"              
             shows "\<exists>Qb' Qb'' k'.  k \<cdot>\<^sub>Q Qb = Qb' + Qb'' \<and> k'\<noteq>0 \<and> 
                   Q1'' = k' \<cdot>\<^sub>Q Qb' \<and> Q2 = inverse k' \<cdot>\<^sub>Q (Qb'')  \<and> 
-                 (QStateM_vars Q1'' = {} \<or> QStateM_vars Q2 = {} \<longrightarrow> 
-                   Im k' = 0 \<and> Re k' > 0) \<and>
                  QStateM_wf (QStateM_map Q1'',k' \<cdot>\<^sub>q qstate Qb') \<and>
                  QState_wf (QStateM_vars Q1'',list_of_vec (k' \<cdot>\<^sub>v QState_vector (qstate Qb'))) \<and>
                  QStateM_wf (QStateM_map Q2, (inverse k') \<cdot>\<^sub>q qstate Qb'') \<and> 
@@ -2728,77 +2694,56 @@ proof-
   obtain Qb' Qb'' k' where 
    q1:"k \<cdot>\<^sub>Q Qb = Qb' + Qb''" and q2:"k'\<noteq>0" and
    q3:"Q1'' = k' \<cdot>\<^sub>Q Qb'" and q4:"Q2 = inverse k' \<cdot>\<^sub>Q (Qb'')" and 
-   q5:"(QStateM_vars Q1'' = {} \<or> QStateM_vars Q2 = {} \<longrightarrow> Im k' = 0 \<and> Re k' > 0)" and
    q6:"QStateM_wf (QStateM_map Q1'',k' \<cdot>\<^sub>q qstate Qb')" and
    q7:"QStateM_wf (QStateM_map Q2, (inverse k') \<cdot>\<^sub>q qstate Qb'')"     
     using eq_tensor_inverse_QStateM_wf_split_Q'[OF a0 a1] by auto
   let ?v1 = "list_of_vec (k' \<cdot>\<^sub>v QState_vector (qstate Qb'))"
   let ?v2 = "list_of_vec (inverse k' \<cdot>\<^sub>v QState_vector (qstate Qb''))"
-  have kq1:"QStateM_vars Q1'' = {} \<longrightarrow> Im k' = 0 \<and> Re k' > 0" and kneq0:"k'\<noteq>0" and
-            kq2: "QStateM_vars Q2 = {} \<longrightarrow> Im k' = 0 \<and> Re k' > 0"
-    using q2 q5
-    by auto
-  then have ikq1:"QStateM_vars Q1'' = {} \<longrightarrow> Im (inverse k') = 0 \<and> Re (inverse k') > 0" and kneq0:"inverse k'\<noteq>0" and
-            ikq2:"QStateM_vars Q2 = {} \<longrightarrow> Im (inverse k') = 0 \<and> Re (inverse k') > 0" 
-    by auto
+  
   have "QState_wf (QStateM_vars Q1'',?v1)"
   proof-    
     have "2^card (QStateM_vars Q1'') = length ?v1"
-      using q2 q5 q6 apply transfer 
-      by (metis QState_refl QState_rel1a' 
-            QState_wf  eq_QState_dest fst_conv length_list_of_vec 
-            sca_mult_qstate_def sca_mult_qstate_quantum snd_conv)
+      using q2  q6 apply transfer 
+      by (metis  QState_rel1a' fst_conv length_list_of_vec sca_mult_qstate_quantum snd_conv)
     moreover have "finite (QStateM_vars Q1'')" using a1 
       by (simp add: QStateM_vars.rep_eq QState_rel3')
-    moreover have "(\<exists>i<length ?v1. ?v1 !i\<noteq>0)"      
-      by (metis QState_rel4 QState_vector.rep_eq dim_vec_of_list index_smult_vec(1) 
-              index_smult_vec(2) inverse_zero kneq0 length_list_of_vec 
-              list_of_vec_index mult_eq_0_iff vec_of_list_index)
-    moreover have "length ?v1 = 1 \<longrightarrow> 
-         Im (?v1!0) = 0 \<and> Re (?v1!0) > 0"      
-      by (metis QStateM_vars.rep_eq QState_list.rep_eq QState_rel3' 
-        QState_vector.rep_eq QState_wf QState_wf_def calculation(1) 
-            card_0_eq less_exp less_one list_vec q5 sca_mult_qstate_quantum snd_conv)
+    moreover have "(\<exists>i<length ?v1. ?v1 !i\<noteq>0)"
+      by (metis QState_wf_def q2 sca_mult_qstate_wf snd_conv)
+    moreover have "length ?v1 = 1 \<longrightarrow> ?v1!0 \<noteq> 0"
+      using calculation(3) by auto
     ultimately show ?thesis unfolding QState_wf_def by auto
   qed
   moreover have  "QState_wf (QStateM_vars Q2,list_of_vec (inverse k' \<cdot>\<^sub>v QState_vector (qstate Qb'')))"
   proof-
     have "2^card (QStateM_vars Q2) = length ?v2"
-      using q2 q5 q7 apply transfer
-      by (metis QState_refl QState_rel1a' QState_wf eq_QState_dest fst_conv 
+      using q2  q7 apply transfer
+      by (metis  QState_rel1a' fst_conv 
                 index_smult_vec(2) length_list_of_vec nonzero_imp_inverse_nonzero 
-                sca_mult_qstate_def sca_mult_qstate_vars snd_conv)      
+                 sca_mult_qstate_vars snd_conv)      
     moreover have "finite (QStateM_vars Q2)" using a1 
       by (simp add: QStateM_vars.rep_eq QState_rel3')
-    moreover have "(\<exists>i<length ?v2. ?v2 !i\<noteq>0)"      
-      by (metis QState_rel4 QState_vector.rep_eq dim_vec_of_list index_smult_vec(1) 
-              index_smult_vec(2) kneq0 length_list_of_vec 
-              list_of_vec_index mult_eq_0_iff vec_of_list_index)
-    moreover have "length ?v2 = 1 \<longrightarrow> 
-         Im (?v2!0) = 0 \<and> Re (?v2!0) > 0"
-      by (metis One_nat_def QStateM_vars.rep_eq QState_rel3' QState_wf_def calculation(1) 
-               card_0_eq ikq2 nat_power_eq_Suc_0_iff numeral_eq_one_iff 
-               sca_mult_qstate_wf1 semiring_norm(85) snd_conv)
+    moreover have "(\<exists>i<length ?v2. ?v2 !i\<noteq>0)"
+      by (metis QState_wf_def nonzero_imp_inverse_nonzero q2 sca_mult_qstate_wf snd_conv)
+    moreover have "length ?v2 = 1 \<longrightarrow> ?v2!0 \<noteq> 0"
+      using calculation(3) by force 
     ultimately show ?thesis unfolding QState_wf_def by auto
   qed
-  ultimately show ?thesis using q1 q2 q3 q4 q5 q6 q7 by blast  
+  ultimately show ?thesis using q1 q2 q3 q4 q6 q7 by blast  
 qed
  
 
-lemma
+(* lemma
   assumes a0: "Q1'' + Q2 = k \<cdot>\<^sub>Q Qb" and a1:"Q1'' ## Q2" and
               "k \<cdot>\<^sub>Q Qb = Qb' + Qb''" and
              "QStateM_wf (QStateM_map Q1'', k' \<cdot>\<^sub>q (qstate Qb')) \<and>
              QStateM_wf (QStateM_map Q2, (inverse k') \<cdot>\<^sub>q (qstate Qb''))" and
              "Q1'' = k' \<cdot>\<^sub>Q Qb' \<and> Q2 = inverse k' \<cdot>\<^sub>Q (Qb'')"
-           shows "True"
-(* lemma assumes a0: "Q1'' + Q2 = k \<cdot>\<^sub>q Qb" and a1:"Q1'' ## Q2" and 
+           shows "True"*)
+lemma assumes a0: "Q1'' + Q2 = k \<cdot>\<^sub>q Qb" and a1:"Q1'' ## Q2" and 
               a2:"QState_wf (QState_vars Qb, list_of_vec (k \<cdot>\<^sub>v QState_vector Qb))" and
               a3:"QState_vars Q1'' = {} \<or> QState_vars Q2 = {}"
             shows"\<exists>Qb' Qb'' k'. Qb = Qb' + Qb'' \<and> k'\<noteq>0 \<and> 
-                  Q1'' = k' \<cdot>\<^sub>q (inverse k \<cdot>\<^sub>q Qb') \<and> Q2 = inverse k' \<cdot>\<^sub>q Qb'' \<and> 
-                 (QState_vars Q1'' = {} \<or> QState_vars Q2 = {} \<longrightarrow> 
-                   Im k' = 0 \<and> Re k' > 0) \<and>
+                  Q1'' = k' \<cdot>\<^sub>q (inverse k \<cdot>\<^sub>q Qb') \<and> Q2 = inverse k' \<cdot>\<^sub>q Qb'' \<and>
                  QState_wf (QState_vars Q1'',list_of_vec (k \<cdot>\<^sub>v QState_vector Qb')) \<and>
                  QState_wf (QState_vars Q2, list_of_vec((inverse k') \<cdot>\<^sub>v QState_vector Qb''))"
 proof-  
@@ -2806,55 +2751,45 @@ proof-
      using empty_qstate_def zero_QState by force
    moreover have "QState_vars (k \<cdot>\<^sub>q Qb) = QState_vars Qb" using a2 unfolding sca_mult_qstate_def
      using QState_var_idem by blast
-  have k:"k\<noteq>0 \<and> (QState_vars Qb = {} \<longrightarrow> Im k = 0 \<and> Re k > 0)" 
-    using a2 apply (auto simp add: QState_wf_def)
-     apply (metis QState_wf_def QState_list.rep_eq QState_vector.rep_eq QState_wf add.left_neutral card.empty 
-                  fst_conv less_irrefl list_of_vec_index list_vec mult_eq_0_iff power_0 snd_conv)
-    by (metis One_nat_def QState_list.rep_eq QState_rel1' QState_rel1a' 
-              QState_rel2 QState_vector.rep_eq list_of_vec_index 
-           list_vec mult_eq_0_iff zero_less_mult_pos2)
- 
+  have k:"k\<noteq>0 " 
+    using a2 by (auto simp add: QState_wf_def)
   then have "inverse k \<cdot>\<^sub>q (Q1'' + Q2) = Qb" using a0 a2 unfolding sca_mult_qstate_def    
     by (smt (z3) QState_list.rep_eq QState_refl QState_vector.rep_eq empty_iff 
                left_inverse list_vec sca_mult_qstate_quantum sca_mult_qstate_vars 
                 scalar_vec_one smult_smult_assoc)
-  moreover have 
-       k_inv:"inverse k \<noteq>0 \<and> (QState_vars Qb = {} \<longrightarrow> Im (inverse k) = 0 \<and> Re (inverse k) > 0)"
-    using k by force
   ultimately have  "(inverse k \<cdot>\<^sub>q Q1'') + Q2 = Qb"
-    using scalar_mult_QState_plus_l[OF _ a1, of "inverse k"] sorry
+    using scalar_mult_QState_plus_l[OF _ a1, of "inverse k"]
+    by (simp add: k)
   have "QState_vars (k \<cdot>\<^sub>q Qb) = QState_vars Qb" using a2 unfolding sca_mult_qstate_def
     using QState_var_idem by blast 
   moreover have  "QState_vars Q1'' + QState_vars Q2 = QState_vars Qb"
     using a0 a1 calculation a2 unfolding sca_mult_qstate_def
     by (metis QState_vars_plus) 
   then have "QState_vars Q1'' + QState_vars Q2 = QState_vars Qb"
-    using a0 a1 sorry  
-  
-  moreover have 
-       k_inv:"inverse k \<noteq>0 \<and> (QState_vars Qb = {} \<longrightarrow> Im (inverse k) = 0 \<and> Re (inverse k) > 0)"
-    using k by force
+    using a0 a1
+    by blast   
   ultimately have  "(inverse k \<cdot>\<^sub>q Q1'') + Q2 = Qb"
-    using scalar_mult_QState_plus_l[OF _ a1, of "inverse k"] sorry
+    using scalar_mult_QState_plus_l[OF _ a1, of "inverse k"]
+    using \<open>inverse k \<cdot>\<^sub>q Q1'' + Q2 = Qb\<close> by blast 
   have "QState_vars (k \<cdot>\<^sub>q Qb) = QState_vars Qb" using a2 unfolding sca_mult_qstate_def
     using QState_var_idem by blast 
   moreover have  "QState_vars Q1'' + QState_vars Q2 = QState_vars Qb"
     using a0 a1 calculation a2 unfolding sca_mult_qstate_def
     by (metis QState_vars_plus) 
   then have "QState_vars Q1'' + QState_vars Q2 = QState_vars Qb"
-    using a0 a1 sorry
-  qed
-*) 
+    using a0 a1
+    by blast 
+  then show ?thesis sorry
+  qed 
+ 
 
-
+  thm eq_tensor_inverse_QStateM_wf
 lemma eq_tensor_inverse_QStateM_wf_split_Q: 
   assumes a0: "Q1'' + Q2 = k \<cdot>\<^sub>Q Qb" and a1:"Q1'' ## Q2"  
             shows"\<exists>Qb' Qb'' k'. k \<cdot>\<^sub>Q Qb = Qb' + Qb'' \<and> k'\<noteq>0 \<and> 
-                  Q1'' = k' \<cdot>\<^sub>Q (Qb') \<and> Q2 = inverse k' \<cdot>\<^sub>Q Qb'' \<and> 
-                 (QStateM_vars Q1'' = {} \<or> QStateM_vars Q2 = {} \<longrightarrow> 
-                   Im k' = 0 \<and> Re k' > 0) \<and>
+                  Q1'' = k' \<cdot>\<^sub>Q (Qb') \<and> Q2 = inverse k' \<cdot>\<^sub>Q Qb'' \<and>
                  QStateM_wf (QStateM_map Q1'', (k' \<cdot>\<^sub>q qstate Qb')) \<and>
                  QStateM_wf (QStateM_map Q2, (inverse k') \<cdot>\<^sub>q qstate Qb'')"
-  using eq_tensor_inverse_QStateM_wf[OF a1] a0 by metis
+  using eq_tensor_inverse_QStateM_wf[OF a1] a0  by metis
   
 end
