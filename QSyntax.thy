@@ -6,7 +6,7 @@
 
 
 theory QSyntax
-  imports HOL.Complex vars HOL.Orderings   Q_State vars
+  imports HOL.Complex vars HOL.Orderings   Q_State_tensor vars
 begin                                             
 
 subsection \<open>Syntax\<close>
@@ -34,6 +34,8 @@ type_synonym q_vars = "(nat \<Rightarrow>nat set)"
 type_synonym qstate = "q_vars \<times>  QState"
 type_synonym qheap = "nat set \<times> complex vec"
 type_synonym 's state = "real \<times> 's \<times>   QStateM"
+type_synonym 's state_t = "real \<times> 's \<times> QStateT"
+type_synonym 's state_e = "real \<times> 's \<times> QStateE"
 type_synonym 's pred = "'s \<Rightarrow> bool" 
 type_synonym 's assn = "'s set"
 type_synonym 's expr_q = "'s \<Rightarrow> nat set"
@@ -65,7 +67,8 @@ definition set_stack::"'s state \<Rightarrow> 's \<Rightarrow> 's state"
   where "set_stack \<sigma> v = (get_prob \<sigma>, v, get_QStateM \<sigma>)"
 
 
-datatype 's XQState = Normal "'s state" | Fault 
+ 
+
 
 datatype ('a, 's) com = 
     Skip
@@ -79,10 +82,14 @@ datatype ('a, 's) com =
   | Dispose "'a" "('s,nat set) expr"
 
 
+datatype 's XQState = NormalA "'s state" | FaultA
+type_synonym ('v,'s) QConf = "('v,'s) com \<times> 's XQState"
 
-type_synonym ('v,'b,'s) QConf = "('v,'s) com \<times> 's XQState"
+datatype 's XQStateT = Normal "'s state_t" | Fault
+type_synonym ('v,'s) QConfT = "('v,'s) com \<times> 's XQStateT"
 
-
+datatype 's XQStateE = NormalE "'s state_e" | FaultE
+type_synonym ('v,'s) QConfE = "('v,'s) com \<times> 's XQStateE"
 
 
 definition new_q_addr::"('s \<Rightarrow> complex list) \<Rightarrow> 's  \<Rightarrow> q_vars \<Rightarrow> (nat set) set"
@@ -162,7 +169,36 @@ definition to_heap::"qstate \<Rightarrow>  QState"
 
 definition projection1::"nat \<Rightarrow> nat \<Rightarrow> 'a::comm_ring_1 mat" ("1\<^sub>_ _") where
   "projection1 k n \<equiv> mat n n (\<lambda> (i,j). if i = k \<and> j = k then 1 else 0)"
+(*
+type_synonym 's state_e = "real \<times> 's \<times> QStateE"
+datatype 's XQStateE = NormalE "'s state_e" | FaultE 
+type_synonym ('v,'s) QConfE = "('v,'s) com \<times> 's XQStateE"
 
+inductive stepa::"[('v,'s) QConfE, ('v,'s) QConfE] \<Rightarrow> bool" 
+  ("\<turnstile> (_ \<rightarrow>/ _)" [81,81] 100)
+  where 
+
+\<comment>\<open>Dispose takes an expression from the stack to a natural number and removes those qubits
+  from the quantum state if they are not entangled with the rest of qubits in the current
+  Quantum state. The entanglement condition is that it is possible to find a vector \<qq>1 such that
+  \<qq> =  \<qq>' +  \<qq>''\<close>
+
+
+(* | Dispose: "  \<Q> = \<Q>' + \<Q>'' \<Longrightarrow> \<Q>' ## \<Q>'' \<Longrightarrow> n = vec_norm (QStateM_vector \<Q>'') \<Longrightarrow>
+              (\<Union>((QStateM_map \<Q>'') ` (q \<sigma>))) \<noteq> {} \<Longrightarrow> 
+              Q_domain (QStateM_map \<Q>'') =(\<Union>((QStateM_map \<Q>'') ` (q \<sigma>))) \<Longrightarrow>                                      
+             \<turnstile> \<langle>Dispose q, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Normal (\<delta>,\<sigma>,QStateM(m', n \<cdot>\<^sub>q Q'))" *)
+
+Disposea: " \<Q>' ## \<Q>'' \<Longrightarrow> n = vec_norm (QStateM_vector \<Q>') \<Longrightarrow> \<Q>' = QT T' \<Longrightarrow> \<Q>'' = QT T'' \<Longrightarrow>
+              QStateM_vars \<Q>' \<noteq> {} \<Longrightarrow> 
+              QStateM_vars \<Q>' = (Q_domain_var (the (var_set q i \<sigma>)) (QStateM_map \<Q>')) \<Longrightarrow>                                      
+              \<forall>e \<in> (the (var_set q i \<sigma>)). (QStateM_map \<Q>') e \<noteq> {} \<Longrightarrow>
+          \<turnstile>(Dispose q i, NormalE (\<delta>,\<sigma>,QStateE (Plus T' T''))) \<rightarrow> (Skip, NormalE (\<delta>,\<sigma>, QStateE(Single \<Q>'')))"
+
+inductive_cases stepa [cases set]:
+"\<turnstile>(c, NormalE (\<delta>,\<sigma>,QStateE (Plus T' T'')) ) \<rightarrow>  t"
+
+thm step *)
 
 locale h = vars + partial_state2 
 
