@@ -1605,7 +1605,7 @@ qed
 context vars
 begin
 
-inductive QExec::"('v, 's) com \<Rightarrow> 's XQStateT \<Rightarrow> 's XQStateT \<Rightarrow> bool" 
+inductive QExec::"('v, 's) com \<Rightarrow> 's XQState \<Rightarrow> 's XQState \<Rightarrow> bool" 
   ("\<turnstile> \<langle>_,_\<rangle> \<Rightarrow> _"  [20,98,98] 89)  
   where 
   Skip : "\<turnstile>  \<langle>Skip, Normal \<sigma>\<rangle> \<Rightarrow> Normal \<sigma>" 
@@ -1616,13 +1616,13 @@ inductive QExec::"('v, 's) com \<Rightarrow> 's XQStateT \<Rightarrow> 's XQStat
 \<comment>\<open>QMod modifies the set of qubits of the Quantum State given by q \<sigma> with the 
   transformation matrix M, any qubit not included in q \<sigma> remains the same\<close>
 
- | QMod:"\<Inter>(QStateM_map \<Q> ` (q \<sigma>)) \<noteq> {} \<Longrightarrow> (q \<sigma>)\<noteq>{} \<Longrightarrow> \<Q> = QT \<T> \<Longrightarrow> 
+ | QMod:"\<Inter>(QStateM_map \<Q> ` (q \<sigma>)) \<noteq> {} \<Longrightarrow> (q \<sigma>)\<noteq>{} \<Longrightarrow>
          \<Q>' = matrix_sep (q \<sigma>) \<Q> M \<Longrightarrow> matrix_sep_not_zero (q \<sigma>) \<Q> M \<Longrightarrow>         
-         \<turnstile> \<langle>QMod M q, Normal (\<delta>,\<sigma>,\<T>)\<rangle> \<Rightarrow> Normal (\<delta>, \<sigma>, Single \<Q>')"
+         \<turnstile> \<langle>QMod M q, Normal (\<delta>,\<sigma>, \<Q>)\<rangle> \<Rightarrow> Normal (\<delta>, \<sigma>,  \<Q>')"
 
 \<comment>\<open>QMod fails if the set of qubits to be modified is not included in the quantum state\<close>
-| QMod_F:"\<Inter>(QStateM_map \<Q> ` (q \<sigma>)) = {} \<or> (q \<sigma>) = {} \<or> \<not> matrix_sep_not_zero (q \<sigma>) \<Q> M \<Longrightarrow>  \<Q> = QT \<T> \<Longrightarrow>       
-          \<turnstile> \<langle>QMod M q, Normal (\<delta>,\<sigma>,\<T>)\<rangle> \<Rightarrow> Fault"
+| QMod_F:"\<Inter>(QStateM_map \<Q> ` (q \<sigma>)) = {} \<or> (q \<sigma>) = {} \<or> \<not> matrix_sep_not_zero (q \<sigma>) \<Q> M \<Longrightarrow>         
+          \<turnstile> \<langle>QMod M q, Normal (\<delta>,\<sigma>, \<Q>)\<rangle> \<Rightarrow> Fault"
 
 \<comment>\<open>Alloc takes a normal variable "q" representing the variable where the index to the qubits is store
    an function e from the state \<sigma> to a natural number representing the number of qubits to allocate
@@ -1637,10 +1637,10 @@ inductive QExec::"('v, 's) com \<Rightarrow> 's XQStateT \<Rightarrow> 's XQStat
           q'_addr \<in> new_q_addr e \<sigma> (QStateM_map \<Q>)  \<Longrightarrow> e \<sigma> \<noteq> 0 \<Longrightarrow> length (v \<sigma>) = (e \<sigma>) \<Longrightarrow>                     
           \<turnstile> \<langle>Alloc q e v, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Normal (\<delta>, \<sigma>',QStateM(\<vv>',\<qq> + QState (q'_addr,(v \<sigma>)) ))" *)
 
-| Alloc:"q' \<notin> (dom_q_vars (QStateM_map \<Q>)) \<Longrightarrow> (length (v \<sigma>) > 1) \<Longrightarrow>  \<Q> = QT \<T> \<Longrightarrow>
+| Alloc:"q' \<notin> (dom_q_vars (QStateM_map \<Q>)) \<Longrightarrow> (length (v \<sigma>) > 1) \<Longrightarrow> 
               \<vv>' = (\<lambda>i. {})(q' := q'_addr) \<and>  \<sigma>' = set_value \<sigma> q (from_nat q') \<Longrightarrow> 
           q'_addr \<in> new_q_addr v \<sigma> (QStateM_map \<Q>)  \<Longrightarrow> \<exists>i<length (v \<sigma>). (v \<sigma>)!i \<noteq>0 \<Longrightarrow>
-          \<turnstile> \<langle>Alloc q v, Normal (\<delta>,\<sigma>,\<T>)\<rangle> \<Rightarrow> Normal (\<delta>, \<sigma>',Single (\<Q> + Q_State.QStateM(\<vv>', QState (q'_addr,(v \<sigma>)) )))"
+          \<turnstile> \<langle>Alloc q v, Normal (\<delta>,\<sigma>, \<Q>)\<rangle> \<Rightarrow> Normal (\<delta>, \<sigma>', \<Q> + Q_State.QStateM(\<vv>', QState (q'_addr,(v \<sigma>)) ))"
 (* | Alloc:"q' \<notin> (dom_q_vars (QStateM_map \<Q>)) \<Longrightarrow> q'_addr \<in> new_q_addr e \<sigma> (QStateM_map \<Q>)  \<Longrightarrow> e \<sigma> \<noteq> 0 \<Longrightarrow>
           \<vv>' = (QStateM_map \<Q>)(q' := q'_addr)  \<Longrightarrow> length (v \<sigma>) = (e \<sigma>) \<Longrightarrow> \<sigma>' = set_value \<sigma> q (from_nat q') \<Longrightarrow>                    
           \<turnstile> \<langle>Alloc q e v, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Normal (\<delta>, \<sigma>',QStateM(\<vv>',\<qq> + QState (q'_addr,(v \<sigma>)) ))" *)
@@ -1677,11 +1677,11 @@ inductive QExec::"('v, 's) com \<Rightarrow> 's XQStateT \<Rightarrow> 's XQStat
               Q_domain (QStateM_map \<Q>'') =(\<Union>((QStateM_map \<Q>'') ` (q \<sigma>))) \<Longrightarrow>                                      
              \<turnstile> \<langle>Dispose q, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Normal (\<delta>,\<sigma>,QStateM(m', n \<cdot>\<^sub>q Q'))" *)
 
- | Dispose: "  \<Q>' ## \<Q>'' \<Longrightarrow> n = vec_norm (QStateM_vector \<Q>') \<Longrightarrow>
-              QStateM_vars \<Q>' \<noteq> {} \<Longrightarrow> \<Q>' = QT T' \<Longrightarrow> \<Q>'' = QT T'' \<Longrightarrow>
+ | Dispose: "  \<Q>' ## \<Q>'' \<Longrightarrow> \<Q> =  \<Q>' + \<Q>'' \<Longrightarrow> n = vec_norm (QStateM_vector \<Q>') \<Longrightarrow>
+              QStateM_vars \<Q>' \<noteq> {} \<Longrightarrow> 
               QStateM_vars \<Q>' = (Q_domain_var (the (var_set q i \<sigma>)) (QStateM_map \<Q>')) \<Longrightarrow>                                      
               \<forall>e \<in> (the (var_set q i \<sigma>)). (QStateM_map \<Q>') e \<noteq> {} \<Longrightarrow>
-             \<turnstile> \<langle>Dispose q i, Normal (\<delta>,\<sigma>,Plus T' T'')\<rangle> \<Rightarrow> Normal (\<delta>,\<sigma>, Single (n \<cdot>\<^sub>Q  \<Q>''))"
+             \<turnstile> \<langle>Dispose q i, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Normal (\<delta>,\<sigma>,  \<Q>'')"
 
 \<comment>\<open>Dispose dispose will fail if it is not possible to find such states \<qq>',  \<qq>''\<close>
 
@@ -1690,7 +1690,7 @@ inductive QExec::"('v, 's) com \<Rightarrow> 's XQStateT \<Rightarrow> 's XQStat
                \<Q> = \<Q>' + \<Q>'' \<and> \<Q>' ## \<Q>'' \<Longrightarrow>
                \<turnstile> \<langle>Dispose q, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Fault" *)
 
-| Dispose_F: "(\<nexists>\<Q>' \<Q>''.  \<Q> = Plus (Single \<Q>') (Single \<Q>'') \<and> \<Q>' ## \<Q>'' \<and> QStateM_vars \<Q>' \<noteq> {} \<and> 
+| Dispose_F: "(\<nexists>\<Q>' \<Q>''.  \<Q> = \<Q>' + \<Q>'' \<and> \<Q>' ## \<Q>'' \<and> QStateM_vars \<Q>' \<noteq> {} \<and> 
                QStateM_vars \<Q>' = (Q_domain_var (the (var_set q i \<sigma>)) (QStateM_map \<Q>')) \<and>
                (\<forall>e \<in> (the (var_set q i \<sigma>)). (QStateM_map \<Q>') e \<noteq> {})) \<Longrightarrow>
                \<turnstile> \<langle>Dispose q i, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Fault"
@@ -1705,16 +1705,16 @@ inductive QExec::"('v, 's) com \<Rightarrow> 's XQStateT \<Rightarrow> 's XQStat
             \<turnstile> \<langle>Measure v q, Normal (\<delta>,\<sigma>,(\<vv>,\<qq>))\<rangle> \<Rightarrow> Normal (\<delta>',\<sigma>',(\<vv>',\<qq>'))"  *)
 
 | Measure: "addr1 = \<Union>((QStateM_map \<Q>) ` (q \<sigma>)) \<Longrightarrow> \<forall>e \<in> (q \<sigma>). (QStateM_map \<Q>) e \<noteq> {} \<Longrightarrow>                      
-            k \<in> {0..<2^(card addr1)} \<Longrightarrow>  \<Q> = QT \<T> \<Longrightarrow>         
+            k \<in> {0..<2^(card addr1)} \<Longrightarrow>          
             (\<delta>k, \<Q>') = measure_vars' k (q \<sigma>) \<Q> \<Longrightarrow>             
             \<delta>k > 0 \<Longrightarrow> \<delta>' = \<delta> * \<delta>k \<Longrightarrow> \<sigma>' = set_value \<sigma> v (from_nat k) \<Longrightarrow>
-            \<turnstile> \<langle>Measure v q, Normal (\<delta>,\<sigma>,\<T>)\<rangle> \<Rightarrow> Normal (\<delta>',\<sigma>',Single \<Q>')"
+            \<turnstile> \<langle>Measure v q, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Normal (\<delta>',\<sigma>', \<Q>')"
 \<comment>\<open>Since Measure access to the values of the qubits given by q \<sigma> as QMod, 
   Measure will similarly fail if the set of qubits to be mesured does not
   belong to the set of allocated qubits\<close>
 
- | Measure_F: "\<exists>e. e \<in> q \<sigma> \<and> (QStateM_map (QT \<T>)) e = {}  \<Longrightarrow> 
-              \<turnstile> \<langle>Measure v q, Normal (\<delta>,\<sigma>,\<T>)\<rangle> \<Rightarrow> Fault" 
+ | Measure_F: "\<exists>e. e \<in> q \<sigma> \<and> (QStateM_map \<Q>) e = {}  \<Longrightarrow> 
+              \<turnstile> \<langle>Measure v q, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Fault" 
 
 | Fault_Prop:"\<turnstile> \<langle>C, Fault\<rangle> \<Rightarrow> Fault"
 

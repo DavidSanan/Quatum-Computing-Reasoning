@@ -6,7 +6,7 @@
 
 
 theory QSyntax
-  imports HOL.Complex vars HOL.Orderings   Q_State_tensor vars
+  imports HOL.Complex vars HOL.Orderings   Q_State vars
 begin                                             
 
 subsection \<open>Syntax\<close>
@@ -34,8 +34,8 @@ type_synonym q_vars = "(nat \<Rightarrow>nat set)"
 type_synonym qstate = "q_vars \<times>  QState"
 type_synonym qheap = "nat set \<times> complex vec"
 type_synonym 's state = "real \<times> 's \<times>   QStateM"
-type_synonym 's state_t = "real \<times> 's \<times> QStateT"
-type_synonym 's state_e = "real \<times> 's \<times> QStateE"
+(* type_synonym 's state_t = "real \<times> 's \<times> QStateT"
+type_synonym 's state_e = "real \<times> 's \<times> QStateE"*)
 type_synonym 's pred = "'s \<Rightarrow> bool" 
 type_synonym 's assn = "'s set"
 type_synonym 's expr_q = "'s \<Rightarrow> nat set"
@@ -82,14 +82,14 @@ datatype ('a, 's) com =
   | Dispose "'a" "('s,nat set) expr"
 
 
-datatype 's XQState = NormalA "'s state" | FaultA
+(* datatype 's XQState = NormalA "'s state" | FaultA
+type_synonym ('v,'s) QConf = "('v,'s) com \<times> 's XQState" *)
+
+datatype 's XQState = Normal "'s state" | Fault
 type_synonym ('v,'s) QConf = "('v,'s) com \<times> 's XQState"
 
-datatype 's XQStateT = Normal "'s state_t" | Fault
-type_synonym ('v,'s) QConfT = "('v,'s) com \<times> 's XQStateT"
-
-datatype 's XQStateE = NormalE "'s state_e" | FaultE
-type_synonym ('v,'s) QConfE = "('v,'s) com \<times> 's XQStateE"
+(* datatype 's XQStateE = NormalE "'s state_e" | FaultE
+type_synonym ('v,'s) QConfE = "('v,'s) com \<times> 's XQStateE" *)
 
 
 definition new_q_addr::"('s \<Rightarrow> complex list) \<Rightarrow> 's  \<Rightarrow> q_vars \<Rightarrow> (nat set) set"
