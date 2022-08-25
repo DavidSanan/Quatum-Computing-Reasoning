@@ -1,4 +1,4 @@
-session QAux = QHLProver +
+session QAux = QHLProverSep +
   options [timeout=600]
   sessions
    Jordan_Normal_Form

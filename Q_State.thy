@@ -665,7 +665,7 @@ lemma plus_QState_set_wf:"\<lbrakk>d1 = (QState_vars q1); d2 = (QState_vars q2);
           s = d1 \<union> d2\<rbrakk> \<Longrightarrow> finite s"
   apply transfer by fastforce
 
-lemma plus_QState_vector_set_wf:"finite (fst (plus_QState_vector q1 q2))"
+lemma plus_QState_vector_set_finite:"finite (fst (plus_QState_vector q1 q2))"
   unfolding plus_QState_vector_def Let_def using plus_QState_set_wf
   by fastforce 
 
@@ -727,12 +727,13 @@ lemma plus_QState_vector_wf':
         shows "dim_vec v =  2 ^ card (QState_vars q1 \<union> QState_vars q2)"
   using dim_vec_plus_2_pow_s[OF a0 a1 a2 a3 a4 a5 a6 a9] by auto
 
-lemma plus_QState_vector_wf: assumes a0: "QState_vars q1 \<inter> QState_vars q2 = {}"
+lemma plus_QState_vector_length_card: assumes a0: "QState_vars q1 \<inter> QState_vars q2 = {}"
   shows "length (snd (plus_QState_vector q1 q2)) =
         2 ^ card (fst (plus_QState_vector q1 q2))"
   unfolding plus_QState_vector_def Let_def using a0
   apply clarsimp  apply (frule plus_QState_vector_wf')  
   by force+
+
 
 lemma plus_QState_vector_wf_empty:
   assumes a0:"QState_vars q1 \<inter> QState_vars q2 = {}" and
@@ -788,7 +789,7 @@ proof-
                    length (snd (plus_QState_vector q1 q2))"
     by (metis QState_rel1' a0 a2 partial_state.d1_def partial_state.d2_def 
          partial_state.dims1_def partial_state.dims2_def 
-        partial_state.encode12_lt plus_QState_vector_vars plus_QState_vector_wf 
+        partial_state.encode12_lt plus_QState_vector_vars plus_QState_vector_length_card 
         prod_list_replicate ps2.dims0_def ps2.dims1_def ps2.dims2_def ps2.disjoint 
         ps2.nths_vars1' ps2.nths_vars2' ps2.pencode12_def ps2.vars0_def state_sig.d_def) 
   moreover have "snd (plus_QState_vector q1 q2) ! 
@@ -817,19 +818,29 @@ proof-
        "j <length (QState_list q2) \<and>  QState_list q2 ! j \<noteq> 0"
     by (transfer,auto)+
   then show ?thesis using a0 plus_QState_vector_wf_pencode_not_zero
-    by (metis plus_QState_vector_wf)
+    by (metis plus_QState_vector_length_card)
     
 qed
+
+
+lemma 
+  plus_QState_vector_wf:
+  assumes a0:"QState_vars Q1 \<inter> QState_vars Q2 = {} "
+  shows "QState_wf (plus_QState_vector Q1 Q2)"
+  using a0 unfolding plus_QState_vector_def Let_def QState_wf_def apply auto
+  apply (auto simp add: dim_vec_plus_2_pow_s QState_rel3')
+  using plus_QState_vector_vars plus_QState_vector_vector plus_QState_vector_wf_not_zero by presburger
+
 
 lemma QState_vars_Plus:"(QState_vars q1 \<inter> QState_vars q2 \<noteq> {} \<longrightarrow>
           QState_vars (plus_QState q1 q2) = {}) \<and>        
        (QState_vars q1 \<inter> QState_vars q2 = {} \<longrightarrow> 
            QState_vars (plus_QState q1 q2) = fst (plus_QState_vector q1 q2))"  
     apply (auto simp add: plus_QState_def ) apply transfer    
-   apply transfer' using plus_QState_vector_set_wf plus_QState_vector_wf
+   apply transfer' using plus_QState_vector_set_finite plus_QState_vector_wf
   apply (auto simp add: fstI) 
-  apply transfer' using plus_QState_vector_set_wf plus_QState_vector_wf plus_QState_vector_wf_not_zero
-  apply (metis (mono_tags, lifting) all_not_in_conv fst_uQState_empty prod.exhaust_sel snd_uQState_empty)
+  apply transfer' using plus_QState_vector_set_finite plus_QState_vector_wf plus_QState_vector_wf_not_zero
+  apply (metis (mono_tags, lifting)  prod.exhaust_sel )
   by (simp add: QState.rep_eq QState_vars.rep_eq QState_wf_def 
        plus_QState_vector_wf_empty plus_QState_vector_wf_not_zero) 
   
@@ -842,8 +853,8 @@ lemma QState_list_Plus:"(QState_vars q1 \<inter> QState_vars q2 \<noteq> {} \<lo
     apply (auto simp add:  QState_wf_def)
   apply transfer 
   apply auto 
-  using plus_QState_vector_set_wf
-  by (simp add: QState_wf_def plus_QState_vector_wf plus_QState_vector_wf_empty 
+  using plus_QState_vector_set_finite
+  by (simp add: QState_wf_def plus_QState_vector_length_card plus_QState_vector_wf_empty 
                  plus_QState_vector_wf_not_zero)   
 
 lemma neutral_vector_wf:"length [1] = (2^(card {}))" by auto
@@ -989,7 +1000,6 @@ proof-
     by (simp add: q_state_eq)
 
 qed
-  
 
 
 lemma plus_disj_dist:"\<lbrakk>disj_QState x (plus_QState y z); disj_QState y z\<rbrakk> \<Longrightarrow> disj_QState x y"
@@ -1024,6 +1034,97 @@ instance
   apply (auto simp add: sep_disj_QState plus_QState intro:plus_dis_dist2)[1]
   done
 end 
+
+lemma plus_QState_vector_cancellative:  
+     assumes a0:"plus_QState_vector Q1 Q3 = plus_QState_vector Q2 Q3" and
+       a1:"QState_vars Q1 \<inter> QState_vars Q3 = {}" and a2:"QState_vars Q2 \<inter> QState_vars Q3 = {}" 
+     shows "Q1 = Q2"
+proof-
+  let ?v1 = "QState_vars Q1" and ?v2 = "QState_vars Q2" and ?v3 = "QState_vars Q3"
+  let ?V1 = "QState_vector Q1" and ?V2 = "QState_vector Q2" and ?V3 = "QState_vector Q3"
+  have v3_not_zero:"\<exists>i < 2^(card ?v3). ?V3$i\<noteq> 0"
+    by (metis QState_rel1a' QState_rel3 QState_vector.rep_eq dim_vec_of_list vec_of_list_index)
+  have eq_v1_v2:"?v1 = ?v2"
+    by (metis Int_Un_eq(1) a0 a1 a2 plus_QState_vector_vars sup_commute sup_inf_distrib1)
+  interpret ps2:partial_state2 "(replicate (card (?v1 \<union> ?v3)) (2::nat))" ?v1 ?v3 
+    apply standard using a1
+    using QState_rel3'  
+    by auto
+  interpret ps:partial_state "ps2.dims0" "ps2.vars1'" .
+  have "partial_state2.ptensor_vec ?v1 ?v3 ?V1 ?V3 = 
+                 partial_state2.ptensor_vec ?v1 ?v3 ?V2 ?V3"
+    by (metis a0 eq_v1_v2 plus_QState_vector_vector vec_list)
+
+  have "dim_vec (ps2.ptensor_vec ?V1 ?V3) = 
+               2^(card (?v1 \<union> ?v3))"
+    using a1 dim_vec_plus_2_pow_s by blast
+
+  have "dim_vec (ps2.ptensor_vec ?V2 ?V3) = 
+               2^(card (?v1 \<union> ?v3))"
+    using a2 dim_vec_plus_2_pow_s eq_v1_v2
+    by presburger 
+  have "\<forall>i<2^(card (?v1 \<union> ?v3)). ps2.ptensor_vec ?V1 ?V3 $ i = ?V1$(ps.encode1 i) * ?V3 $(ps.encode2 i)"
+    by (simp add: partial_state.tensor_vec_eval ps2.d_def ps2.dims0_def ps2.ptensor_vec_def ps2.vars0_def)
+  moreover have "\<forall>i<2^(card (?v1 \<union> ?v3)). ps2.ptensor_vec ?V2 ?V3 $ i = ?V2$(ps.encode1 i) * ?V3 $(ps.encode2 i)"
+    by (simp add: partial_state.tensor_vec_eval ps2.d_def ps2.dims0_def ps2.ptensor_vec_def ps2.vars0_def)
+  moreover have "\<forall>i<2^(card (?v1 \<union> ?v3)). ps2.ptensor_vec ?V1 ?V3 $ i = ps2.ptensor_vec ?V2 ?V3 $ i"
+    using \<open>ps2.ptensor_vec (QState_vector Q1) (QState_vector Q3) = ps2.ptensor_vec (QState_vector Q2) (QState_vector Q3)\<close> by presburger
+  ultimately have "\<forall>i<2^(card (?v1 \<union> ?v3)). 
+                     ?V1$(ps.encode1 i) * ?V3 $(ps.encode2 i) =  
+                     ?V2$(ps.encode1 i) * ?V3 $(ps.encode2 i)"
+    by auto
+  then have v1:"\<forall>i j. i<2^(card ?v1 ) \<and> j < 2^(card ?v3) \<longrightarrow> 
+              ?V1$i * ?V3 $j = ?V2$i * ?V3 $j"
+    by (metis \<open>dim_vec (ps2.ptensor_vec (QState_vector Q2) (QState_vector Q3)) = 2 ^ card (QState_vars Q1 \<union> QState_vars Q3)\<close> 
+             partial_state.d1_def partial_state.d2_def partial_state.dims1_def partial_state.dims2_def 
+             prod_list_replicate ps.encode12_inv1 ps.encode12_inv2 
+             ps.encode12_lt ps2.d0_def ps2.dims1_def ps2.dims2_def 
+             ps2.nths_vars1' ps2.nths_vars2' ps2.ptensor_vec_dim state_sig.d_def)
+  then have "\<forall>i<2^(card ?v1). ?V1$i = ?V2$i"
+  proof-
+    { assume "\<exists>i<2^(card ?v1). ?V1$i \<noteq> ?V2$i"
+      then obtain i where "i<2^(card ?v1)" and 
+                         "?V1$i \<noteq> ?V2$i"
+        by auto
+      then have "\<forall>i < 2^(card ?v3). ?V3 $ i = 0"
+        using v1 by auto
+      then have False using v3_not_zero by auto
+    }
+    thus ?thesis by auto
+  qed
+  then have "QState_vector Q1 = QState_vector Q2"
+    using  eq_v1_v2
+    by (metis QState_rel1a' eq_vecI)
+  then show ?thesis using eq_v1_v2 apply transfer
+    by (metis fst_conv list_vec snd_conv)
+qed
+
+instantiation QState :: cancellative_sep_algebra
+begin
+instance 
+  apply standard 
+  apply (simp add: plus_QState sep_disj_QState plus_QState_def disj_QState_def) 
+  apply transfer' apply (auto simp add: plus_QState_vector_wf)
+  using plus_QState_vector_cancellative by presburger 
+end
+
+(* lemma  assumes a0:"(Q::QState) = Q1 + Q2" and
+       a1:"Q1##Q2" and a2:"Q = Q1" 
+     shows "Q2 = 0"
+proof-
+  let ?v = "QState_vars Q" and ?v1 = "QState_vars Q1" and ?v2 = "QState_vars Q2"
+  let ?V = "QState_vector Q" and ?V1 = "QState_vector Q1" and ?V2 = "QState_vector Q2"
+  
+  interpret ps2:partial_state2 "(replicate (card (?v1 \<union> ?v2)) (2::nat))" ?v1 ?v2
+    apply standard using a1
+    using QState_rel3'
+    by (auto simp add: disj_QState_def sep_disj_QState)  
+  interpret ps:partial_state "ps2.dims0" "ps2.vars1'" .
+  have "Q = Q + Q2" using a0 a2 by auto
+  moreover have "?v2 = {}"
+    by (metis QState_vars_Plus a0 a2 add_cancel_left_right card_eq_0_iff length_replicate 
+              plus_QState plus_QState_vector_vars ps2.dims0_def ps2.disjoint 
+              ps2.finite_v2 ps2.length_dims0 ps2.vars0_def)*)
 
 lemma encode_lt_card:
   assumes a0:"vs1 \<inter> vs2 = {}" and a1:"finite vs1" and a2:"finite vs2" and                            
@@ -1641,7 +1742,7 @@ proof-
     by (meson a0 disj_QState_def sep_disj_QState) 
   then show ?thesis using a0 f0 unfolding  plus_QState plus_QState_def Let_def     
     apply transfer'  
-    apply (auto  simp add: QState_wf_def dim_vec_plus_2_pow_s plus_QState_vector_set_wf f0 plus_QState_vector_vector QState_list_Plus vec_list)           
+    apply (auto  simp add: QState_wf_def dim_vec_plus_2_pow_s plus_QState_vector_set_finite f0 plus_QState_vector_vector QState_list_Plus vec_list)           
    using plus_QState_vector_vars plus_QState_vector_wf' apply auto
    by (metis plus_QState_vector_vector plus_QState_vector_wf_not_zero vec_list vec_of_list_index)
 qed
@@ -2079,6 +2180,23 @@ lemma eq_QStateM_dest: "Q_domain vs \<noteq> {} \<Longrightarrow>
   apply (metis Pair_inject QState_vars_empty empty_iff prod.collapse)
   by (metis QState_vars_empty empty_iff snd_conv)
 
+(* lemma eq_QStateM_dest': 
+  assumes a0:"QStateM_wf (vs, v)" and 
+       a1:"QStateM(vs, v) = QStateM(vs', v')" 
+  shows "vs = vs' \<and> v = v'" 
+proof-
+  { assume "Q_domain vs \<noteq> {}" 
+    then have ?thesis using eq_QStateM_dest[OF _ a0 a1] by auto
+  }
+  { assume "Q_domain vs = {}"
+    then have "{} = QState_vars v \<and>
+        (\<forall>x y. x\<noteq>y \<and> x\<in> domain vs \<and> y \<in> domain vs \<longrightarrow> vs x \<inter> vs y = {})"
+      using a0 by auto
+    then have ?thesis using a0 a1 unfolding Q_domain_def apply auto
+      apply transfer' apply auto apply transfer' apply auto unfolding Q_domain_def apply auto
+      sorry
+qed *)
+
 lemma eq_QStateM_dest1: " 
        QStateM_wf (vs, v) \<Longrightarrow> QStateM_wf (vs', v') \<Longrightarrow> 
        QStateM(vs, v) = QStateM(vs', v') \<Longrightarrow> 
@@ -2356,6 +2474,63 @@ instance
            sep_disj_add sep_disj_addD)  
 end 
 
+
+  
+
+instantiation QStateM :: cancellative_sep_algebra
+begin
+
+lemma cancelative_mapping:assumes a0:" (\<lambda>x. if m x = {} then fst (ma, qa) x else fst (m, q) x) =
+       (\<lambda>x. if m x = {} then fst (mb, qb) x else fst (m, q) x)" and
+       a1:"{x. ma x \<noteq> {}} \<inter> {x. m x \<noteq> {}} = {}" and
+       a2:"{x. mb x \<noteq> {}} \<inter> {x. m x \<noteq> {}} = {}"
+     shows "ma = mb"
+proof-
+  { fix x
+    { assume "m x = {}" 
+      then have "ma x = mb x" using a0 
+        by (metis fstI)
+    }
+    moreover { 
+      assume "m x \<noteq>{}"
+      then have "ma x = mb x" using a0 a1 a2
+        by blast
+    }
+    ultimately have "ma x = mb x" by auto
+  } then show ?thesis by blast
+qed
+
+
+lemma QStateM_map_cancellative:
+  assumes a0:"QStateM_map x + QStateM_map z = QStateM_map y + QStateM_map z" and
+              a1:"QStateM_map x ## QStateM_map z" and a2:"QStateM_map y ## QStateM_map z"
+            shows "QStateM_map x = QStateM_map y"
+  using a0 a1 a2 unfolding plus_fun_def sep_disj_fun_def opt_class.domain_def 
+  apply transfer 
+  by (auto intro:cancelative_mapping)
+
+lemma QStateM_Cancellative:
+  assumes a0:"QStateM_map x + QStateM_map z = QStateM_map y + QStateM_map z" and
+       a1:"qstate x + qstate z = qstate y + qstate z" and
+       a2:"QStateM_map x ## QStateM_map z" and a3:"qstate x ## qstate z" and 
+       a4:"QStateM_map y ## QStateM_map z" and "qstate y ## qstate z"
+     shows "x = y"
+proof-
+  have "QStateM_map x = QStateM_map y" using QStateM_map_cancellative[OF a0 a2 a4] by auto
+  moreover have "qstate x = qstate y"
+    by (metis QStateM_rel1 a1 a3 calculation disj_QState_def sep_add_cancelD sep_disj_QState) 
+  ultimately show ?thesis
+    by (metis idem_QState)
+qed
+
+instance 
+  apply standard 
+  apply (simp add: plus_QStateM sep_disj_QStateM ) 
+  apply transfer' using plus_wf apply (auto)
+  using QStateM_Cancellative by presburger 
+end
+
+
 lemma QStateM_disj_dest:
   assumes a0:"Q1 ## Q2"
   shows "QStateM_map Q1 ## QStateM_map Q2" and "qstate Q1 ## qstate Q2"
@@ -2540,6 +2715,10 @@ proof-
 qed
 *)
 
+lemma vec_norm_square:
+  "vec_norm ((u::complex) \<cdot>\<^sub>v q)^2 = \<bar>u\<bar>^2 * (vec_norm q)^2"
+    using norm_complex_absolutely_homogenous
+    by (metis power_mult_distrib)
 
 lemma eq_tensor_inverse_QStateM_vector: 
   assumes a0:"Q1 ## Q2" and
@@ -2791,5 +2970,6 @@ lemma eq_tensor_inverse_QStateM_wf_split_Q:
                  QStateM_wf (QStateM_map Q1'', (k' \<cdot>\<^sub>q qstate Qb')) \<and>
                  QStateM_wf (QStateM_map Q2, (inverse k') \<cdot>\<^sub>q qstate Qb'')"
   using eq_tensor_inverse_QStateM_wf[OF a1] a0  by metis
-  
+
+       
 end
