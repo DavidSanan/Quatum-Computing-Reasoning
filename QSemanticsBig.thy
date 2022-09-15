@@ -19,6 +19,7 @@ text \<open>Semantics for quantum programs\<close>
   unit_vecl :: "nat \<Rightarrow> nat \<Rightarrow> complex list"
   where "unit_vecl n i = list_of_vec (unit_vec n i)" *)
 
+
 lemma i_less_union: 
   assumes a0:"(i::nat) < 2 ^ card v1 * 2 ^ card v2" and
     a1:"v1 \<inter> v2 = {}" and
@@ -28,140 +29,131 @@ lemma i_less_union:
   using a0 a1 a2 a3
   by (simp add: card_Un_disjoint power_add)
 
+context partial_state2 
+begin
+
 lemma ptensor_mat_M_N_row: 
-     assumes a0:"finite v1" and a1:"finite v2" and a2:"v1 \<inter> v2 = {}" and
-       a3:"i < (2^(card v1)) * (2^(card v2))" and
-       a5:"dim_vec (V::complex vec) = (2^(card v1)) * (2^(card v2))"
-     shows "(ptensor_mat v1 v2 M N *\<^sub>v V) $ i = 
-             row (ptensor_mat v1 v2 M N) i \<bullet> V"
+     assumes 
+       a0:"i < d0" and
+       a1:"dim_vec (V::complex vec) = d0"
+     shows "(ptensor_mat M N *\<^sub>v V) $ i = 
+             row (ptensor_mat M N) i \<bullet> V"
 proof -
-  have "i < dim_row (ptensor_mat v1 v2 M N)"
-    by (simp add: a0 a3 local.a1 local.a2 ptensor_mat_dim_row)
+  have "i < dim_row (ptensor_mat  M N)"
+    by (simp add: a0 )
   then show ?thesis
     by (meson index_mult_mat_vec)
 qed
 
 lemma ptensor_map_M_N: 
-     assumes a0:"finite v1" and a1:"finite v2" and a2:"v1 \<inter> v2 = {}" and
-       a3:"i < (2^(card v1)) * (2^(card v2))" and
-       a4:"j < (2^(card v1)) * (2^(card v2))" 
-     shows "ptensor_mat v1 v2 M N $$ (i,j) = 
-            M $$ (partial_state.encode1 (list_dims (v1 \<union> v2)) (partial_state2.vars1' v1 v2) i,
-                 (partial_state.encode1 (list_dims (v1 \<union> v2)) (partial_state2.vars1' v1 v2) j)) *
-            N $$ (partial_state.encode2 (list_dims (v1 \<union> v2)) (partial_state2.vars1' v1 v2) i,
-                 (partial_state.encode2 (list_dims (v1 \<union> v2)) (partial_state2.vars1' v1 v2) j))"
+     assumes 
+       a0:"i < d0" and
+       a1:"j < d0" 
+     shows "ptensor_mat M N $$ (i,j) = 
+            M $$ (partial_state.encode1 dims0 vars1' i,
+                 (partial_state.encode1 dims0 vars1' j)) *
+            N $$ (partial_state.encode2 dims0 vars1' i,
+                 (partial_state.encode2 dims0 vars1' j))"
 proof-
-  let ?m1 = "M" and ?m2 = "N" and ?d = "list_dims (v1 \<union> v2)"
-  let ?v = "partial_state2.vars1' v1 v2"  let  ?v' = "partial_state2.vars2' v1 v2"
+  let ?m1 = "M" and ?m2 = "N" and ?d = "dims0"
+  let ?v = "vars1'"  let  ?v' = "vars2'"
 
-  interpret ps2:partial_state2 "list_dims (v1 \<union> v2)" v1 v2
-    apply standard using a0 a1 a2 unfolding list_dims_def by auto
+ let ?enc1 = "partial_state.encode1 dims0 ?v" and
+     ?enc2 = "partial_state.encode2 dims0 ?v"
 
- let ?enc1 = "partial_state.encode1 ps2.dims0 ?v" and
-     ?enc2 = "partial_state.encode2 ps2.dims0 ?v"
-
-  have "ps2.dims0 = ?d" unfolding ps2.dims0_def list_dims_def ps2.vars0_def by auto
-  moreover have "ps2.ptensor_mat ?m1 ?m2 $$ (i,j) = 
+  have "dims0 = ?d" unfolding dims0_def list_dims_def vars0_def by auto
+  moreover have "ptensor_mat ?m1 ?m2 $$ (i,j) = 
         ?m1 $$ (?enc1 i, ?enc1 j) * ?m2 $$ (?enc2 i, ?enc2  j)"
-    unfolding ps2.ptensor_mat_def 
-    apply (rule  partial_state.tensor_mat_eval, auto simp add: ps2.dims0_def state_sig.d_def ps2.vars0_def) 
-    using i_less_union[OF _ a2 a0 a1] a3 a4 by auto
-  
+    unfolding ptensor_mat_def 
+    apply (rule  partial_state.tensor_mat_eval, auto simp add:  state_sig.d_def vars0_def)
+    using a0 a1 d0_def   by auto
   ultimately show ?thesis
-    using ps2.ptensor_encode2_encode1 by presburger 
+    using ptensor_encode2_encode1 by presburger 
 qed
 
 
 lemma row_i_ptensor_M_N: 
-     assumes a0:"finite v1" and a1:"finite v2" and a2:"v1 \<inter> v2 = {}" and
-       a3:"i < (2^(card v1)) * (2^(card v2))" and
-       a5:"dim_vec (V::complex vec) = (2^(card v1)) * (2^(card v2))"
-     shows "row (ptensor_mat v1 v2 M N) i =
-            Matrix.vec ((2^(card v1)) * (2^(card v2))) 
-        (\<lambda>j.  M $$ (partial_state.encode1 (list_dims (v1 \<union> v2)) (partial_state2.vars1' v1 v2) i,
-                 (partial_state.encode1 (list_dims (v1 \<union> v2)) (partial_state2.vars1' v1 v2) j)) *
-            N $$ (partial_state.encode2 (list_dims (v1 \<union> v2)) (partial_state2.vars1' v1 v2) i,
-                 (partial_state.encode2 (list_dims (v1 \<union> v2)) (partial_state2.vars1' v1 v2) j)))"
+     assumes 
+       a0:"i < d0" and
+       a1:"dim_vec (V::complex vec) = d0"
+     shows "row (ptensor_mat M N) i =
+            Matrix.vec d0 
+        (\<lambda>j.  M $$ (partial_state.encode1 dims0 vars1' i,
+                 (partial_state.encode1 dims0 vars1' j)) *
+            N $$ (partial_state.encode2 dims0 vars1' i,
+                 (partial_state.encode2 dims0 vars1' j)))"
 proof-
-  have "row (ptensor_mat v1 v2 M N) i = 
-        Matrix.vec (dim_col (ptensor_mat v1 v2 M N)) (\<lambda> j. (ptensor_mat v1 v2 M N) $$ (i,j))"
+  have "row (ptensor_mat M N) i = 
+        Matrix.vec (dim_col (ptensor_mat M N)) (\<lambda> j. (ptensor_mat M N) $$ (i,j))"
     using row_def by blast
-  also have "Matrix.vec (dim_col (ptensor_mat v1 v2 M N)) (\<lambda> j. (ptensor_mat v1 v2 M N) $$ (i,j)) =
-             Matrix.vec (dim_col (ptensor_mat v1 v2 M N)) 
-                (\<lambda>j. M $$ (partial_state.encode1 (list_dims (v1 \<union> v2)) (partial_state2.vars1' v1 v2) i,
-                 (partial_state.encode1 (list_dims (v1 \<union> v2)) (partial_state2.vars1' v1 v2) j)) *
-               N $$ (partial_state.encode2 (list_dims (v1 \<union> v2)) (partial_state2.vars1' v1 v2) i,
-                 (partial_state.encode2 (list_dims (v1 \<union> v2)) (partial_state2.vars1' v1 v2) j)))"
-     using ptensor_mat_dim_col[OF a0 a1 a2, of M N] 
-     by (auto simp add: ptensor_map_M_N[OF a0 a1 a2 a3])
+  also have "Matrix.vec (dim_col (ptensor_mat M N)) (\<lambda> j. (ptensor_mat M N) $$ (i,j)) =
+             Matrix.vec (dim_col (ptensor_mat M N)) 
+                (\<lambda>j. M $$ (partial_state.encode1 dims0 vars1' i,
+                 (partial_state.encode1 dims0 vars1' j)) *
+               N $$ (partial_state.encode2 dims0 vars1' i,
+                 (partial_state.encode2 dims0 vars1' j)))"
+    using a0 ptensor_map_M_N by fastforce
    finally show ?thesis
-     by (simp add: a0 a1 a2 ptensor_mat_dim_col)
+     by (simp add: a0 a1)
 qed
 
-definition aijv::"nat set \<Rightarrow> nat set \<Rightarrow> complex vec  \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow>  complex"
-  where "aijv d1 d2 v i j\<equiv>  v$(partial_state2.pencode12 d1 d2 (i,j))"
+definition aijv::"complex vec  \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow>  complex"
+  where "aijv v i j\<equiv>  v$(pencode12 (i,j))"
 
 lemma eq_vec_aijv:
-      assumes a0:"i<(dim_vec v)" and a1:"dim_vec (v::complex vec) = (2^(card v1)) * (2^(card v2))" and
-              a2:"finite v1" and a3:"finite v2" and a4:"v1 \<inter> v2 = {}"        
-       shows "v $ i = aijv v1 v2 v 
-                    (partial_state.encode1 (list_dims (v1 \<union> v2))
-                       (partial_state2.vars1' v1 v2) i) 
-                    (partial_state.encode2 (list_dims (v1 \<union> v2)) 
-                       (partial_state2.vars1' v1 v2) i)"
+      assumes a0:"i<d0" and a1:"dim_vec (v::complex vec) = d0"         
+       shows "v $ i = aijv v 
+                    (partial_state.encode1 dims0 vars1' i) 
+                    (partial_state.encode2 dims0 vars1' i)"
 proof-
-  interpret ps2:partial_state2 "(replicate ((2^(card v1)) * (2^(card v2))) 2)" v1 v2
-    apply standard using a2 a3 a4  by auto
-  let ?i = "(\<lambda>i. partial_state.encode1 ps2.dims0 (partial_state2.vars1' v1 v2) i)"
-  let ?j = "(\<lambda>i. partial_state.encode2 ps2.dims0 (partial_state2.vars1' v1 v2) i)"
-   have "v $ i = aijv v1 v2 v (?i i) (?j i)"
+  
+  let ?i = "(\<lambda>i. partial_state.encode1 dims0 vars1'  i)"
+  let ?j = "(\<lambda>i. partial_state.encode2 dims0 vars1'  i)"
+   have "v $ i = aijv  v (?i i) (?j i)"
     unfolding aijv_def using a0
-    by (simp add: a1 card_Un_disjoint partial_state.encode12_inv power_add ps2.dims0_def 
-          ps2.disjoint ps2.finite_v1 
-        ps2.finite_v2 ps2.pencode12_def ps2.vars0_def state_sig.d_def)  
-  moreover have "ps2.dims0 = (list_dims (v1 \<union> v2))"
-    by (simp add: list_dims_def ps2.dims0_def ps2.vars0_def)
-  ultimately show ?thesis 
-    unfolding  list_dims_def ps2.dims0_def ps2.vars0_def  by auto
+    by (simp add: d0_def partial_state.encode12_inv pencode12_def state_sig.d_def) 
+  then show ?thesis 
+    unfolding  list_dims_def dims0_def vars0_def  by auto
 qed
 
 lemma eq_vec_aijv_v2_empty:
-      assumes a0:"i<(dim_vec v)" and a1:"dim_vec (v::complex vec) = (2^(card v1)) * (2^(card v2))" and
-              a2:"finite v1" and a3:"v2 = {}" and a4:"v1 \<inter> v2 = {}"        
-       shows "v $ i = aijv v1 v2 v i 0"
+      assumes a0:"i < d0" and a1:"dim_vec (v::complex vec) = d0" and
+              a2:"vars2 = {}"        
+       shows "v $ i = aijv v i 0"
 proof-
-  interpret ps2:partial_state2 "(replicate ((2^(card v1)) * (2^(card v2))) 2)" v1 v2
-    apply standard using a2 a3 a4  by auto
-  let ?i = "(\<lambda>i. partial_state.encode1 ps2.dims0 (partial_state2.vars1' v1 v2) i)"
-  let ?j = "(\<lambda>i. partial_state.encode2 ps2.dims0 (partial_state2.vars1' v1 v2) i)"
-  have "v $ i = aijv v1 v2 v (?i i) (?j i)"
+  
+  let ?i = "(\<lambda>i. partial_state.encode1 dims0 vars1' i)"
+  let ?j = "(\<lambda>i. partial_state.encode2 dims0 vars1' i)"
+  have "v $ i = aijv v (?i i) (?j i)"
     unfolding aijv_def using a0
-    by (simp add: a1 card_Un_disjoint partial_state.encode12_inv power_add ps2.dims0_def 
-          ps2.disjoint ps2.finite_v1 
-        ps2.finite_v2 ps2.pencode12_def ps2.vars0_def state_sig.d_def)  
+    using a1 aijv_def eq_vec_aijv by presburger  
   moreover have "(?j i) = 0" 
-    unfolding partial_state.encode2_def ps2.dims0_def    
-    using a3 digit_decode_non_vars1 partial_state.dims2_def 
-          partial_state2.vars1'_def ps2.partial_state2_axioms ps2.vars0_def 
-    by auto
-  moreover have "(?i i) = i" using a3
-    unfolding  list_dims_def ps2.dims0_def ps2.vars0_def apply auto
-    by (metis Int_absorb a0 digit_decode_vars ind_in_set_id length_replicate local.a1 order_refl partial_state.dims2_def partial_state.encode2_alter partial_state2.length_dims0_minus_vars2'_is_vars1' partial_state2.vars1'_def prod_list_replicate ps2.d0_def ps2.d1_def ps2.d2_def ps2.dims0_def ps2.dims1_def ps2.dims2_def ps2.dims_product ps2.finite_v1 ps2.nths_vars1' ps2.nths_vars1'_comp ps2.partial_state2_axioms ps2.ptensor_encode1_encode2 ps2.vars0_def sup_bot.right_neutral)   
-  ultimately show ?thesis using a3
+    unfolding partial_state.encode2_def dims0_def
+    using a2 digit_decode_non_vars1 partial_state.dims2_def vars0_def vars1'_def by auto    
+  moreover have "(?i i) = i" using a2
+    unfolding  list_dims_def dims0_def vars0_def apply auto
+    by (metis Int_absorb a0 digit_decode_vars ind_in_set_id length_replicate local.a1 order_refl 
+            partial_state.dims2_def partial_state.encode2_alter length_dims0_minus_vars2'_is_vars1' vars1'_def 
+          prod_list_replicate d0_def d1_def d2_def dims0_def dims1_def dims_product 
+         finite_v1 nths_vars1' nths_vars1'_comp  ptensor_encode1_encode2 vars0_def sup_bot.right_neutral)   
+  ultimately show ?thesis using a2
      by auto    
 qed
 
-definition vector_aij::"nat set \<Rightarrow> nat set \<Rightarrow> complex vec  \<Rightarrow> nat \<Rightarrow> complex vec"
-  where "vector_aij d1 d2 v i \<equiv> Matrix.vec (2^card d2) (\<lambda>j. aijv d1 d2 v i j)"
+definition vector_aij::"complex vec  \<Rightarrow> nat \<Rightarrow> complex vec"
+  where "vector_aij  v i \<equiv> Matrix.vec d2 (\<lambda>j. aijv v i j)"
 
-definition list_aij::"nat set \<Rightarrow> nat set \<Rightarrow> complex vec  \<Rightarrow> nat \<Rightarrow> complex list"
-  where "list_aij d1 d2 v i \<equiv> map (\<lambda>j. aijv d1 d2 v i j) [0..<2^card d2]"
+definition list_aij::"complex vec  \<Rightarrow> nat \<Rightarrow> complex list"
+  where "list_aij v i \<equiv> map (\<lambda>j. aijv  v i j) [0..< d2]"
+
+end
+
 
 definition aij ::"'s state \<Rightarrow> 's expr_q  \<Rightarrow> ('s, complex list) expr \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow>complex" 
   where "aij s q v i j \<equiv> let st = get_stack s ; qv = fst (get_qstate s); 
                              vars = Q_domain qv; d1 = q st; d2 = vars - d1;
                              vec = vec_of_list (v st) in 
-                             aijv d1 d2 vec i j"
+                             partial_state2.aijv d1 d2 vec i j"
 
 
 definition matrix_sep :: "nat set \<Rightarrow>  QStateM \<Rightarrow> complex mat \<Rightarrow>  complex vec"
@@ -227,9 +219,9 @@ proof-
      apply auto      
      apply (subgoal_tac "\<Union> (QStateM_map q ` hi) \<subseteq> \<Union> (range (QStateM_map q))") 
       apply auto
-    using finite_subset using a0 a1 apply blast  
-    using q_wf eq_QStateM_vars using a0 a1
-    by (metis QState_rel3' finite_Diff)
+    apply (metis QStateM_rel1 Q_domain_def UNIV_I UN_Un UnCI eq_QStateM_vars snd_conv subsetI subset_antisym)
+    apply (metis UNIV_I UN_Un UnCI rev_finite_subset subsetI subset_antisym)
+    by (metis QStateM_rel1 QStateM_vars.rep_eq finite_Diff finite_Q_domain qstate_def)
   have Q_wf:"QState_wf (QStateM_vars q, list_of_vec (?m *\<^sub>v ?v))" unfolding QState_wf_def using a3
     unfolding matrix_sep_def Let_def matrix_sep_not_zero_def 
     apply (auto simp add: matrix_sep_def a0 a1 a2)
@@ -280,7 +272,8 @@ proof-
      apply auto      
      apply (subgoal_tac "\<Union> (QStateM_map q ` hi) \<subseteq> \<Union> (range (QStateM_map q))") 
       apply auto
-    using finite_subset apply blast  
+      apply (metis QStateM_rel1 Q_domain_def UNIV_I UN_Un UnCI eq_QStateM_vars snd_conv subsetI subset_antisym)
+    using \<open>\<Union> (QStateM_map q ` hi) \<subseteq> Q_domain (QStateM_map q)\<close> finite_Q_domain finite_subset apply blast
     using q_wf eq_QStateM_vars
     by (metis QState_rel3' finite_Diff)
   have Q_wf:"QState_wf (QStateM_vars q, list_of_vec (?m *\<^sub>v ?v))" unfolding QState_wf_def using a4
@@ -304,6 +297,8 @@ proof-
     by (metis QState.rep_eq QState_vars.rep_eq domain_map_not_e fst_conv q snd_conv)    
 qed
 
+
+
 lemma matrix_sep_dest:
   assumes a0:"sep_vars = Q_domain_var hi (QStateM_map q)" and a1:"var_d =  QStateM_vars q" and 
      a2:"var_r = var_d - sep_vars" and a3:"matrix_sep_not_zero hi q  M"
@@ -324,148 +319,423 @@ proof-
 qed 
    
 
+context partial_state2
+begin
 
 lemma mat_extend_M_1k_zero: 
-     assumes a0:"finite v1" and a1:"finite v2" and a2:"v1 \<inter> v2 = {}" and
-       a3:"i < (2^(card v1)) * (2^(card v2))" and
-       a4:"j < (2^(card v1)) * (2^(card v2))" and 
-       a7:"partial_state.encode2 (list_dims (v1 \<union> v2)) (partial_state2.vars1' v1 v2) i \<noteq>
-           partial_state.encode2 (list_dims (v1 \<union> v2)) (partial_state2.vars1' v1 v2) j"
-       shows "ptensor_mat v1 v2 M (1\<^sub>m (2^(card v2))) $$ (i,j) = 0"
+  assumes
+       a3:"i < d0" and
+       a4:"j < d0" and 
+       a7:"partial_state.encode2 dims0 vars1' i \<noteq>
+           partial_state.encode2 dims0 vars1' j"
+       shows "ptensor_mat M (1\<^sub>m d2) $$ (i,j) = 0"
 proof-
-  let ?m1 = "M" and ?m2 = "1\<^sub>m (2^(card v2))" and ?d = "list_dims (v1 \<union> v2)"
-  let ?v = "partial_state2.vars1' v1 v2"   
+  let ?m1 = "M" and ?m2 = "1\<^sub>m d2" and ?d = "dims0"
+  let ?v = "vars1'"   
 
-  interpret ps2:partial_state2 "list_dims (v1 \<union> v2)" v1 v2
-    apply standard using a0 a1 a2 unfolding list_dims_def by auto
+ let ?enc1 = "partial_state.encode1 dims0 ?v" and
+     ?enc2 = "partial_state.encode2 dims0 ?v"
 
- let ?enc1 = "partial_state.encode1 ps2.dims0 ?v" and
-     ?enc2 = "partial_state.encode2 ps2.dims0 ?v"
-
-  have "ps2.dims0 = ?d" unfolding ps2.dims0_def list_dims_def ps2.vars0_def by auto
-  moreover have "ps2.ptensor_mat ?m1 ?m2 $$ (i,j) = 
+  have "dims0 = ?d" unfolding dims0_def list_dims_def vars0_def by auto
+  moreover have "ptensor_mat ?m1 ?m2 $$ (i,j) = 
         ?m1 $$ (?enc1 i, ?enc1 j) * ?m2 $$ (?enc2 i, ?enc2  j)"
-    unfolding ps2.ptensor_mat_def 
-    apply (rule  partial_state.tensor_mat_eval, auto simp add: ps2.dims0_def state_sig.d_def ps2.vars0_def) 
-    using i_less_union[OF _ a2 a0 a1] a3 a4 by auto
+    unfolding ptensor_mat_def 
+    apply (rule  partial_state.tensor_mat_eval, auto simp add: dims0_def state_sig.d_def vars0_def)
+    using a3 d0_def dims0_def vars0_def apply auto[1]
+    using a4 d0_def dims0_def vars0_def by force 
+    
   moreover have " ?m2 $$ (?enc2 i, ?enc2  j) = 0"
-    by (metis a3 a4 a7 calculation(1) index_one_mat(1) partial_state.d2_def partial_state.dims2_def 
-              partial_state.encode2_lt prod_list_replicate ps2.d0_def 
-                ps2.d1_def ps2.d2_def ps2.d_def ps2.dims1_def ps2.dims2_def 
-              ps2.dims_product ps2.nths_vars2')
+    by (metis a3 a4 a7 d0_def d2_def index_one_mat(1) nths_vars2' partial_state.d2_def 
+      partial_state.dims2_def partial_state.encode2_lt state_sig.d_def)
   ultimately show ?thesis
     using mult_not_zero by auto   
 qed
 
 
 lemma mat_extend_M_1k_M: 
-     assumes a0:"finite v1" and a1:"finite v2" and a2:"v1 \<inter> v2 = {}" and
-       a3:"i < (2^(card v1)) * (2^(card v2))" and
-       a4:"j < (2^(card v1)) * (2^(card v2))" and 
-       a7:"partial_state.encode2 (list_dims (v1 \<union> v2)) (partial_state2.vars1' v1 v2) i =
-           partial_state.encode2 (list_dims (v1 \<union> v2)) (partial_state2.vars1' v1 v2) j"
-     shows "ptensor_mat v1 v2 M (1\<^sub>m (2^(card v2))) $$ (i,j) = 
-            M $$ (partial_state.encode1 (list_dims (v1 \<union> v2)) (partial_state2.vars1' v1 v2) i,
-                 (partial_state.encode1 (list_dims (v1 \<union> v2)) (partial_state2.vars1' v1 v2) j))"
+     assumes 
+       a0:"i < d0" and
+       a1:"j < d0" and 
+       a2:"partial_state.encode2 dims0 vars1' i =
+           partial_state.encode2 dims0 vars1' j"
+     shows "ptensor_mat M (1\<^sub>m d2) $$ (i,j) = 
+            M $$ (partial_state.encode1 dims0 vars1' i,
+                 (partial_state.encode1 dims0 vars1' j))"
 proof-
-  let ?m1 = "M" and ?m2 = "1\<^sub>m (2^(card v2))" and ?d = "list_dims (v1 \<union> v2)"
-  let ?v = "partial_state2.vars1' v1 v2"   
+  let ?m1 = "M" and ?m2 = "1\<^sub>m d2" and ?d = "dims0"
+  let ?v = "vars1'"   
 
-  interpret ps2:partial_state2 "list_dims (v1 \<union> v2)" v1 v2
-    apply standard using a0 a1 a2 unfolding list_dims_def by auto
+ let ?enc1 = "partial_state.encode1 dims0 ?v" and
+     ?enc2 = "partial_state.encode2 dims0 ?v"
 
- let ?enc1 = "partial_state.encode1 ps2.dims0 ?v" and
-     ?enc2 = "partial_state.encode2 ps2.dims0 ?v"
-
-  have "ps2.dims0 = ?d" unfolding ps2.dims0_def list_dims_def ps2.vars0_def by auto
-  moreover have "ps2.ptensor_mat ?m1 ?m2 $$ (i,j) = 
+  have "dims0 = ?d" unfolding dims0_def list_dims_def vars0_def by auto
+  moreover have "ptensor_mat ?m1 ?m2 $$ (i,j) = 
         ?m1 $$ (?enc1 i, ?enc1 j) * ?m2 $$ (?enc2 i, ?enc2  j)"
-    unfolding ps2.ptensor_mat_def
-    by (simp add: a0 a1 a2 a3 a4 calculation i_less_union list_dims_def 
-         partial_state.tensor_mat_eval state_sig.d_def) 
+    unfolding ptensor_mat_def
+    by (metis a0 a1 d0_def partial_state.tensor_mat_eval state_sig.d_def)
   moreover have " ?m2 $$ (?enc2 i, ?enc2  j) = 1"
-    by (metis  a4 a7 calculation(1) index_one_mat(1) partial_state.d2_def partial_state.dims2_def 
-              partial_state.encode2_lt prod_list_replicate ps2.d0_def 
-                ps2.d1_def ps2.d2_def ps2.d_def ps2.dims1_def ps2.dims2_def 
-              ps2.dims_product ps2.nths_vars2')
+    by (metis a1 a2 d0_def d2_def index_one_mat(1) nths_vars2' partial_state.d2_def 
+             partial_state.dims2_def partial_state.encode2_lt state_sig.d_def)
   ultimately show ?thesis using mult.comm_neutral by metis    
 qed
 
 lemma row_mat_extend_M_v: 
-     assumes a0:"finite v1" and a1:"finite v2" and a2:"v1 \<inter> v2 = {}" and
-       a3:"i < (2^(card v1)) * (2^(card v2))" and
-       a5:"dim_vec (V::complex vec) = (2^(card v1)) * (2^(card v2))"
-     shows "row (ptensor_mat v1 v2 M (1\<^sub>m (2^(card v2)))) i =
-            Matrix.vec ((2^(card v1)) * (2^(card v2))) 
-        (\<lambda>j. if (partial_state.encode2 (list_dims (v1 \<union> v2)) (partial_state2.vars1' v1 v2) j) = 
-                 (partial_state.encode2 (list_dims (v1 \<union> v2)) (partial_state2.vars1' v1 v2) i)  then 
-                 M $$ (partial_state.encode1 (list_dims (v1 \<union> v2)) (partial_state2.vars1' v1 v2) i,
-                      (partial_state.encode1 (list_dims (v1 \<union> v2)) (partial_state2.vars1' v1 v2) j))
-             else 0)"
-proof-
-  have "row (ptensor_mat v1 v2 M (1\<^sub>m (2^(card v2)))) i = 
-       Matrix.vec ((2^(card v1)) * (2^(card v2))) 
-        (\<lambda>j.  M $$ (partial_state.encode1 (list_dims (v1 \<union> v2)) (partial_state2.vars1' v1 v2) i,
-                 (partial_state.encode1 (list_dims (v1 \<union> v2)) (partial_state2.vars1' v1 v2) j)) *
-            ((1\<^sub>m (2^(card v2))) $$ (partial_state.encode2 (list_dims (v1 \<union> v2)) (partial_state2.vars1' v1 v2) i,
-                 (partial_state.encode2 (list_dims (v1 \<union> v2)) (partial_state2.vars1' v1 v2) j))))"
-    using a0 a1 a2 a3 a5 row_i_ptensor_M_N by blast
-  thus ?thesis
-    by (smt (verit, best) a0 a1 a2 a3 dim_vec eq_vecI index_vec mat_extend_M_1k_M mat_extend_M_1k_zero row_def)
-qed
-
-lemma mat_extend_M_M_v_scalar_product_i': 
-     assumes a0:"finite v1" and a1:"finite v2" and a2:"v1 \<inter> v2 = {}" and
-       a3:"i < (2^(card v1)) * (2^(card v2))" and
-       a5:"dim_vec (V::complex vec) = (2^(card v1)) * (2^(card v2))"
-     shows "(ptensor_mat v1 v2 M (1\<^sub>m (2^(card v2))) *\<^sub>v V) $ i = 
-             row (ptensor_mat v1 v2 M (1\<^sub>m (2^(card v2)))) i \<bullet> V"
-  by (meson a0 a1 a2 a3 a5 ptensor_mat_M_N_row)
-
-context partial_state2
-begin
-
-definition trim_vector::"complex vec \<Rightarrow> nat \<Rightarrow> complex vec"
-  where "trim_vector v i \<equiv> 
-    Matrix.vec ((2::nat)^(card vars1)) 
-      (\<lambda>j. if (partial_state.encode2 dims0 vars1'  j) = i then  v $ j else 0)"
-
-lemma mat_extend_M_M_v_scalar_product_i:
      assumes 
-       a0:"i < (2^(card vars1)) * (2^(card vars2))" and
-       a1:"dim_vec (V::complex vec) = (2^(card vars1)) * (2^(card vars2))"
-     shows "(ptensor_mat M (1\<^sub>m (2^(card vars2))) *\<^sub>v V) $ i = 
-             row M (partial_state.encode1 dims0 vars1'  i) \<bullet> trim_vector V (partial_state.encode1 dims0 vars1'  i)"
-proof-
-  have "(ptensor_mat M (1\<^sub>m (2^(card vars2))) *\<^sub>v V) $ i = row (ptensor_mat M (1\<^sub>m (2^(card vars2)))) i \<bullet> V"
-    using mat_extend_M_M_v_scalar_product_i'
-    using a0 a1 disjoint finite_v1 finite_v2 by blast
-  also have " row (ptensor_mat M (1\<^sub>m (2^(card vars2)))) i = 
-        Matrix.vec ((2^(card vars1)) * (2^(card vars2))) 
+       a0:"i < d0" and
+       a1:"dim_vec (V::complex vec) = d0"
+     shows "row (ptensor_mat M (1\<^sub>m d2)) i =
+            Matrix.vec d0 
         (\<lambda>j. if (partial_state.encode2 dims0 vars1' j) = 
                  (partial_state.encode2 dims0 vars1' i)  then 
                  M $$ (partial_state.encode1 dims0 vars1' i,
                       (partial_state.encode1 dims0 vars1' j))
-             else 0)" using row_mat_extend_M_v[OF finite_v1 finite_v2 disjoint a0 a1, of M]
-    by (metis dims0_def list_dims_def vars0_def)
-  also have "(\<dots> \<bullet> V) = 
-            row M (partial_state.encode1 dims0 vars1' i) \<bullet> trim_vector V (partial_state.encode2 dims0 vars1' i) "
-    unfolding trim_vector_def scalar_prod_def apply auto
-    sorry
-  finally show ?thesis
-    by blast
+             else 0)"
+proof-
+  have "row (ptensor_mat M (1\<^sub>m d2)) i = 
+       Matrix.vec d0
+        (\<lambda>j.  M $$ (partial_state.encode1 dims0 vars1' i,
+                   (partial_state.encode1 dims0 vars1' j)) *
+            ((1\<^sub>m d2) $$ (partial_state.encode2 dims0 vars1' i,
+                        (partial_state.encode2 dims0 vars1' j))))"
+    using a0 a1  row_i_ptensor_M_N by blast
+  thus ?thesis
+    by (smt (verit, best) a0 a1 dim_vec eq_vecI index_vec mat_extend_M_1k_M mat_extend_M_1k_zero row_def)
+qed
+
+
+
+lemma mat_extend_M_M_v_scalar_product_i': 
+  assumes
+       a0:"i < d0" and
+       a1:"dim_vec (V::complex vec) = d0"
+     shows "(ptensor_mat M (1\<^sub>m d2) *\<^sub>v V) $ i = row (ptensor_mat  M (1\<^sub>m d2)) i \<bullet> V"
+  by (meson a0 a1  ptensor_mat_M_N_row)
+
+
+(* 
+extend_vec takes a vector v of size 2^card vars1  and a j < 2^card vars2
+and returns a vector of size d0 (2^card vars1+card vars2) equivalent to 
+tensor_product v v', where v' is defined as the vector such that 
+for all j'< 2^cards vars2  v'$j' = 1 if j' = j and v'$j' = 0 if j' \<noteq> j
+
+*)
+definition extend_vec::"complex vec \<Rightarrow> nat \<Rightarrow> complex vec"
+  where "extend_vec v j \<equiv> 
+    Matrix.vec d0 
+      (\<lambda>i. if (partial_state.encode2 dims0 vars1' i) = j then 
+                v$(partial_state.encode1 dims0 vars1' i)
+           else 0)"
+
+lemma d0_card_v1_v2:"d0 = ((2^(card vars1)) * (2^(card vars2)))"
+  by (simp add: d1_def d2_def dims1_def dims2_def dims_product)
+
+lemma extend_vec_equiv:
+    assumes a0:"dim_vec v = d1" and
+            a1:"j<d2" and a2:"v2 = Matrix.vec d2 (\<lambda>i. if i=j then 1 else 0)"
+          shows "extend_vec v j = ptensor_vec v v2"
+proof-
+  have p0:"ptensor_vec v v2 = 
+        Matrix.vec d0 
+                  (\<lambda>i. v$(partial_state.encode1 dims0 vars1' i) * 
+                       v2$(partial_state.encode2 dims0 vars1' i))"
+    using a0 a2 unfolding partial_state.tensor_vec_def ptensor_vec_def 
+    apply auto
+    using d0_def state_sig.d_def by presburger
+  moreover {fix i
+    assume "i < dim_vec (local.ptensor_vec v v2)"
+    then have "Matrix.vec d0
+          (\<lambda>i. if partial_state.encode2 dims0 vars1' i = j
+               then v $ partial_state.encode1 dims0 vars1' i else 0) $
+         i =
+         local.ptensor_vec v v2 $ i" 
+      using p0 a0 a1 a2
+      apply auto
+      by (smt (verit, best) d0_def d2_def index_vec nths_vars2' partial_state.d2_def 
+             partial_state.dims2_def partial_state.encode2_lt state_sig.d_def)
+  }
+  ultimately show ?thesis unfolding  extend_vec_def   by auto   
+qed
+
+
+lemma row_tensor_map_eq_extend_row:
+     assumes 
+       a0:"i < d0" and
+       a1:"dim_col M = d1"
+     shows "row (ptensor_mat M (1\<^sub>m d2)) i = 
+            extend_vec (row M (partial_state.encode1 dims0 vars1'  i)) (partial_state.encode2 dims0 vars1'  i)"
+proof-
+  have "row (ptensor_mat M (1\<^sub>m d2)) i =
+        Matrix.vec d0
+        (\<lambda>j. if (partial_state.encode2 dims0 vars1' j) = 
+                 (partial_state.encode2 dims0 vars1' i)  then 
+                 M $$ (partial_state.encode1 dims0 vars1' i,
+                      (partial_state.encode1 dims0 vars1' j))
+             else 0)"
+    using row_mat_extend_M_v
+    using a0  disjoint finite_v1 finite_v2 
+    unfolding dims0_def list_dims_def vars0_def
+    using d0_card_v1_v2
+    using dim_vec by blast
+  also have "Matrix.vec d0
+   (\<lambda>j. if partial_state.encode2 dims0 vars1' j = partial_state.encode2 dims0 vars1' i
+        then M $$
+             (partial_state.encode1 dims0 vars1' i, partial_state.encode1 dims0 vars1' j)
+        else 0) = 
+       extend_vec (row M (partial_state.encode1 dims0 vars1' i))
+                   (partial_state.encode2 dims0 vars1' i)" 
+    unfolding extend_vec_def row_def 
+    apply rule
+     apply (metis (no_types, lifting) a1 d1_def dim_vec index_vec 
+          local.ptensor_mat_dim_col partial_state.d2_def 
+          partial_state.dims2_def partial_state.encode2_lt 
+          partial_state.tensor_mat_dim_col partial_state2.nths_vars1'_comp 
+          partial_state2_axioms ptensor_encode1_encode2 ptensor_mat_def)
+    by auto 
+  finally show ?thesis by auto
+qed
+
+definition trim_vec::"complex vec \<Rightarrow> nat \<Rightarrow> complex vec"
+  where "trim_vec v j \<equiv> 
+          Matrix.vec d1 (\<lambda>i. v$partial_state.encode12 dims0 vars1' (i,j))"
+
+lemma sum_v_as_sum_v1_v2:
+  assumes a0:"dim_vec v = d0" and a1:"dim_vec V = d0"
+  shows "(\<Sum>i = 0..< d0. v $ i * V $ i) = 
+       (\<Sum>i = 0 ..< d1. \<Sum>j = 0 ..<d2. (v $ (pencode12 (i,j))) * (V$ (pencode12 (i,j))))"
+proof-
+  let ?i = "(\<lambda>i. partial_state.encode1 dims0 vars1' i)"
+  let ?j = "(\<lambda>i. partial_state.encode2 dims0 vars1' i)"
+  have "(\<Sum>i = 0..< d0. v $ i *  V $ i) = (\<Sum>i = 0..< d0. v $ (pencode12 (?i i, ?j i)) * V $ (pencode12 (?i i, ?j i)))"
+    using partial_state.encode12_inv dims_product 
+         partial_state2_axioms  partial_state2.pencode12_def 
+    unfolding  d0_def d1_def d2_def dims1_def dims2_def  state_sig.d_def by auto
+  also have "\<dots> = (\<Sum>i = 0 ..<d1. \<Sum>j = 0 ..<d2. v $ pencode12 (i,j) *  V $ pencode12 (i,j))"    
+  proof-
+    have "dim_vec v = state_sig.d dims0" and
+         "partial_state.d2 dims0 vars1' = d2" and
+         "partial_state.d1 dims0 vars1' = d1"
+       unfolding state_sig.d_def
+      using d0_def d1_def dims0_def dims1_def 
+            dims2_def dims_product a0
+      using partial_state.d2_def partial_state.dims2_def d2_def nths_vars2'
+      using partial_state.d1_def partial_state.dims1_def nths_vars1' by auto
+    thus ?thesis  
+      using partial_state.sum_encode[THEN sym, where dims1 = dims0 and vars1 = vars1'] a0
+      by fastforce
+  qed
+  finally show ?thesis by auto
+qed
+
+lemma split_sum:
+  assumes a0:"i<(m::nat)"
+  shows "(\<Sum>j = 0..<m. f (j::nat)) = (\<Sum>j = 0..<i. f j) + f i + (\<Sum>j = i+1..<m. f j)"
+proof-
+  show ?thesis using sum_Un[of "{0..i}" " {i + 1..<m}" "\<lambda>j. j"] a0
+    by (metis Suc_leI add.commute assms plus_1_eq_Suc sum.atLeast0_lessThan_Suc sum.atLeastLessThan_concat zero_le)
+qed
+
+lemma row_tensor_mat_M_1_V_only_M: assumes a0:"i < d0" and 
+             a1:"dim_col M = d1"and a2:"dim_row M = d1"
+  shows "(\<Sum>ia = 0..<d1.
+        \<Sum>j = 0..<d2.
+           Matrix.vec d0
+            (\<lambda>j. if partial_state.encode2 dims0 vars1' j = partial_state.encode2 dims0 vars1' i
+                 then M $$ (partial_state.encode1 dims0 vars1' i, partial_state.encode1 dims0 vars1' j) else 0) $
+           pencode12 (ia, j) *  V $ (pencode12(ia,j))) =
+    (\<Sum>ia = 0..<d1. M $$ (partial_state.encode1 dims0 vars1' i, ia) *  
+                    (V::('a::field) vec) $ (pencode12(ia,partial_state.encode2 dims0 vars1' i)))"
+proof-
+  let ?MV = "Matrix.vec d0
+            (\<lambda>j. if partial_state.encode2 dims0 vars1' j = partial_state.encode2 dims0 vars1' i
+                 then M $$ (partial_state.encode1 dims0 vars1' i, partial_state.encode1 dims0 vars1' j) else 0)" and
+      ?i = "partial_state.encode2 dims0 vars1' i"
+
   
+  have a0':"partial_state.encode2 dims0 vars1' i < d2"
+    using a0
+    by (metis d0_def d2_def nths_vars2' partial_state.d2_def 
+        partial_state.dims2_def partial_state.encode2_lt state_sig.d_def)
+  { fix ia::nat
+    let ?f = "\<lambda>j. ?MV $ pencode12(ia,j)* V$(pencode12(ia,j))"
+    have "(\<Sum>j = 0..<d2. (?MV $ pencode12 (ia, j)) *  (V $ (pencode12(ia,j)))) = 
+              (\<Sum>j = 0..<?i. (?MV $ pencode12 (ia, j)) *  (V $ (pencode12(ia,j)))) + 
+                            (?MV $ pencode12 (ia, ?i)) *  (V $ (pencode12(ia,?i))) +
+              (\<Sum>j = ?i+1..<d2. (?MV $ pencode12 (ia, j)) *  (V $ (pencode12(ia,j))))"
+      using split_sum[of ?i d2 ?f, OF a0'] by auto 
+  } 
+  moreover { fix ia::nat
+    assume a0:"ia <d1"
+    have p0:"\<forall>j. 0 \<le> j \<and> j< ?i \<longrightarrow> partial_state.encode2 dims0 vars1' (pencode12(ia,j))\<noteq> ?i" 
+      unfolding pencode12_def using a0' a0 partial_state.encode12_inv2 
+      by (simp add: d1_def d2_def nths_vars1' nths_vars2' partial_state.d1_def 
+           partial_state.d2_def partial_state.dims1_def partial_state.dims2_def)
+    then have p0:"\<forall>j. 0 \<le> j \<and> j< ?i \<longrightarrow> ?MV $ pencode12 (ia, j) * V $ pencode12 (ia, j) = 0"
+    proof-
+      { fix j
+        assume a00:"0\<le>j \<and> j < ?i"
+        then have "partial_state.encode2 dims0 vars1' (pencode12 (ia, j)) \<noteq> 
+                   partial_state.encode2 dims0 vars1' i" using p0 by auto
+        moreover have "pencode12 (ia, j) < d0" using a0 a0' a00 apply auto
+          using d0_def d1_def d2_def nths_vars1' partial_state.d1_def partial_state.d2_def 
+                partial_state.dims1_def partial_state.dims2_def partial_state.encode12_lt 
+                partial_state2.nths_vars2' partial_state2_axioms pencode12_def state_sig.d_def by force
+        then have "Matrix.vec d0
+     (\<lambda>j. if partial_state.encode2 dims0 vars1' j = partial_state.encode2 dims0 vars1' i
+          then M $$ (partial_state.encode1 dims0 vars1' i, partial_state.encode1 dims0 vars1' j) else 0) $
+    pencode12 (ia, j) = (if partial_state.encode2 dims0 vars1' (pencode12 (ia, j)) = partial_state.encode2 dims0 vars1' i
+          then M $$ (partial_state.encode1 dims0 vars1' i, partial_state.encode1 dims0 vars1' (pencode12 (ia, j))) else 0)"
+          by auto
+        ultimately have "?MV $ pencode12 (ia, j) = 0" by auto 
+      }
+      then show ?thesis by auto
+    qed
+    
+    have p1:"\<forall>j. ?i+1 \<le> j \<and> j< d2 \<longrightarrow> partial_state.encode2 dims0 vars1' (pencode12(ia,j))\<noteq> ?i"
+      unfolding pencode12_def using a0' a0 partial_state.encode12_inv2 
+      by (simp add: d1_def d2_def nths_vars1' nths_vars2' partial_state.d1_def 
+           partial_state.d2_def partial_state.dims1_def partial_state.dims2_def)
+    then have p1:"\<forall>j. ?i+1 \<le> j \<and> j< d2 \<longrightarrow> ?MV $ pencode12 (ia, j) * V $ pencode12 (ia, j) = 0"
+    proof-
+      { fix j
+        assume a00:"?i+1 \<le> j \<and> j< d2"
+        then have "partial_state.encode2 dims0 vars1' (pencode12 (ia, j)) \<noteq> 
+                   partial_state.encode2 dims0 vars1' i" using p1 by auto
+        moreover have "pencode12 (ia, j) < d0" using a0 a0' a00 apply auto
+          using d0_def d1_def d2_def nths_vars1' partial_state.d1_def partial_state.d2_def 
+                partial_state.dims1_def partial_state.dims2_def partial_state.encode12_lt 
+                partial_state2.nths_vars2' partial_state2_axioms pencode12_def state_sig.d_def by force
+        then have "Matrix.vec d0
+     (\<lambda>j. if partial_state.encode2 dims0 vars1' j = partial_state.encode2 dims0 vars1' i
+          then M $$ (partial_state.encode1 dims0 vars1' i, partial_state.encode1 dims0 vars1' j) else 0) $
+    pencode12 (ia, j) = (if partial_state.encode2 dims0 vars1' (pencode12 (ia, j)) = partial_state.encode2 dims0 vars1' i
+          then M $$ (partial_state.encode1 dims0 vars1' i, partial_state.encode1 dims0 vars1' (pencode12 (ia, j))) else 0)"
+          by auto
+        ultimately have "?MV $ pencode12 (ia, j) = 0" by auto 
+        } thus ?thesis by auto
+    qed
+    
+    have "(\<Sum>j = 0..<?i. (?MV $ pencode12 (ia, j)) *  (V $ (pencode12(ia,j)))) = 0" and
+         "(\<Sum>j = ?i+1..<d2. (?MV $ pencode12 (ia, j)) *  (V $ (pencode12(ia,j)))) = 0" and
+         "(?MV $ pencode12 (ia, ?i)) *  (V $ (pencode12(ia,?i))) = 
+          (M $$ (partial_state.encode1 dims0 vars1' i, ia) *  
+                    V $ (pencode12(ia,partial_state.encode2 dims0 vars1' i)))"
+        apply (simp add: p0)
+      apply (simp add: p1)
+      using a0 assms(1) d0_def d1_def nths_vars1' partial_state.d1_def partial_state.dims1_def 
+            partial_state.encode12_inv1 partial_state.encode12_inv2 partial_state.encode12_lt 
+            partial_state.encode2_lt pencode12_def state_sig.d_def by auto
+      
+     
+  } 
+  ultimately show ?thesis
+    by (metis (no_types, lifting) add.right_neutral add_0 atLeastLessThan_iff sum.cong)
+ 
+qed
+  
+lemma mat_extend_M_M_v_scalar_product_i: 
+     assumes 
+       a0:"i < d0" and
+       a1:"dim_vec (V::complex vec) = d0" and a2:"dim_col M = d1" and a3:"dim_row M = d1"
+     shows "(ptensor_mat M (1\<^sub>m d2) *\<^sub>v V) $ i = 
+             (row M (partial_state.encode1 dims0 vars1'  i)) \<bullet> (trim_vec V (partial_state.encode2 dims0 vars1'  i))"
+proof-
+  have "(ptensor_mat M (1\<^sub>m d2) *\<^sub>v V) $ i = 
+         row (ptensor_mat M (1\<^sub>m d2)) i \<bullet> V"
+    using mat_extend_M_M_v_scalar_product_i'
+    by (metis a0 a1 ptensor_mat_M_N_row)
+  also have "row (ptensor_mat M (1\<^sub>m d2)) i =
+            Matrix.vec d0 
+        (\<lambda>j. if (partial_state.encode2 dims0 vars1' j) = 
+                 (partial_state.encode2 dims0 vars1' i)  then 
+                 M $$ (partial_state.encode1 dims0 vars1' i,
+                      (partial_state.encode1 dims0 vars1' j))
+             else 0)"
+    using row_mat_extend_M_v[OF a0 a1] by auto
+  also have "Matrix.vec d0 
+        (\<lambda>j. if (partial_state.encode2 dims0 vars1' j) = 
+                 (partial_state.encode2 dims0 vars1' i)  then 
+                 M $$ (partial_state.encode1 dims0 vars1' i,
+                      (partial_state.encode1 dims0 vars1' j))
+             else 0) \<bullet> V = (\<Sum> ia = 0 ..< dim_vec V. Matrix.vec d0 
+        (\<lambda>j. if (partial_state.encode2 dims0 vars1' j) = 
+                 (partial_state.encode2 dims0 vars1' i)  then 
+                 M $$ (partial_state.encode1 dims0 vars1' i,
+                      (partial_state.encode1 dims0 vars1' j))
+             else 0) $ ia * V $ ia)" unfolding scalar_prod_def by auto
+  also have "\<dots> = (\<Sum>ia = 0 ..< d1. \<Sum>j = 0 ..<d2. 
+                  Matrix.vec d0 
+                  (\<lambda>j. if (partial_state.encode2 dims0 vars1' j) = 
+                       (partial_state.encode2 dims0 vars1' i)  then 
+                       M $$ (partial_state.encode1 dims0 vars1' i,
+                             (partial_state.encode1 dims0 vars1' j))
+                   else 0) $(pencode12(ia,j)) *  V $ (pencode12(ia,j)))"
+    using sum_v_as_sum_v1_v2[OF _ a1, of "Matrix.vec d0 
+                  (\<lambda>j. if (partial_state.encode2 dims0 vars1' j) = 
+                       (partial_state.encode2 dims0 vars1' i)  then 
+                       M $$ (partial_state.encode1 dims0 vars1' i,
+                             (partial_state.encode1 dims0 vars1' j))
+                   else 0)"] a1 by auto
+  finally show ?thesis using row_tensor_mat_M_1_V_only_M[OF a0 a2 a3] unfolding trim_vec_def row_def
+    by (auto simp add: a2 scalar_prod_def pencode12_def)
 qed
 
 end
+(* lemma 
+  assumes dims: "v \<in> carrier_vec n" "M \<in> carrier_mat n n"
+  shows "((M *\<^sub>v v) \<bullet>c (M *\<^sub>v v)) = (adjoint M *\<^sub>v (M *\<^sub>v v)) \<bullet>c v"
+  using adjoint_def_alter
+  by (metis adjoint_adjoint adjoint_dim dims(1) dims(2) mult_mat_vec_carrier)
 
 
+lemma 
+  assumes dims: "v \<in> carrier_vec n" "M \<in> carrier_mat n n"
+  shows "(adjoint M *\<^sub>v (M *\<^sub>v v)) \<bullet>c v = (v \<bullet>c (adjoint M *\<^sub>v (M *\<^sub>v v)))"
+  by (metis (no_types, lifting) adjoint_adjoint adjoint_def_alter adjoint_dim_col 
+     carrier_matD(2) carrier_matI dims(1) dims(2) mult_mat_vec_carrier) 
+ 
+   
+lemma assumes dims: "v \<in> carrier_vec n" "M \<in> carrier_mat n n"
+  shows " ((M *\<^sub>v v) \<bullet>c (M *\<^sub>v v)) = (v \<bullet>c (adjoint M *\<^sub>v (M *\<^sub>v v)))"
+  using adjoint_def_alter
+  by (metis  dims(1) dims(2) mult_mat_vec_carrier)
 
-lemma inn_mat_extend_M_1k_M_v: 
-     assumes a0:"finite v1" and a1:"finite v2" and a2:"v1 \<inter> v2 = {}" and
-       a3:"i < (2^(card v1)) * (2^(card v2))" and
-       a5:"dim_vec (V::complex vec) = (2^(card v1)) * (2^(card v2))"
-     shows "row (ptensor_mat v1 v2 M (1\<^sub>m (2^(card v2)))) i \<bullet> V"
+lemma assumes dims: "v \<in> carrier_vec n" "M \<in> carrier_mat n n" "hermitian M"
+  shows "(v \<bullet>c (adjoint M *\<^sub>v (M *\<^sub>v v))) = (v \<bullet>c (( v))) " sorry
+  by (metis adjoint_dim assoc_mult_mat_vec dims(1) dims(2) dims(3) one_mult_mat_vec unitary_simps(1)) 
+
+lemma assumes a0:"M \<in> carrier_mat n n" and a1:"hermitian M"
+  shows "adjoint M * M = M"
+proof-
+  have "adjoint M = M" using a1 a0
+    by (simp add: hermitian_def)
+  then have "adjoint M * M = M*M"
+    by simp
+  then have "M*M = M" using a0 a1
+qed *)
+  
+
+\<comment>\<open>The probability of a meassurement m  as the square norm of the vector product of the 
+measurable operator M_m and 
+the norm of \<psi>. P(m) = \<parallel>M_m |\<psi>>\<parallel>^2, with \<parallel>\<psi>\<parallel> = square_root (inner_prod \<psi> \<psi>) 
+and inner_prod \<psi> \<phi> = scalar_prod \<psi> (conjugate \<phi>). 
+Hence  \<parallel>M_m |\<psi>>\<parallel>^2 = inner_prod (M_m |\<psi>>) (M_m |\<psi>>) and 
+inner_prod (M_m |\<psi>>) (M_m |\<psi>>) = inner_prod |\<psi>> (adjoint M_m *v  M_m *v |\<psi>> 
+because the sum of all the observables M_i = I_H we have that (adjoint M_m) *  M_m = M_m and
+P(m) = inner_prod |\<psi>> ( M_m * |\<psi>> .
+
+The resulting vector |\<psi>_m> = M_m |\<psi>> \ square_root P(m) == M_m |\<psi>> / \<parallel>M_m |\<psi>>\<parallel>, 
+that is the vector normalized
+
+let assume that the vector to measure, \<psi> is not normalized. To have a consistent measurement,
+    we work over the normalized vector \<psi>' = \<psi>\ \<parallel>\<psi> \<parallel>. 
+Then \<parallel>M_m |\<psi>'>\<parallel>^2 = \<parallel>(M_m *v 1 / \<parallel>\<psi> \<parallel>*\<psi>)\<parallel>^2 = \<parallel>(M_m *v \<psi>)\<parallel>^2 / \<parallel>\<psi> \<parallel>^2
+and M_m |\<psi> / \<parallel>\<psi> \<parallel>> = 1 / \<parallel>\<psi> \<parallel> * M_m |\<psi>> and 
+1/\<parallel>\<psi> \<parallel> * M_m |\<psi>\ > / square_root P(m) == 
+1/\<parallel>\<psi> \<parallel> * M_m |\<psi>\ > / square_root (\<parallel>(M_m *v \<psi>)\<parallel>^2  / \<parallel>\<psi> \<parallel>^2) ==
+1/\<parallel>\<psi> \<parallel> * M_m |\<psi>\ > /  (\<parallel>(M_m *v \<psi>)\<parallel> / \<parallel>\<psi> \<parallel>) =  M_m |\<psi>\ > / (\<parallel>(M_m *v \<psi>)\<parallel>
+\<close>
+
+
 
 definition measure_vars::"nat \<Rightarrow>  nat set \<Rightarrow>  QStateM  \<Rightarrow> (real \<times>  QStateM)"
   where "measure_vars k  q Q \<equiv>
@@ -1042,18 +1312,18 @@ lemma ptensor_unit_v_v_aij_not_k_zero:
        a5:"k < (2^(card v1))" and 
        a7:"partial_state.encode1 (list_dims (v1 \<union> v2)) (partial_state2.vars1' v1 v2) i \<noteq> k" and
        a8:"dim_vec v = (2^(card v1)) * (2^(card v2))" 
-     shows "ptensor_vec v1 v2 (unit_vec (2 ^ card v1) k) (vector_aij v1 v2 v k) $ i = 0"
+     shows "ptensor_vec v1 v2 (unit_vec (2 ^ card v1) k) (partial_state2.vector_aij v1 v2 v k) $ i = 0"
 proof-
-  let ?v1 = "unit_vec (2 ^ card v1) k" and ?v2 = "vector_aij v1 v2 v k"
-  interpret ps2:partial_state2 "replicate ((2^(card v1)) * (2^(card v2))) 2" "v1" "v2"
-    apply standard using a2 a1 a0 by auto
-  have "ptensor_vec v1 v2 (unit_vec (2 ^ card v1) k) (vector_aij v1 v2 v k) $ i = 
+  let ?v1 = "unit_vec (2 ^ card v1) k" and ?v2 = "partial_state2.vector_aij v1 v2 v k"
+  interpret ps2:partial_state2 "replicate (card (v1 \<union>  v2)) 2" "v1" "v2"
+    apply standard using a2 a1 a0 by auto 
+  have "ptensor_vec v1 v2 (unit_vec (2 ^ card v1) k) (partial_state2.vector_aij v1 v2 v k) $ i = 
         (?v1 $ (partial_state.encode1 (list_dims (v1 \<union> v2)) (partial_state2.vars1' v1 v2) i)) * 
         (?v2 $ (partial_state.encode2  (list_dims (v1 \<union> v2)) (partial_state2.vars1' v1 v2) i))"
     unfolding  ps2.ptensor_vec_def  ps2.dims0_def
     by (simp add: a3 i_less_union list_dims_def local.a2 partial_state.tensor_vec_eval  
                   ps2.finite_v1 ps2.finite_v2 ps2.vars0_def state_sig.d_def)
-  thus ?thesis
+  thus ?thesis  
     by (metis a3 a5 a7 i_less_union index_unit_vec(1) list_dims_def 
          local.a2 mult_not_zero partial_state.d1_def partial_state.dims1_def 
          partial_state.encode1_lt prod_list_replicate ps2.dims0_def ps2.dims1_def 
@@ -1066,27 +1336,25 @@ lemma ptensor_unit_v_v_aij_k_v_i:
        a5:"k < (2^(card v1))" and 
        a7:"partial_state.encode1 (list_dims (v1 \<union> v2)) (partial_state2.vars1' v1 v2) i = k" and
        a8:"dim_vec v = (2^(card v1)) * (2^(card v2))" 
-     shows "ptensor_vec v1 v2 (unit_vec (2 ^ card v1) k) (vector_aij v1 v2 v k) $ i = v $ i"
+     shows "ptensor_vec v1 v2 (unit_vec (2 ^ card v1) k) (partial_state2.vector_aij v1 v2 v k) $ i = v $ i"
 proof-
-  let ?v1 = "unit_vec (2 ^ card v1) k" and ?v2 = "vector_aij v1 v2 v k"
-  interpret ps2:partial_state2 "replicate ((2^(card v1)) * (2^(card v2))) 2" "v1" "v2"
+  let ?v1 = "unit_vec (2 ^ card v1) k" and ?v2 = "partial_state2.vector_aij v1 v2 v k"
+  interpret ps2:partial_state2 "replicate (card (v1 \<union>  v2)) 2" "v1" "v2"
     apply standard using a2 a1 a0 by auto
-  have "ptensor_vec v1 v2 (unit_vec (2 ^ card v1) k) (vector_aij v1 v2 v k) $ i = 
+  have "ptensor_vec v1 v2 (unit_vec (2 ^ card v1) k) (partial_state2.vector_aij v1 v2 v k) $ i = 
         (?v1 $ (partial_state.encode1 (list_dims (v1 \<union> v2)) (partial_state2.vars1' v1 v2) i)) * 
         (?v2 $ (partial_state.encode2  (list_dims (v1 \<union> v2)) (partial_state2.vars1' v1 v2) i))"
     unfolding  ps2.ptensor_vec_def  ps2.dims0_def
     by (simp add: a3 i_less_union list_dims_def local.a2 partial_state.tensor_vec_eval  
                   ps2.finite_v1 ps2.finite_v2 ps2.vars0_def state_sig.d_def)
-  moreover have "partial_state.encode2 (list_dims (v1 \<union> v2)) ps2.vars1' i < (2 ^ card v2)"
-    by (metis a3 i_less_union list_dims_def partial_state.d1_def partial_state.dims1_def 
-              partial_state.encode1_lt prod_list_replicate ps2.dims0_def 
-              ps2.dims2_def ps2.disjoint ps2.finite_v1 ps2.finite_v2 ps2.nths_vars2'_comp 
-              ps2.ptensor_encode2_encode1 ps2.vars0_def state_sig.d_def)    
+  moreover have "partial_state.encode2 (list_dims (v1 \<union> v2)) ps2.vars1' i < ps2.d2" and "i<ps2.d0"
+    apply (simp add: a0 a1 a2 a3 encode_lt_card(2) i_less_union ps2.d2_def ps2.dims2_def)
+    using a3 ps2.d0_card_v1_v2 by presburger 
   then have "(?v2 $ (partial_state.encode2 (list_dims (v1 \<union> v2)) (partial_state2.vars1' v1 v2) i)) = 
             v $ ps2.pencode12 (k, partial_state.encode2 (list_dims (v1 \<union> v2)) ps2.vars1' i) " 
-    unfolding vector_aij_def aijv_def using a7 a3  by auto        
-  then have "(?v2 $ (partial_state.encode2 (list_dims (v1 \<union> v2)) (partial_state2.vars1' v1 v2) i)) = v $ i"  
-    unfolding vector_aij_def aijv_def using a7 a3 apply auto
+    unfolding ps2.vector_aij_def ps2.aijv_def   by auto        
+  then have "(?v2 $ (partial_state.encode2 (list_dims (v1 \<union> v2)) (ps2.vars1') i)) = v $ i"  
+    unfolding ps2.vector_aij_def ps2.aijv_def using a7 a3 apply auto
     by (simp add:  i_less_union list_dims_def partial_state.encode12_inv 
                   ps2.dims0_def ps2.disjoint ps2.finite_v1 ps2.finite_v2 
                   ps2.pencode12_def ps2.vars0_def state_sig.d_def)    
@@ -1101,7 +1369,7 @@ lemma mat_eq_ptensor_product_vector_i:
        a5:"k < (2^(card v1))" and
        a8:"dim_vec v = (2^(card v1)) * (2^(card v2))" 
      shows "(ptensor_mat v1 v2 (1\<^sub>k (2 ^ card v1)) (1\<^sub>m (2 ^ card v2)) *\<^sub>v v) $ i =
-            ptensor_vec v1 v2 (unit_vec (2 ^ card v1) k) (vector_aij v1 v2 v k) $ i"
+            ptensor_vec v1 v2 (unit_vec (2 ^ card v1) k) (partial_state2.vector_aij v1 v2 v k) $ i"
   using ptensor_unit_v_v_aij_k_v_i[OF a0 a1 a2 a3 a5 _ a8] 
         ptensor_unit_v_v_aij_not_k_zero[OF a0 a1 a2 a3 a5 _ a8] 
         mat_product_vector_not_k[OF a0 a1 a2 a3 a5 _ a8]  
@@ -1114,10 +1382,10 @@ lemma mat_eq_ptensor_product_vector:
        a5:"k < (2^(card v1))" and
        a8:"dim_vec v = (2^(card v1)) * (2^(card v2))"
      shows "(ptensor_mat v1 v2 ((1\<^sub>k (2^(card v1)))) (1\<^sub>m (2^(card v2)))) *\<^sub>v v = 
-            ptensor_vec v1 v2 (unit_vec (2^(card v1)) k) (vector_aij v1 v2 v k)"
+            ptensor_vec v1 v2 (unit_vec (2^(card v1)) k) (partial_state2.vector_aij v1 v2 v k)"
 proof-
   let ?v = "(ptensor_mat v1 v2 ((1\<^sub>k (2^(card v1)))) (1\<^sub>m (2^(card v2)))) *\<^sub>v v"
-  let ?w = "ptensor_vec v1 v2 (unit_vec (2^(card v1)) k) (vector_aij v1 v2 v k)"
+  let ?w = "ptensor_vec v1 v2 (unit_vec (2^(card v1)) k) (partial_state2.vector_aij v1 v2 v k)"
   have "dim_vec ?v = dim_vec ?w"
   proof- 
     have "dim_vec ?v = (2^(card v1)) * (2^(card v2))"
@@ -1139,28 +1407,28 @@ lemma v_scalar_mat_product_eq_ptensor:
        a5:"k < (2^(card v1))" and
        a8:"dim_vec v = (2^(card v1)) * (2^(card v2))"
      shows "a \<cdot>\<^sub>v ((ptensor_mat v1 v2 ((1\<^sub>k (2^(card v1)))) (1\<^sub>m (2^(card v2)))) *\<^sub>v v) = 
-            a \<cdot>\<^sub>v ptensor_vec v1 v2 (unit_vec (2^(card v1)) k) (vector_aij v1 v2 v k)"
+            a \<cdot>\<^sub>v ptensor_vec v1 v2 (unit_vec (2^(card v1)) k) (partial_state2.vector_aij v1 v2 v k)"
   using mat_eq_ptensor_product_vector[OF a0 a1 a2 a5 a8] by auto
 
 lemma eq_sum_v_p_encode:
 assumes a0:"finite v1" and a1:"finite v2" and a2:"v1 \<inter> v2 = {}" and       
        a3:"dim_vec (v::complex vec) = (2^(card v1)) * (2^(card v2))" 
      shows "(\<Sum>i = 0..< (dim_vec v). (cmod (v $ i))\<^sup>2) = 
-           (\<Sum>i = 0 ..<2^(card v1). \<Sum>j = 0 ..<2^(card v2). (cmod (aijv v1 v2 v i j))\<^sup>2)"
+           (\<Sum>i = 0 ..<2^(card v1). \<Sum>j = 0 ..<2^(card v2). (cmod (partial_state2.aijv v1 v2 v i j))\<^sup>2)"
 proof-
   interpret ps2:
-    partial_state2 "replicate ((2^(card v1)) * (2^(card v2))) 2" "v1" "v2"
+    partial_state2 "replicate (card (v1 \<union> v2)) 2" "v1" "v2"
     apply standard using a2 a1 a0 by auto
   let ?i = "(\<lambda>i. partial_state.encode1 ps2.dims0 (partial_state2.vars1' v1 v2) i)"
   let ?j = "(\<lambda>i. partial_state.encode2 ps2.dims0 (partial_state2.vars1' v1 v2) i)"
   have "\<And>i. i<(dim_vec v) \<Longrightarrow>  
-              v $ i = aijv v1 v2 v (?i i) (?j i)"
-    unfolding aijv_def
+              v $ i = partial_state2.aijv v1 v2 v (?i i) (?j i)"
+    unfolding ps2.aijv_def
     by (simp add: a3 card_Un_disjoint partial_state.encode12_inv power_add ps2.dims0_def 
           ps2.disjoint ps2.finite_v1 
         ps2.finite_v2 ps2.pencode12_def ps2.vars0_def state_sig.d_def)
   then have eq:"\<And>i. i<(dim_vec v) \<Longrightarrow>  
-              (cmod (v $ i))\<^sup>2 = (cmod (aijv v1 v2 v (?i i) (?j i)))\<^sup>2" by auto
+              (cmod (v $ i))\<^sup>2 = (cmod (ps2.aijv  v (?i i) (?j i)))\<^sup>2" by auto
   have "(\<Sum>i = 0..< (dim_vec v). (cmod (v $ i))\<^sup>2) = 
         (\<Sum>i = 0..< (dim_vec v). (cmod (v $ partial_state2.pencode12 v1 v2 (?i i,?j i)))\<^sup>2)"
     using partial_state.encode12_inv ps2.dims_product 
@@ -1181,7 +1449,7 @@ proof-
       using partial_state.sum_encode[THEN sym, where dims1 = ps2.dims0 and vars1 = ps2.vars1']
       by fastforce
   qed       
-  finally show ?thesis unfolding aijv_def by auto
+  finally show ?thesis unfolding ps2.aijv_def by auto
 qed
 
 lemma "(cmod a)^2 = (Re a)\<^sup>2 + (Im a)\<^sup>2" using Complex.cmod_power2 by auto
@@ -1206,16 +1474,16 @@ lemma eq_v_aijv_i_j:
     assumes a0:"finite v1" and a1:"finite v2" and a2:"v1 \<inter> v2 = {}" and
        a8:"dim_vec v = (2^(card v1)) * (2^(card v2))"
      shows "(vec_norm v)^2 = 
-            (\<Sum>i = 0 ..<2^(card v1). \<Sum>j = 0 ..<2^(card v2). (norm (aijv v1 v2 v i j))^2)"
+            (\<Sum>i = 0 ..<2^(card v1). \<Sum>j = 0 ..<2^(card v2). (norm (partial_state2.aijv v1 v2 v i j))^2)"
 proof-
   have " v \<bullet>c v = (\<Sum>i = 0 ..<dim_vec v. (v$i) * (conjugate (v$i)))"
    unfolding scalar_prod_def by auto
   also have "\<dots> =  (\<Sum>i = 0 ..<dim_vec v. (norm (v$i))\<^sup>2)"
     using complex_norm_square conjugate_complex_def
     by auto
-  also have " \<dots> = (\<Sum>i = 0 ..<2^(card v1). \<Sum>j = 0 ..<2^(card v2). (norm (aijv v1 v2 v i j))^2)"
+  also have " \<dots> = (\<Sum>i = 0 ..<2^(card v1). \<Sum>j = 0 ..<2^(card v2). (norm (partial_state2.aijv v1 v2 v i j))^2)"
     using eq_sum_v_p_encode[OF a0 a1 a2 a8] by auto
-  finally have "v \<bullet>c v = (\<Sum>i = 0 ..<2^(card v1). \<Sum>j = 0 ..<2^(card v2). (norm (aijv v1 v2 v i j))^2)"
+  finally have "v \<bullet>c v = (\<Sum>i = 0 ..<2^(card v1). \<Sum>j = 0 ..<2^(card v2). (norm (partial_state2.aijv v1 v2 v i j))^2)"
     by auto
   moreover have "(vec_norm v)^2 = v \<bullet>c v"
     using power2_csqrt vec_norm_def by presburger
@@ -1252,7 +1520,6 @@ qed
 lemma sum_eq_sum_k_j:
   assumes a0:"k < (m::nat)" and a1:"\<forall>i j. j < n \<and> i < m \<and> i \<noteq> k \<longrightarrow> f i j = 0" and a2:"0<m"
   shows "(\<Sum>i = 0 ..<m. \<Sum>j = 0 ..<n. f i j) = (\<Sum>j = 0 ..<n. f k j)"
-
   using a2 a0 a1 
 proof(induct m rule:nat_induct_non_zero)
   case 1
@@ -1280,10 +1547,10 @@ lemma  vec_norm_ptensor_eq_sum_norm_k:
        a5:"k < (2^(card v1))" and
        a8:"dim_vec v = (2^(card v1)) * (2^(card v2))"
   shows "(vec_norm (((ptensor_mat v1 v2 ((1\<^sub>k (2^(card v1)))) (1\<^sub>m (2^(card v2)))) *\<^sub>v v)))^2  = 
-         (\<Sum>j = 0..<2^(card v2). norm (aijv v1 v2 v k j )^2)"
+         (\<Sum>j = 0..<2^(card v2). norm (partial_state2.aijv v1 v2 v k j )^2)"
 proof-
   interpret ps2:
-    partial_state2 "replicate ((2^(card v1)) * (2^(card v2))) 2" "v1" "v2"
+    partial_state2 "replicate (card (v1 \<union>v2)) 2" "v1" "v2"
     apply standard using a2 a1 a0 by auto
   let ?i = "(\<lambda>i. partial_state.encode1 ps2.dims0 (partial_state2.vars1' v1 v2) i)"
   let ?j = "(\<lambda>i. partial_state.encode2 ps2.dims0 (partial_state2.vars1' v1 v2) i)"
@@ -1291,23 +1558,23 @@ proof-
   have dim_v:"dim_vec v = dim_vec ?v"
     by (simp add: a8 ps2.d1_def ps2.d2_def ps2.dims1_def ps2.dims2_def ps2.dims_product)
   then have "(vec_norm ?v)^2 = 
-            (\<Sum>i = 0 ..<2^(card v1). \<Sum>j = 0 ..<2^(card v2). (norm (aijv v1 v2 ?v i j))^2)"
+            (\<Sum>i = 0 ..<2^(card v1). \<Sum>j = 0 ..<2^(card v2). (norm (ps2.aijv ?v i j))^2)"
     using eq_v_aijv_i_j[OF a0 a1 a2  a8[simplified dim_v]] by fastforce
-  also have "(\<Sum>i = 0 ..<2^(card v1). \<Sum>j = 0 ..<2^(card v2). (norm (aijv v1 v2 ?v i j))^2) = 
-             (\<Sum>j = 0..<2^(card v2). norm (aijv v1 v2 v k j )^2)"
+  also have "(\<Sum>i = 0 ..<2^(card v1). \<Sum>j = 0 ..<2^(card v2). (norm (ps2.aijv ?v i j))^2) = 
+             (\<Sum>j = 0..<2^(card v2). norm (ps2.aijv v k j )^2)"
   proof-
     have "\<And>i. i<(dim_vec ?v) \<Longrightarrow>  
-                 ?v $ i = aijv v1 v2 ?v (?i i) (?j i)"
-      unfolding aijv_def
+                 ?v $ i = ps2.aijv ?v (?i i) (?j i)"
+      unfolding ps2.aijv_def
       by (simp add: partial_state.encode12_inv ps2.d0_def ps2.pencode12_def state_sig.d_def)
-    let ?f = "\<lambda>i j. (cmod (aijv v1 v2 ?v i j))\<^sup>2"
+    let ?f = "\<lambda>i j. (cmod (ps2.aijv ?v i j))\<^sup>2"
     have "(\<Sum>i = 0..<2 ^ card v1.
              \<Sum>j = 0..<2 ^ card v2.
-                (cmod (aijv v1 v2 ?v i j))\<^sup>2) =
-         (\<Sum>j = 0..<2 ^ card v2. (cmod (aijv v1 v2 ?v k j))\<^sup>2)"
+                (cmod (ps2.aijv  ?v i j))\<^sup>2) =
+         (\<Sum>j = 0..<2 ^ card v2. (cmod (ps2.aijv ?v k j))\<^sup>2)"
       apply (rule sum_eq_sum_k_j[of k "2 ^ card v1" "2 ^ card v2" ?f])
       using a5 apply fastforce
-      unfolding aijv_def 
+      unfolding ps2.aijv_def 
       apply auto apply (rule  mat_product_vector_not_k[OF a0 a1 a2 _ _ _  a8])
         apply (metis a8 dim_mult_mat_vec dim_v partial_state.d1_def 
                      partial_state.d2_def partial_state.dims1_def 
@@ -1321,11 +1588,11 @@ proof-
                 partial_state.dims1_def partial_state.dims2_def 
                 partial_state.encode12_inv1 prod_list_replicate ps2.dims0_def 
                 ps2.dims1_def ps2.dims2_def ps2.nths_vars1' ps2.nths_vars2' ps2.vars0_def)          
-    also have "(\<Sum>j = 0..<2 ^ card v2. (cmod (aijv v1 v2 ?v k j))\<^sup>2) = 
-               (\<Sum>j = 0..<2 ^ card v2. (cmod (aijv v1 v2  v k j))\<^sup>2)"    
+    also have "(\<Sum>j = 0..<2 ^ card v2. (cmod (ps2.aijv ?v k j))\<^sup>2) = 
+               (\<Sum>j = 0..<2 ^ card v2. (cmod (ps2.aijv   v k j))\<^sup>2)"    
     proof-
-      have "\<And>j. j < 2^card v2 \<Longrightarrow> (cmod (aijv v1 v2 ?v k j))\<^sup>2 = (cmod (aijv v1 v2 v k j))\<^sup>2"      
-        unfolding aijv_def using mat_product_vector_k[OF a0 a1 a2 _ _ _ a8]      
+      have "\<And>j. j < 2^card v2 \<Longrightarrow> (cmod (ps2.aijv ?v k j))\<^sup>2 = (cmod (ps2.aijv v k j))\<^sup>2"      
+        unfolding ps2.aijv_def using mat_product_vector_k[OF a0 a1 a2 _ _ _ a8]      
         by (metis a5 list_dims_def partial_state.d1_def partial_state.d2_def
                 partial_state.dims1_def partial_state.dims2_def 
                 partial_state.encode12_inv1 partial_state.encode12_lt 
@@ -1339,20 +1606,29 @@ proof-
   finally show ?thesis by auto
 qed
 
+lemma  vec_norm_ptensor_eq_sum_norm_k':
+  assumes a0:"finite v1" and a1:"finite v2" and a2:"v1 \<inter> v2 = {}" and
+       a5:"k < (2^(card v1))" and
+       a8:"dim_vec v = (2^(card v1)) * (2^(card v2))"
+  shows "vec_norm (((ptensor_mat v1 v2 ((1\<^sub>k (2^(card v1)))) (1\<^sub>m (2^(card v2)))) *\<^sub>v v))  = 
+         sqrt(\<Sum>j = 0..<2^(card v2). norm (partial_state2.aijv v1 v2 v k j )^2)"
+  using vec_norm_ptensor_eq_sum_norm_k[OF a0 a1 a2 a5 a8]
+  by (metis Im_complex_of_real Re_complex_of_real conjugate_scalar_prod_Re csqrt_of_real_nonneg power2_csqrt vec_norm_def)
+
 lemma eq_norm: assumes a0:"finite v1" and a1:"finite v2" and a2:"v1 \<inter> v2 = {}" and             
        a5:"k < (2^(card v1))" and
        a8:"dim_vec v = (2^(card v1)) * (2^(card v2))"
      shows "Re ((vec_norm (((ptensor_mat v1 v2 ((1\<^sub>k (2^(card v1)))) (1\<^sub>m (2^(card v2)))) *\<^sub>v v)))^2 
                 div (vec_norm v)^2) =
-            (\<Sum>j = 0..<2^(card v2). norm (aijv v1 v2 v k j )^2) / 
-             (\<Sum>i = 0 ..<2^(card v1). \<Sum>j = 0 ..<2^(card v2). norm (aijv v1 v2 v i j)^2 )"
+            (\<Sum>j = 0..<2^(card v2). norm (partial_state2.aijv v1 v2 v k j )^2) / 
+             (\<Sum>i = 0 ..<2^(card v1). \<Sum>j = 0 ..<2^(card v2). norm (partial_state2.aijv v1 v2 v i j)^2 )"
 proof-
   have "(vec_norm (((ptensor_mat v1 v2 ((1\<^sub>k (2^(card v1)))) (1\<^sub>m (2^(card v2)))) *\<^sub>v v)))^2 =
-        (\<Sum>j = 0..<2^(card v2). norm (aijv v1 v2 v k j )^2)"
+        (\<Sum>j = 0..<2^(card v2). norm (partial_state2.aijv v1 v2 v k j )^2)"
     using vec_norm_ptensor_eq_sum_norm_k[OF a0 a1 a2 a5 a8] by auto
   moreover have "(vec_norm v)^2 = 
                  (\<Sum>i = 0 ..<2^(card v1). 
-                    \<Sum>j = 0 ..<2^(card v2). norm (aijv v1 v2 v i j)^2 )"
+                    \<Sum>j = 0 ..<2^(card v2). norm (partial_state2.aijv v1 v2 v i j)^2 )"
     using eq_v_aijv_i_j[OF a0 a1 a2 a8] by auto
   ultimately show ?thesis by auto
 qed
@@ -1364,17 +1640,21 @@ lemma norm_v2_empty: assumes a0:"finite v1" and a1:"v2 = {}" and
                 div (vec_norm v)^2) =
             (norm (v$k)^2) / (\<Sum>i = 0 ..<2^(card v1). norm (v$i)^2 )"
 proof-
+  interpret ps2:
+    partial_state2 "replicate (card (v1 \<union>v2)) 2" "v1" "v2"
+    apply standard using a1 a1 a0 by auto
   have "Re ((vec_norm (((ptensor_mat v1 v2 ((1\<^sub>k (2^(card v1)))) (1\<^sub>m (2^(card v2)))) *\<^sub>v v)))^2 
-                div (vec_norm v)^2) = (\<Sum>j = 0..<2^(card v2). norm (aijv v1 v2 v k j )^2) / 
-             (\<Sum>i = 0 ..<2^(card v1). \<Sum>j = 0 ..<2^(card v2). norm (aijv v1 v2 v i j)^2 )"
+                div (vec_norm v)^2) = (\<Sum>j = 0..<2^(card v2). norm (partial_state2.aijv v1 v2 v k j )^2) / 
+             (\<Sum>i = 0 ..<2^(card v1). \<Sum>j = 0 ..<2^(card v2). norm (partial_state2.aijv v1 v2 v i j)^2 )"
     using eq_norm[OF a0 _ _ a5 a8] using a1 by auto
-  moreover have "\<And>i. i <(2^(card v1)) \<Longrightarrow> aijv v1 v2 v k 0 = v $ k" using a1 unfolding aijv_def
-    using eq_vec_aijv_v2_empty
-    using a0 a5 a8 aijv_def by auto
-  moreover have "(\<Sum>j = 0..<2^(card v2). norm (aijv v1 v2 v k j )^2) =  norm (v$k)^2"
+  moreover have "\<And>i. i <(2^(card v1)) \<Longrightarrow> partial_state2.aijv v1 v2 v k 0 = v $ k" 
+    using a1 unfolding partial_state2.aijv_def
+    using ps2.eq_vec_aijv_v2_empty
+    using a0 a5 a8 partial_state2.aijv_def ps2.d0_card_v1_v2 by auto
+  moreover have "(\<Sum>j = 0..<2^(card v2). norm (partial_state2.aijv v1 v2 v k j )^2) =  norm (v$k)^2"
     using a1 calculation(2)
     by fastforce  
-  moreover have "(\<Sum>i = 0 ..<2^(card v1). \<Sum>j = 0 ..<2^(card v2). norm (aijv v1 v2 v i j)^2 )= 
+  moreover have "(\<Sum>i = 0 ..<2^(card v1). \<Sum>j = 0 ..<2^(card v2). norm (partial_state2.aijv v1 v2 v i j)^2 )= 
                  (\<Sum>i = 0 ..<2^(card v1). norm (v$i)^2)"
     using a1 
     by (metis (no_types) a0 a8 card.empty eq_sum_v_p_encode 
@@ -1397,15 +1677,20 @@ proof-
   then have "\<And>a. a\<ge>0 \<Longrightarrow> sqrt (a\<^sup>2) = a" by auto
   ultimately show ?thesis using a9 by auto
 qed
+
+
   
 lemma  vector_aij_v2_empty:
   assumes a0:"finite v1" and a1:"v2 = {}" and             
        a5:"k < (2^(card v1))" and
        a8:"dim_vec v = (2^(card v1)) * (2^(card v2))" 
-     shows "vector_aij v1 v2 v k $ 0 = v$k"
- unfolding vector_aij_def 
- using eq_vec_aijv_v2_empty[OF _ a8 a0 a1 _] a5 a8 a1  by auto
-
+     shows "partial_state2.vector_aij v1 v2 v k $ 0 = v$k"
+    apply standard using a1 a1 a0 apply auto
+  by (metis One_nat_def a5 a8 card.empty finite.emptyI index_vec inf_bot_right length_replicate 
+                lessI mult.right_neutral nth_replicate partial_state2.d0_card_v1_v2 
+                 partial_state2.d2_def partial_state2.dims2_def 
+                 partial_state2.eq_vec_aijv_v2_empty partial_state2.intro 
+                partial_state2.vector_aij_def power_0 prod_list_replicate)+
 (*
 lemma  assumes a0:"finite v1" and a1:"v2 = {}" and             
        a5:"k < (2^(card v1))" and

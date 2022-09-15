@@ -28,15 +28,15 @@ lemma "x \<in> comb_set f A B \<Longrightarrow> \<exists>a b. a \<in> A \<and> b
   unfolding comb_set_def by auto
 
 
-definition Q_sep_dis::"(('s state) \<Rightarrow> bool) \<Rightarrow> (('s state) \<Rightarrow> bool) \<Rightarrow>  (('s state) \<Rightarrow> bool)" 
+(* definition Q_sep_dis::"(('s state) \<Rightarrow> bool) \<Rightarrow> (('s state) \<Rightarrow> bool) \<Rightarrow>  (('s state) \<Rightarrow> bool)" 
 (infixr "\<and>*\<^sub>q" 35)
 where "Q_sep_dis A B \<equiv>  let setAB = fst ` (snd ` {s. A s}) \<inter>  fst ` (snd ` {s. B s});
                               setA = {s. A s \<and> fst (snd s) \<in> setAB}; 
-                              setB = {s. B s \<and> fst (snd s) \<in> setAB} in
-                           (\<lambda>s. fst s \<in> (comb_set (*) (fst ` setA) (fst ` setB)) \<and>  
+                              setB = {s. B s \<and> fst (snd s) \<in> setAB} in *)
+                (*           (\<lambda>s. fst s \<in> (comb_set *) (*) (fst ` setA) (fst ` setB)) \<and>  
                                  fst (snd s) \<in> setAB \<and>      
                             ((\<lambda>s. s \<in> (snd ` (snd ` setA))) \<and>* 
-                             (\<lambda>s. s \<in> (snd ` (snd ` setB)))) (snd (snd s)))"
+                             (\<lambda>s. s \<in> (snd ` (snd ` setB)))) (snd (snd s)))" *)
 
 definition stack\<^sub>s :: "('s state) set \<Rightarrow> 's set"
   where "stack\<^sub>s A \<equiv> fst ` (snd ` A)"
@@ -514,7 +514,7 @@ definition aij ::"'s state \<Rightarrow> 's expr_q  \<Rightarrow> ('s, complex l
   where "aij s q v i j \<equiv> let st = get_stack s ; qv = fst (get_qstate s); 
                              vars = Q_domain qv; d1 = Q_domain_var (q st) qv; d2 = vars - d1 ;
                              vec = v st in 
-                             aijv d1 d2 (vec_of_list vec) i j"
+                             partial_state2.aijv d1 d2 (vec_of_list vec) i j"
 
 
 
@@ -585,16 +585,16 @@ lemma allocate_preserves_R:
 definition \<rho> ::"'s expr_q  \<Rightarrow> ('s, complex list) expr \<Rightarrow> nat \<Rightarrow>  's state \<Rightarrow> real" 
   where "\<rho> q v i s \<equiv> let st = get_stack s ; qv = fst (get_qstate s); 
                          vars = Q_domain qv; d1 = Q_domain_var (q st) qv; d2 = vars - d1 in 
-                     (\<Sum>j = 0..<2^(card d2). norm (aijv d1 d2 (vec_of_list (v st)) i j )^2) / 
+                     (\<Sum>j = 0..<2^(card d2). norm (partial_state2.aijv d1 d2 (vec_of_list (v st)) i j )^2) / 
                         (\<Sum>i = 0 ..<2^(card d1). 
-                            \<Sum>j = 0 ..<2^(card d2). norm (aijv d1 d2 (vec_of_list (v st)) i j )^2 )"
+                            \<Sum>j = 0 ..<2^(card d2). norm (partial_state2.aijv d1 d2 (vec_of_list (v st)) i j )^2 )"
 
-lemma "\<Sum>j = 0..<2^(card d2). norm (aijv d1 d2 (vec_of_list (v st)) i j )^2"
+(* lemma "\<Sum>j = 0..<2^(card d2). norm (partial_state2.aijv d1 d2 (vec_of_list (v st)) i j )^2" *)
 
 definition \<rho>_m ::"'s expr_q  \<Rightarrow> ('s, complex list) expr \<Rightarrow> nat \<Rightarrow>  's state \<Rightarrow> real" 
   where "\<rho>_m q v i s \<equiv> let st = get_stack s ; qv = fst (get_qstate s); 
                          vars = Q_domain qv; d1 = Q_domain_var (q st) qv; d2 = vars - d1 in 
-                     sqrt (\<Sum>j = 0..<2^(card d2). norm (aijv d1 d2 (vec_of_list (v st)) i j )^2)"
+                     sqrt (\<Sum>j = 0..<2^(card d2). norm (partial_state2.aijv d1 d2 (vec_of_list (v st)) i j )^2)"
 
 definition vector_i::"'s state \<Rightarrow> 's expr_q  \<Rightarrow>  ('s, complex list) expr \<Rightarrow> nat \<Rightarrow> ('s, complex list) expr"
   where "vector_i s q v i \<equiv> 
@@ -603,13 +603,13 @@ definition vector_i::"'s state \<Rightarrow> 's expr_q  \<Rightarrow>  ('s, comp
         elem_ij  = (\<lambda>j. (aij s q v i j) / (\<rho>_m q v i s)) in
      (\<lambda>st. map (\<lambda>e. elem_ij e) [0..<2^card d2])"
 
-definition vector_i'::"'s state \<Rightarrow> 's expr_q  \<Rightarrow>  ('s, complex list) expr \<Rightarrow> nat \<Rightarrow> ('s, complex list) expr"
+(*definition vector_i'::"'s state \<Rightarrow> 's expr_q  \<Rightarrow>  ('s, complex list) expr \<Rightarrow> nat \<Rightarrow> ('s, complex list) expr"
   where "vector_i' s q v i \<equiv> 
      let st = get_stack s ; qv = fst (get_qstate s); 
         vars = Q_domain qv; d1 = Q_domain_var (q st) qv; d2 = vars - d1;
         elem_ij  = if d2 \<noteq> {} then (\<lambda>j. (aij s q v i j) / sqrt (\<rho> q v i s))
                    else (\<lambda>j. 1) in
-     (\<lambda>st. map (\<lambda>e. elem_ij e) [0..<2^card d2])"
+     (\<lambda>st. map (\<lambda>e. elem_ij e) [0..<2^card d2])"*)
 
 (* lemma eq_vector_i:
   assumes a0:"(Q_domain (fst (get_qstate s))) - 
@@ -619,7 +619,7 @@ definition vector_i'::"'s state \<Rightarrow> 's expr_q  \<Rightarrow>  ('s, com
   unfolding vector_i_def vector_i'_def Let_def Q_domain_set_def
   by auto *)
 
-lemma vector_i_d2_empty:
+(* lemma vector_i_d2_empty:
   assumes a0:"(Q_domain (fst (get_qstate s))) - 
                   (Q_domain_var (q (get_stack s)) (fst (get_qstate s))) = {}" 
   shows "vector_i' s q v i = (\<lambda>st. [1])"
@@ -635,7 +635,7 @@ proof-
                    (Q_domain_var (q (get_stack s)) (fst (get_qstate s))))] = [0]" 
     by (simp add: assms)
   then show ?thesis unfolding vector_i'_def Let_def apply auto using a0 by auto
-qed
+qed *)
 
 definition
   unit_vecl :: "'s state \<Rightarrow> 's expr_q  \<Rightarrow> nat \<Rightarrow> ('s, complex list) expr"
@@ -1013,28 +1013,28 @@ lemma " x\<in> (\<pi> u) \<and> fst x = n \<Longrightarrow> fst x = fst y \<Long
 
 
 lemma domain_Q: assumes 
-      a1:"(\<forall>e\<in>q \<sigma>. QStateM_map \<Q> e \<noteq> {})" and
-      a2:"(k::nat) < 2 ^ card (\<Union> (QStateM_map \<Q> ` q \<sigma>))" and
-      a3:"QStateM_vars \<Q> = Q_domain_var (q \<sigma> \<union> qr \<sigma>) (QStateM_map \<Q>)" and
-      a4:"QStateM_list \<Q> = vl \<sigma>" and      
-      a6:"q \<sigma> \<inter> qr \<sigma>  = {}" and a7:"q \<sigma> \<noteq> {}"                    
-    shows "finite (Q_domain_var (q \<sigma>) (QStateM_map \<Q>))" and 
-          "finite (Q_domain_var (qr \<sigma>) (QStateM_map \<Q>))" and
+      a1:"(\<forall>e\<in>q. QStateM_map \<Q> e \<noteq> {})" and
+      a2:"(k::nat) < 2 ^ card (\<Union> (QStateM_map \<Q> ` q))" and
+      a3:"QStateM_vars \<Q> = Q_domain_var (q \<union> qr ) (QStateM_map \<Q>)" and
+      a4:"QStateM_list \<Q> = vl" and      
+      a6:"q  \<inter> qr   = {}" and a7:"q  \<noteq> {}"                    
+    shows "finite (Q_domain_var  q (QStateM_map \<Q>))" and 
+          "finite (Q_domain_var qr (QStateM_map \<Q>))" and
           "Q_domain (QStateM_map \<Q>) = QStateM_vars \<Q>" and
-          "dim_vec (vec_of_list (vl \<sigma>)) =
-             2 ^ card (Q_domain_var (q \<sigma>) (QStateM_map \<Q>)) *
-             2 ^ card (Q_domain_var (qr \<sigma>) (QStateM_map \<Q>))" and
-          "k < 2 ^ card (Q_domain_var (q \<sigma>) (QStateM_map \<Q>))" and
-          "Q_domain_var (q \<sigma>) (QStateM_map \<Q>) \<inter> Q_domain_var (qr \<sigma>) (QStateM_map \<Q>) = {}" and
-          "Q_domain_var (q \<sigma>) (QStateM_map \<Q>) \<noteq> {}" and
-          "Q_domain_var (qr \<sigma>) (QStateM_map \<Q>) = Q_domain (QStateM_map \<Q>) - Q_domain_var (q \<sigma>) (QStateM_map \<Q>)"    
+          "dim_vec (vec_of_list vl) =
+             2 ^ card (Q_domain_var q (QStateM_map \<Q>)) *
+             2 ^ card (Q_domain_var qr (QStateM_map \<Q>))" and
+          "k < 2 ^ card (Q_domain_var q (QStateM_map \<Q>))" and
+          "Q_domain_var q (QStateM_map \<Q>) \<inter> Q_domain_var qr (QStateM_map \<Q>) = {}" and
+          "Q_domain_var q (QStateM_map \<Q>) \<noteq> {}" and
+          "Q_domain_var qr (QStateM_map \<Q>) = Q_domain (QStateM_map \<Q>) - Q_domain_var q (QStateM_map \<Q>)"    
 proof-
-  let ?q = "q \<sigma>" and ?qr = "qr \<sigma>" and ?v = "vec_of_list (vl \<sigma>)"       
-  let ?v1 = "Q_domain_var ?q (QStateM_map \<Q>)" and ?v2 = "Q_domain_var ?qr (QStateM_map \<Q>)"
-  let ?M = "(1\<^sub>k (2 ^ card (\<Union> (QStateM_map \<Q> ` q \<sigma>))))"
+  let ?v = "vec_of_list vl" and       
+      ?v1 = "Q_domain_var q (QStateM_map \<Q>)" and ?v2 = "Q_domain_var qr (QStateM_map \<Q>)"
+  let ?M = "(1\<^sub>k (2 ^ card (\<Union> (QStateM_map \<Q> ` q ))))"
   have "finite (QStateM_vars \<Q>)"
     by (simp add: QStateM_vars.rep_eq QState_rel3')
-  moreover have h1:"QStateM_vars \<Q> = Q_domain_var ?q (QStateM_map \<Q>) \<union> Q_domain_var ?qr (QStateM_map \<Q>)"
+  moreover have h1:"QStateM_vars \<Q> = Q_domain_var q (QStateM_map \<Q>) \<union> Q_domain_var qr (QStateM_map \<Q>)"
     using a3 a6 unfolding Q_domain_var_def
     by simp 
   ultimately show f1:"finite ?v1" and f2:"finite ?v2" 
@@ -1081,7 +1081,7 @@ proof-
        dim_vec:"dim_vec ?v = 2 ^ card ?v1 * 2 ^ card ?v2" and k:"k < 2 ^ card ?v1" and
        inter_12:"?v1 \<inter> ?v2 = {}" and v1_not_empty:"?v1 \<noteq> {}" and
        v2:"?v2 = Q_domain (QStateM_map \<Q>) - ?v1"
-    using domain_Q[of q \<sigma> \<Q> k qr vl, OF a1 a2 a3 a4 a6 a7] by auto
+    using domain_Q [OF a1 a2 a3 a4 a6 a7] by auto
   
   note eq_norm[OF f1 f2 inter_12 k dim_vec]
   moreover have \<delta>k:"\<delta>k =  Re ((vec_norm
@@ -1110,6 +1110,91 @@ proof-
     by (force simp add: a8 a12 a9 a10 a11) 
 qed
 
+lemma \<delta>k:
+  assumes a0:"(\<delta>k, \<Q>') = measure_vars k q \<Q>"
+  shows "\<delta>k =  Re ((vec_norm
+             (matrix_sep q \<Q> 1\<^sub>k (2 ^ card (\<Union> (QStateM_map \<Q> ` q)))))\<^sup>2 /
+             (vec_norm (QStateM_vector \<Q>))\<^sup>2)"
+    using measure_vars_dest a0
+    by auto 
+
+
+lemma matrix_sep_nz:
+  assumes a0:"(\<delta>k, \<Q>') = measure_vars k q \<Q>" and a1:"0 < \<delta>k "     
+  shows "matrix_sep_not_zero q \<Q> 1\<^sub>k (2 ^ card (\<Union> (QStateM_map \<Q> ` q)))"
+  using \<delta>k[OF a0] 
+  by (metis  a1 matrix_sep_not_zero_def matrix_sep_var_not_zero zero_vec_list)
+
+lemma Qv_ptensor:
+  assumes a0:"(\<delta>k, \<Q>') = measure_vars k q \<Q>" and
+      a1:"(\<forall>e\<in>q. QStateM_map \<Q> e \<noteq> {})" and
+      a2:"k < 2 ^ card (\<Union> (QStateM_map \<Q> ` q))" and
+      a3:"QStateM_vars \<Q> = Q_domain_var (q \<union> qr) (QStateM_map \<Q>)" and
+      a4:"QStateM_list \<Q> = vl" and
+      a6:"q  \<inter> qr   = {}" and a7:"q  \<noteq> {}" and a8:"0 < \<delta>k" and
+      a9:"M = 1\<^sub>k (2 ^ card (\<Union> (QStateM_map \<Q> ` q)))" and 
+      a10:"v1 = Q_domain_var q (QStateM_map \<Q>)" and a11:"v2 = Q_domain_var qr (QStateM_map \<Q>)"
+  shows "QStateM_vector (matrix_sep_QStateM q \<Q> M) = 
+                 (ptensor_mat v1 v2 M  (1\<^sub>m (2^(card v2))) *\<^sub>v QStateM_vector \<Q>)"
+proof-
+  let ?v = "vec_of_list vl" and
+       ?v1 = "Q_domain_var q (QStateM_map \<Q>)" and ?v2 = "Q_domain_var qr (QStateM_map \<Q>)"
+  let ?M = "(1\<^sub>k (2 ^ card (\<Union> (QStateM_map \<Q> ` q))))"
+
+    have f1:"finite ?v1" and f2:"finite ?v2" and
+       Q_domain:"Q_domain (QStateM_map \<Q>) = QStateM_vars \<Q>" and
+       dim_vec:"dim_vec ?v = 2 ^ card ?v1 * 2 ^ card ?v2" and k:"k < 2 ^ card ?v1" and
+       inter_12:"?v1 \<inter> ?v2 = {}" and v1_not_empty:"?v1 \<noteq> {}" and
+       v2:"?v2 = Q_domain (QStateM_map \<Q>) - ?v1"
+    using domain_Q[of q  \<Q> k qr vl, OF a1 a2 a3 a4 a6 a7] by auto  
+            
+    then show ?thesis
+      using matrix_sep_dest[OF _ Q_domain] v2 matrix_sep_nz[OF a0 a8] a9 a10 a11
+      by (simp add: vec_list vec_of_list_QStateM_list) 
+qed
+
+lemma \<rho>_m_norm:
+  assumes a0:"(\<delta>k, \<Q>') = measure_vars k (q \<sigma>) \<Q>" and 
+      a1:"(\<forall>e\<in>q \<sigma>. QStateM_map \<Q> e \<noteq> {})" and
+      a2:"k < 2 ^ card (\<Union> (QStateM_map \<Q> ` q \<sigma>))" and
+      a3:"QStateM_vars \<Q> = Q_domain_var (q \<sigma> \<union> qr \<sigma>) (QStateM_map \<Q>)" and
+      a4:"QStateM_list \<Q> = vl \<sigma>" and
+      a6:"q \<sigma> \<inter> qr \<sigma>  = {}" and a7:"q \<sigma> \<noteq> {}" and 
+      a8:"ns' = (p * \<delta>k, \<sigma>', \<Q>')" and 
+      a9:"q \<sigma>' = q \<sigma> " and a10:"qr \<sigma>' = qr \<sigma>" and a11:"vl \<sigma>' = vl \<sigma>" and
+      a12:"QStateM_map \<Q>' = QStateM_map \<Q>" and
+      a13:"0 < \<delta>k"   
+    shows "Re (vec_norm
+                (QStateM_vector (matrix_sep_QStateM (q \<sigma>) \<Q> (1\<^sub>k (2 ^ card (Q_domain_var (q \<sigma>) (QStateM_map \<Q>))))))) = 
+             \<rho>_m q vl k ns'"
+proof-
+let ?q = "q \<sigma>" and ?qr = "qr \<sigma>" and ?v = "vec_of_list (vl \<sigma>)" and
+      ?q' = "q \<sigma>'" and ?qr' = "qr \<sigma>'" and ?v' = "vl \<sigma>'" 
+  let ?v1 = "Q_domain_var ?q (QStateM_map \<Q>)" and ?v2 = "Q_domain_var ?qr (QStateM_map \<Q>)"
+  let ?M = "(1\<^sub>k (2 ^ card (\<Union> (QStateM_map \<Q> ` q \<sigma>))))"
+
+   have f1:"finite ?v1" and f2:"finite ?v2" and
+       Q_domain:"Q_domain (QStateM_map \<Q>) = QStateM_vars \<Q>" and
+       dim_vec:"dim_vec ?v = 2 ^ card ?v1 * 2 ^ card ?v2" and k:"k < 2 ^ card ?v1" and
+       inter_12:"?v1 \<inter> ?v2 = {}" and v1_not_empty:"?v1 \<noteq> {}" and
+       v2:"?v2 = Q_domain (QStateM_map \<Q>) - ?v1"
+    using domain_Q[OF a1 a2 a3 a4 a6 a7] by auto  
+            
+  
+  then have " Re (vec_norm
+                (QStateM_vector (matrix_sep_QStateM (q \<sigma>) \<Q> (1\<^sub>k (2 ^ card ?v1))))) = 
+                 sqrt(\<Sum>j = 0..<2^(card ?v2). norm (partial_state2.aijv ?v1 ?v2 (QStateM_vector \<Q>) k j )^2)"
+    using Q_domain_var_def Qv_ptensor a4 
+          Qv_ptensor[OF a0 a1 a2 a3 a4 a6 a7 a13]
+          vec_norm_ptensor_eq_sum_norm_k' vec_of_list_QStateM_list by auto
+  then show "Re (vec_norm
+                (QStateM_vector (matrix_sep_QStateM (q \<sigma>) \<Q> (1\<^sub>k (2 ^ card ?v1))))) = 
+             \<rho>_m q vl k ns'" 
+    unfolding \<rho>_m_def Let_def 
+    by (auto simp add: a11 a4 a12 a8 a9 get_qstate_def get_stack_def v2 vec_of_list_QStateM_list)
+
+qed
+
 
 lemma sound_prob_semant_proof:
   assumes a0:"(\<delta>k, \<Q>') = measure_vars k (q \<sigma>) \<Q>" and 
@@ -1131,7 +1216,7 @@ lemma sound_prob_semant_proof:
           (Q_domain_var (q \<sigma>) (QStateM_map \<Q>))
           (Q_domain_var (qr \<sigma>) (QStateM_map \<Q>))
           (unit_vec (2 ^ card (Q_domain_var (q \<sigma>) (QStateM_map \<Q>))) k)
-          (vector_aij (Q_domain_var (q \<sigma>) (QStateM_map \<Q>))
+          (partial_state2.vector_aij (Q_domain_var (q \<sigma>) (QStateM_map \<Q>))
           (Q_domain_var (qr \<sigma>) (QStateM_map \<Q>)) (QStateM_vector \<Q>) k))"      
 proof-
   let ?q = "q \<sigma>" and ?qr = "qr \<sigma>" and ?v = "vec_of_list (vl \<sigma>)" and
@@ -1139,100 +1224,43 @@ proof-
   let ?v1 = "Q_domain_var ?q (QStateM_map \<Q>)" and ?v2 = "Q_domain_var ?qr (QStateM_map \<Q>)"
   let ?M = "(1\<^sub>k (2 ^ card (\<Union> (QStateM_map \<Q> ` q \<sigma>))))"
 
+  note Qv_ptensor = Qv_ptensor[OF a0 a1 a2 a3 a4 a6 a7 a13]
+  show "\<delta>k = \<rho> q vl k ns'" 
+    using sound_prob_semant_proof_rho[of \<delta>k \<Q>' k q \<sigma> \<Q> qr vl, OF a0 a1 a2 a3 a4 a6 a7 a8 a9 a10 a11 a12]
+    by auto
   have f1:"finite ?v1" and f2:"finite ?v2" and
        Q_domain:"Q_domain (QStateM_map \<Q>) = QStateM_vars \<Q>" and
        dim_vec:"dim_vec ?v = 2 ^ card ?v1 * 2 ^ card ?v2" and k:"k < 2 ^ card ?v1" and
        inter_12:"?v1 \<inter> ?v2 = {}" and v1_not_empty:"?v1 \<noteq> {}" and
        v2:"?v2 = Q_domain (QStateM_map \<Q>) - ?v1"
-    using domain_Q[of q \<sigma> \<Q> k qr vl, OF a1 a2 a3 a4 a6 a7] by auto   
-  note eq_norm[OF f1 f2 inter_12 k dim_vec]
-  moreover have \<delta>k:"\<delta>k =  Re ((vec_norm
-             (matrix_sep ?q \<Q> 1\<^sub>k (2 ^ card (\<Union> (QStateM_map \<Q> ` ?q)))))\<^sup>2 /
-             (vec_norm (QStateM_vector \<Q>))\<^sup>2)"
-    using measure_vars_dest a0
-    by auto     
-  moreover  have matrix_sep_nz:"matrix_sep_not_zero ?q \<Q> 1\<^sub>k (2 ^ card (\<Union> (QStateM_map \<Q> ` ?q)))"
-    by (metis  calculation(2) a13 matrix_sep_not_zero_def matrix_sep_var_not_zero zero_vec_list)
-  moreover have Qv_ptensor:"QStateM_vector (matrix_sep_QStateM (q \<sigma>) \<Q> ?M) = 
-                 (ptensor_mat ?v1 ?v2
-                               (?M::complex mat) (1\<^sub>m (2^(card ?v2))) *\<^sub>v 
-                      QStateM_vector \<Q>)"
-    using matrix_sep_dest[OF  _ Q_domain  v2, of "q \<sigma>"  ?M] v2 matrix_sep_nz
-    by (auto simp add: list_of_vec_QStateM_vec Q_domain list_of_vec_elim)
-  then have "Re ((vec_norm
-                  (ptensor_mat ?v1 ?v2 (1\<^sub>k (2 ^ card ?v1)) (1\<^sub>m (2 ^ card ?v2)) *\<^sub>v
-                    vec_of_list (vl \<sigma>)))\<^sup>2 /
-                (vec_norm (vec_of_list (vl \<sigma>)))\<^sup>2) = 
-             Re ((vec_norm
-                (QStateM_vector (matrix_sep_QStateM (q \<sigma>) \<Q> (1\<^sub>k (2 ^ card ?v1)))))\<^sup>2 /
-                (vec_norm (QStateM_vector \<Q>))\<^sup>2)"
-    using QStateM_list.rep_eq QStateM_vector.rep_eq QState_list.rep_eq 
-          QState_vector.rep_eq Q_domain_var_def a4 v2 by auto
-  
-  ultimately show "\<delta>k = \<rho> q vl k ns'" using v2
-    unfolding \<rho>_def aij_def Q_domain_var_def Let_def get_stack_def get_qstate_def
-    using a11 a12 a8 a9
-    by (metis QStateM_rel1 QStateM_vars.rep_eq Q_domain_var_def Qv_ptensor a11 a12 a8 a9 
-      fst_conv matrix_sep_def qstate_def snd_conv)     
+    using domain_Q[OF a1 a2 a3 a4 a6 a7] by auto   
+   
     
   show "QStateM_vars \<Q>' = ?v1 \<union> ?v2"
     by (metis QStateM_rel1 QStateM_vars.rep_eq Q_domain_var_def UN_Un a12 a3 qstate_def)
-  have "QStateM_vector (matrix_sep_QStateM (q \<sigma>) \<Q> ?M) = 
-                 (ptensor_mat ?v1 ?v2
-                               (?M::complex mat) (1\<^sub>m (2^(card ?v2))) *\<^sub>v 
-                      QStateM_vector \<Q>)"
-    using matrix_sep_dest[OF  _ Q_domain  v2, of "q \<sigma>"  ?M] v2  matrix_sep_nz
-    by (auto simp add: list_of_vec_QStateM_vec Q_domain list_of_vec_elim)
+  have "Re (vec_norm
+                (QStateM_vector (matrix_sep_QStateM (q \<sigma>) \<Q> (1\<^sub>k (2 ^ card ?v1))))) = \<rho>_m q vl k ns'" 
+    using \<rho>_m_norm[of _ _ _ q _ _ qr vl, OF a0 a1 a2 a3 a4 a6 a7 a8 a9 a10 a11 a12 a13] by auto
   moreover have "\<Q>' = (1 / \<rho>_m q vl k ns') \<cdot>\<^sub>Q matrix_sep_QStateM (q \<sigma>) \<Q> (1\<^sub>k ((2::nat) ^ card (\<Union> (QStateM_map \<Q> ` (q \<sigma>)))))"
-    using measure_vars_dest[of \<delta>k, OF  \<delta>k] a0 a8 apply auto sorry
-    by (simp add: \<delta>k) 
+    using  measure_vars_dest[of \<delta>k _ _ _ _ \<Q>', OF  \<delta>k] a0 a8 Qv_ptensor
+    apply auto
+    by (metis Im_complex_of_real Q_domain Q_domain_var_def Re_complex_of_real calculation 
+              complex.exhaust_sel matrix_sep_def measure_vars_def snd_conv v2 vec_norm_Re_0)
   ultimately have "QStateM_vector \<Q>' = (1 /  \<rho>_m q vl k ns') \<cdot>\<^sub>v (ptensor_mat ?v1 ?v2
                                (?M::complex mat) (1\<^sub>m (2^(card ?v2))) *\<^sub>v QStateM_vector \<Q>)"  
-    using a13
-    using a5 matrix_sep_dest matrix_sep_nz sca_mult_q_statem_qstate_vector v1_not_empty sorry by force  
-  moreover have "(1 / sqrt \<delta>k) \<cdot>\<^sub>v ((ptensor_mat ?v1 ?v2 (?M::complex mat) (1\<^sub>m (2^(card ?v2))) *\<^sub>v QStateM_vector \<Q>)) = 
-                 (1 / sqrt \<delta>k) \<cdot>\<^sub>v ptensor_vec ?v1 ?v2 (unit_vec (2^(card ?v1)) k) (vector_aij ?v1 ?v2 (QStateM_vector \<Q>) k)"
+    using a13 \<delta>k[OF a0] Qv_ptensor
+    using a5 matrix_sep_dest matrix_sep_nz[OF a0 a13] sca_mult_q_statem_qstate_vector v1_not_empty
+    by (smt (verit, del_insts) Im_complex_of_real Q_domain Q_domain_var_def  
+        complex.exhaust_sel divide_eq_0_iff matrix_sep_def 
+         of_real_eq_0_iff v2 vec_norm_Re_0 zero_complex.simps(1) zero_power2) 
+  moreover have "(1 /\<rho>_m q vl k ns') \<cdot>\<^sub>v ((ptensor_mat ?v1 ?v2 (?M::complex mat) (1\<^sub>m (2^(card ?v2))) *\<^sub>v QStateM_vector \<Q>)) = 
+                 (1 / \<rho>_m q vl k ns') \<cdot>\<^sub>v ptensor_vec ?v1 ?v2 (unit_vec (2^(card ?v1)) k) (partial_state2.vector_aij ?v1 ?v2 (QStateM_vector \<Q>) k)"
     using v_scalar_mat_product_eq_ptensor[OF f1 f2 inter_12 k dim_vec]
     by (simp add: Q_domain_var_def a4 vec_of_list_QStateM_list)
-  ultimately show  "QStateM_vector \<Q>' = (1 / sqrt \<delta>k) \<cdot>\<^sub>v ptensor_vec ?v1 ?v2 (unit_vec (2^(card ?v1)) k) (vector_aij ?v1 ?v2 (QStateM_vector \<Q>) k)"
+  ultimately show  "QStateM_vector \<Q>' = (1 / \<rho>_m q vl k ns') \<cdot>\<^sub>v ptensor_vec ?v1 ?v2 (unit_vec (2^(card ?v1)) k) (partial_state2.vector_aij ?v1 ?v2 (QStateM_vector \<Q>) k)"
     using measure_vars_dest[of \<delta>k] a0  by auto
 qed
 
-lemma \<rho>_m_norm:
-   "vec_norm (matrix_sep (q \<sigma>) \<Q> 1\<^sub>k (2 ^ (card (\<Union> (QStateM_map \<Q> ` q \<sigma>))))) = 
-    complex_of_real (\<rho>_m q vl k (p * \<delta>k, \<sigma>', \<Q>'))"
-  unfolding \<rho>_m_def Let_def apply auto
-  sorry
-    
-lemma "   
-    1 /vec_norm (matrix_sep (q \<sigma>) \<Q> 1\<^sub>k (2 ^ (card (\<Union> (QStateM_map \<Q> ` q \<sigma>))))) \<cdot>\<^sub>Q
-    (matrix_sep_QStateM (q \<sigma>) \<Q> 1\<^sub>k (2 ^ (card (\<Union> (QStateM_map \<Q> ` q \<sigma>))))) =
-    1 / (complex_of_real (\<rho>_m q vl k (p * \<delta>k, \<sigma>', \<Q>'))) \<cdot>\<^sub>Q
-    (matrix_sep_QStateM (q \<sigma>) \<Q> 1\<^sub>k (2 ^ (card (\<Union> (QStateM_map \<Q> ` q \<sigma>)))))"
-  using \<rho>_m_norm
-  by metis 
-
-lemma sound_prob_semant_proof2:
-  assumes a0:"(\<delta>k, \<Q>') = measure_vars' k (q \<sigma>) \<Q>" and 
-      a1:"(\<forall>e\<in>q \<sigma>. QStateM_map \<Q> e \<noteq> {})" and
-      a2:"k < 2 ^ card (\<Union> (QStateM_map \<Q> ` q \<sigma>))" and
-      a3:"QStateM_vars \<Q> = Q_domain_var (q \<sigma> \<union> qr \<sigma>) (QStateM_map \<Q>)" and
-      a4:"QStateM_list \<Q> = vl \<sigma>" and
-      a5:" QStateM_vars \<Q> \<noteq> {}" and
-      a6:"q \<sigma> \<inter> qr \<sigma>  = {}" and a7:"q \<sigma> \<noteq> {}" and 
-      a8:"ns' = (p * \<delta>k, \<sigma>', \<Q>')" and 
-      a9:"q \<sigma>' = q \<sigma> " and a10:"qr \<sigma>' = qr \<sigma>" and a11:"vl \<sigma>' = vl \<sigma>" and
-      a12:"QStateM_map \<Q>' = QStateM_map \<Q>" and
-      a13:"0 < \<delta>k" and a14:"QStateM_vars \<Q> = \<Union>((QStateM_map \<Q>) ` q \<sigma>)"      
-    shows "\<delta>k = \<rho> q vl k ns'" and 
-      "QStateM_vars \<Q>' = Q_domain_var (q \<sigma>) (QStateM_map \<Q>) \<union> 
-                         (Q_domain_var (qr \<sigma>) (QStateM_map \<Q>))" and
-      "QStateM_vector \<Q>' = 
-         unit_vec (2 ^ card (Q_domain_var (q \<sigma>) (QStateM_map \<Q>))) k"
-  using a0 a1 a11 a12 a13 a2 a3 a4 a5 a6 a7 a8 a9 sound_prob_semant_proof_rho 
-    apply presburger
-  apply (simp add: Q_domain_var_def a12 a3 eq_QStateMap_vars)
-  using Q_domain_var_def a0 a1 a13 a14 a2 a7 measure_vars'_def measure_vars'_dest_QStateM by auto
 
 lemma assest_unit:
   assumes 
@@ -1276,7 +1304,6 @@ proof-
     apply (clarify, intro map_assn_intro) by fast+          
 qed
 
-
 lemma assest_vectori1:
   assumes 
       a0:"QStateM_vars \<Q> = Q_domain_var (q \<sigma> \<union> qr \<sigma>) (QStateM_map \<Q>)" and       
@@ -1284,17 +1311,22 @@ lemma assest_vectori1:
       a2:"q \<sigma>' = q \<sigma>" and a2':"qr \<sigma>' = qr \<sigma> " and a2'':"vl \<sigma>' = vl \<sigma>" and
       a3:"QStateM_map \<Q>' = QStateM_map \<Q>" and      
       a4:"v1 = Q_domain_var (q \<sigma>) (QStateM_map \<Q>)" and  
-      a5:"QStateM_vars \<Q> \<noteq> \<Union>((QStateM_map \<Q>) ` q \<sigma>)" and
       a6:"v2 = Q_domain_var (qr \<sigma>) (QStateM_map \<Q>)" and      
       a7:"q \<sigma> \<inter> qr \<sigma> = {}" and a8:"\<delta>k = \<rho> q vl k ns'" and a9:"QStateM_list \<Q> = vl \<sigma> "
-    shows "list_of_vec (complex_of_real (1 / sqrt \<delta>k) \<cdot>\<^sub>v
-                       vector_aij (Q_domain_var (q \<sigma>) (QStateM_map \<Q>))
+    shows "list_of_vec (complex_of_real (1 /  \<rho>_m q vl k ns') \<cdot>\<^sub>v
+                       partial_state2.vector_aij (Q_domain_var (q \<sigma>) (QStateM_map \<Q>))
                        (Q_domain_var (qr \<sigma>) (QStateM_map \<Q>)) (QStateM_vector \<Q>) k) =
            local.vector_i ns' q vl k \<sigma>'"
-proof-             
-  let ?v = "list_of_vec (complex_of_real (1 / sqrt \<delta>k) \<cdot>\<^sub>v
-             vector_aij (Q_domain_var (q \<sigma>) (QStateM_map \<Q>))
-             (Q_domain_var (qr \<sigma>) (QStateM_map \<Q>)) (QStateM_vector \<Q>) k)" 
+proof-  
+  interpret ps2:partial_state2 "list_dims (v1 \<union> v2)" v1 "v2"
+    apply standard
+    apply (auto simp add: list_dims_def finite_Q_domain_var a4 a6)
+    using a0 a7 domain_qr by auto
+  
+ 
+  let ?v = "list_of_vec (complex_of_real (1 / \<rho>_m q vl k ns') \<cdot>\<^sub>v
+             ps2.vector_aij (QStateM_vector \<Q>) k)" 
+
   have Qstatem_wf_Q:"QStateM_wf (QStateM_unfold \<Q>)"
      using QStateM_wf by blast
   then have QStateM_wf1:"(\<forall>x y. x\<noteq>y \<and> x\<in> domain (QStateM_map \<Q>) \<and> y \<in> domain (QStateM_map \<Q>) \<longrightarrow> 
@@ -1303,13 +1335,14 @@ proof-
   
   have v2:"v2 = QStateM_vars \<Q> - v1"
     using q_vars_q2[of "q \<sigma>" "qr \<sigma>" "QStateM_map \<Q>" "QStateM_vars \<Q>" ] 
-          a7 a5 a6 Qstatem_wf_Q a0 a4 eq_QStateM_vars 
+          a7  a6 Qstatem_wf_Q a0 a4 eq_QStateM_vars 
     by auto
   have len:"length ?v = length (vector_i ns' q vl k \<sigma>') "
     using v2 a3 a4 a6 a1 a2 QStateM_rel1
-    unfolding vector_i_def Let_def vector_aij_def get_qstate_def get_stack_def Q_domain_set_def
-    apply auto     
-    using QStateM_vars.rep_eq Q_domain_var_def qstate_def by presburger     
+    unfolding vector_i_def Let_def  get_qstate_def get_stack_def Q_domain_set_def 
+    unfolding ps2.vector_aij_def ps2.aijv_def ps2.d2_def aij_def Let_def
+    apply auto
+    using QStateM_vars.rep_eq ps2.dims2_def qstate_def by fastforce  
   moreover have  "\<forall>i<length ?v. ?v!i = vector_i ns' q vl k \<sigma>' !i"
   proof-
     { fix i 
@@ -1317,24 +1350,24 @@ proof-
       moreover have "i<length (vector_i ns' q vl k \<sigma>')" 
         using len calculation by auto
       moreover have 
-      "aijv (Q_domain_var (q \<sigma>) (QStateM_map \<Q>)) (Q_domain_var (qr \<sigma>) (QStateM_map \<Q>))
+      "partial_state2.aijv (Q_domain_var (q \<sigma>) (QStateM_map \<Q>)) (Q_domain_var (qr \<sigma>) (QStateM_map \<Q>))
         (QStateM_vector \<Q>) k i =
-      aijv (Q_domain_var (q (fst (snd ns'))) (QStateM_map (snd (snd ns'))))
+      partial_state2.aijv (Q_domain_var (q (fst (snd ns'))) (QStateM_map (snd (snd ns'))))
         (Q_domain (QStateM_map (snd (snd ns'))) -
          Q_domain_var (q (fst (snd ns'))) (QStateM_map (snd (snd ns'))))
         (vec_of_list (vl (fst (snd ns')))) k i" 
         using a1 a2 a2' a2'' a3 v2 a4 a6 QStateM_rel1 
               QStateM_vars.rep_eq a9 qstate_def vec_of_list_QStateM_list by auto
-      ultimately have "?v!i = vector_i ns' q vl k \<sigma>' ! i" using  a8
-        unfolding get_qstate_def get_stack_def vector_aij_def vector_i_def Let_def aij_def 
-        by auto
+      ultimately have "?v!i = vector_i ns' q vl k \<sigma>' ! i" using  a8 v2 a4 a6
+        unfolding get_qstate_def get_stack_def ps2.vector_aij_def vector_i_def Let_def aij_def 
+        by auto 
     } thus ?thesis by auto
   qed
   ultimately show ?thesis
-    using nth_equalityI by blast  
+    using nth_equalityI a4 a6 by blast 
 qed
 
-lemma assest_vectori_v2_empty:
+(*lemma assest_vectori_v2_empty:
   assumes 
       a0:"QStateM_vars \<Q> = Q_domain_var (q \<sigma> \<union> qr \<sigma>) (QStateM_map \<Q>)" and       
       a1:"ns' = (p * \<delta>k, \<sigma>', \<Q>')" and 
@@ -1371,7 +1404,7 @@ proof-
     by (auto simp add: QState_vars_empty Q_domain_def Q_domain_var_def  QState_wf_def)
   thus ?thesis using a9  by auto
 qed
-
+*)
 
 lemma assest_vectori:
   assumes 
@@ -1382,12 +1415,12 @@ lemma assest_vectori:
       a5:"QStateM_map \<Q>' = QStateM_map \<Q>" and
       a6: "map_q = fst (split_map (QStateM_map \<Q>) (q \<sigma>))" and
       a6':"map_qr = snd (split_map (QStateM_map \<Q>) (q \<sigma>))" and a6'':"map_qr = constrain_map (QStateM_map \<Q>) (qr \<sigma>)" and
-      a7:"v1 = Q_domain_var (q \<sigma>) (QStateM_map \<Q>)" and  a10:"QStateM_vars \<Q> \<noteq> \<Union>((QStateM_map \<Q>) ` q \<sigma>)" and
+      a7:"v1 = Q_domain_var (q \<sigma>) (QStateM_map \<Q>)" and  
       a7':"v2 = Q_domain_var (qr \<sigma>) (QStateM_map \<Q>)" and a7'':"0 < \<delta>k " and
-      a8:"Q2  = QStateM(map_qr, QState(v2, list_of_vec ((1 / sqrt \<delta>k)\<cdot>\<^sub>v(vector_aij v1 v2 (QStateM_vector \<Q>) k))))" and
+      a8:"Q2  = QStateM(map_qr, QState(v2, list_of_vec ((1 / \<rho>_m q vl k ns')\<cdot>\<^sub>v(partial_state2.vector_aij v1 v2 (QStateM_vector \<Q>) k))))" and
       a11:"q \<sigma> \<inter> qr \<sigma> = {}" and a12:"\<delta>k = \<rho> q vl k ns'" and a13:"QStateM_list \<Q> = vl \<sigma> " and
-      a14:"QState_wf(v2,list_of_vec ((1 / sqrt \<delta>k)\<cdot>\<^sub>v(vector_aij v1 v2 (QStateM_vector \<Q>) k)))" and
-      a15:"QStateM_wf (map_qr, QState(v2, list_of_vec ((1 / sqrt \<delta>k)\<cdot>\<^sub>v(vector_aij v1 v2 (QStateM_vector \<Q>) k))))"
+      a14:"QState_wf(v2,list_of_vec ((1 / \<rho>_m q vl k ns')\<cdot>\<^sub>v(partial_state2.vector_aij v1 v2 (QStateM_vector \<Q>) k)))" and
+      a15:"QStateM_wf (map_qr, QState(v2, list_of_vec ((1 / \<rho>_m q vl k ns')\<cdot>\<^sub>v(partial_state2.vector_aij v1 v2 (QStateM_vector \<Q>) k))))"
 shows "(p, \<sigma>', Q2) \<in>  (qr \<mapsto> vector_i ns' q vl k)"   
 proof
   have "QStateM_wf (QStateM_unfold \<Q>)"
@@ -1399,19 +1432,16 @@ proof
            Q_domain_var (qr \<sigma>') (snd (split_map (QStateM_map \<Q>) (q \<sigma>)))"
     using a6'' a6' unfolding _Q_domain_var_def split_map_def constrain_map_def none_def
     by (auto simp add: a0 a2')    
-  then have v2_not_empty:"v2\<noteq>{}" using a10
-    using Q_domain_var_def a0 a7' by auto
-  moreover have a02:"list_of_vec (complex_of_real (1 / sqrt \<delta>k) \<cdot>\<^sub>v
-                       vector_aij (Q_domain_var (q \<sigma>) (QStateM_map \<Q>))
+  moreover have a02:"list_of_vec (complex_of_real (1 / \<rho>_m q vl k ns') \<cdot>\<^sub>v
+                       partial_state2.vector_aij (Q_domain_var (q \<sigma>) (QStateM_map \<Q>))
                        (Q_domain_var (qr \<sigma>) (QStateM_map \<Q>)) (QStateM_vector \<Q>) k) =
                      local.vector_i ns' q vl k \<sigma>'" 
-    using assest_vectori1[of \<Q> q \<sigma> qr, OF a0 a1 a2 a2' a2'' a5 a7 a10 a7' a11 a12 a13] by auto
-  moreover have a03:"QState_wf(v2,list_of_vec ((1 / sqrt \<delta>k)\<cdot>\<^sub>v(vector_aij v1 v2 (QStateM_vector \<Q>) k)))"
+    using assest_vectori1[of \<Q> q \<sigma> qr, OF a0 a1 a2 a2' a2'' a5 a7  a7' a11 a12 a13] by auto
+  moreover have a03:"QState_wf(v2,list_of_vec ((1 / \<rho>_m q vl k ns')\<cdot>\<^sub>v(partial_state2.vector_aij v1 v2 (QStateM_vector \<Q>) k)))"
     using a14 by auto     
-  moreover have a04:"QStateM_wf (map_qr, QState(v2, list_of_vec ((1 / sqrt \<delta>k)\<cdot>\<^sub>v(vector_aij v1 v2 (QStateM_vector \<Q>) k))))" 
-    using a15 by auto
-     
-   have "(p, \<sigma>', QStateM(map_qr, QState(v2, list_of_vec ((1 / sqrt \<delta>k)\<cdot>\<^sub>v(vector_aij v1 v2 (QStateM_vector \<Q>) k))))) \<in>  (qr \<mapsto> vector_i ns' q vl k)"   
+  moreover have a04:"QStateM_wf (map_qr, QState(v2, list_of_vec ((1 / \<rho>_m q vl k ns')\<cdot>\<^sub>v(partial_state2.vector_aij v1 v2 (QStateM_vector \<Q>) k))))" 
+    using a15 by auto     
+   have "(p, \<sigma>', QStateM(map_qr, QState(v2, list_of_vec ((1 / \<rho>_m q vl k ns')\<cdot>\<^sub>v(partial_state2.vector_aij v1 v2 (QStateM_vector \<Q>) k))))) \<in>  (qr \<mapsto> vector_i ns' q vl k)"   
       apply (rule map_assn_intro)
       using a7' a01
       apply (simp add: a6')
@@ -1419,9 +1449,49 @@ proof
       using a04 apply blast
       using a03 by blast
     thus ?thesis
-      using a8 by blast   
+      using a8  by blast   
     show "(qr \<mapsto> local.vector_i ns' q vl k) \<subseteq> (qr \<mapsto> local.vector_i ns' q vl k)"
       by auto
+qed
+
+lemma V1_V2_not_zero_tensor_not_zero:   
+     assumes a0:"finite v1" and a1:"finite v2" and a2:"v1 \<inter> v2 = {}" and
+              a3:"dim_vec (V1::'a::field vec)  = 2^card v1" and a4:"dim_vec V2 = 2^card v2" and 
+              a5:"V1 \<noteq> 0\<^sub>v (2^card v1)" and a6:"V2 \<noteq> 0\<^sub>v (2^card v2)"
+      shows "partial_state2.ptensor_vec v1 v2 V1 V2  \<noteq> 0\<^sub>v (2 ^ card (v1 \<union> v2))"
+proof-
+  interpret ps2:partial_state2 "list_dims (v1 \<union> v2)" v1 v2
+    apply standard using a0 a1 a2 a2 a3 a4 by (auto simp add: list_dims_def)
+  obtain i j where V1_i_not0:"V1$i \<noteq> 0" and i_less_dim_v1:"i < ps2.d1" and 
+                   V2_i_not0:"V2$j \<noteq> 0" and j_less_dim_v2:"j < ps2.d2"
+    using a5 a6 a3 a4 not_zero_vector_index
+    by (metis a0 a1 a2 length_replicate nth_replicate partial_state2.dims1_def 
+         partial_state2.intro prod_list_replicate ps2.d1_def ps2.d2_def ps2.dims2_def) 
+  moreover have "ps2.ptensor_vec  V1 V2 $ (ps2.pencode12 (i,j))\<noteq> 0"
+    using i_less_dim_v1 j_less_dim_v2 calculation
+    unfolding ps2.pencode12_def ps2.ptensor_vec_def partial_state.tensor_vec_def
+    by (simp add: partial_state.d1_def partial_state.d2_def 
+                  partial_state.dims1_def partial_state.dims2_def 
+                  partial_state.encode12_inv1 partial_state.encode12_inv2 partial_state.encode12_lt 
+                  ps2.d1_def ps2.d2_def ps2.nths_vars1' ps2.nths_vars2')
+  ultimately show ?thesis unfolding ps2.ptensor_vec_def zero_vec_def partial_state.tensor_vec_def 
+    apply auto
+    by (metis (no_types, lifting) dim_vec index_vec partial_state.d1_def partial_state.d2_def 
+              partial_state.dims1_def partial_state.dims2_def partial_state.encode12_lt 
+             ps2.d1_def ps2.d2_def ps2.nths_vars1' ps2.nths_vars2' ps2.pencode12_def)
+qed
+
+lemma s_product_not_zero_v_not_zero:
+  assumes a0:"(a::complex) \<cdot>\<^sub>v v \<noteq> 0\<^sub>v (dim_vec v)" 
+  shows"v \<noteq> 0\<^sub>v (dim_vec v)"
+proof-
+  { assume "v=0\<^sub>v (dim_vec v)"
+    then have "\<forall>i<(dim_vec v). v$i = 0"
+      by (metis index_zero_vec(1))
+    then have "\<forall>i<(dim_vec v). a*v$i = 0"
+      by auto
+    then have False using a0 unfolding smult_vec_def by auto
+  } thus ?thesis by auto
 qed
 
 lemma  Q_in_disjunction_conj_unit_vector1:
@@ -1435,8 +1505,7 @@ lemma  Q_in_disjunction_conj_unit_vector1:
       a8:"ns' = (p * \<delta>k, \<sigma>', \<Q>')" and 
       a9:"q \<sigma>' = q \<sigma> " and a10:"qr \<sigma>' = qr \<sigma>" and a11:"vl \<sigma>' = vl \<sigma>" and
       a12:"QStateM_map \<Q>' = QStateM_map \<Q>" and
-      a13:"0 < \<delta>k" and a14:"\<delta>k = \<rho> q vl k ns'" and a15:"QStateM_list \<Q> = vl \<sigma> " and
-      a16:"QStateM_vars \<Q> \<noteq> \<Union>((QStateM_map \<Q>) ` q \<sigma>)" 
+      a13:"0 < \<delta>k" and a14:"\<delta>k = \<rho> q vl k ns'" 
     shows "(p, \<sigma>', \<Q>') \<in> (q \<mapsto> local.unit_vecl ns' q k \<and>\<^sup>* qr \<mapsto> vector_i ns' q vl k)"
 proof-
   let ?q = "q \<sigma>" and ?qr = "qr \<sigma>" and ?v = "vec_of_list (vl \<sigma>)" and
@@ -1445,7 +1514,7 @@ proof-
   let ?M = "(1\<^sub>k (2 ^ card (\<Union> (QStateM_map \<Q> ` q \<sigma>))))"
   let ?n = "Re ((vec_norm
              (QStateM_vector
-               (matrix_sep ?q \<Q> 1\<^sub>k (2 ^ card (\<Union> (QStateM_map \<Q> ` ?q))))))\<^sup>2 /
+               (matrix_sep_QStateM ?q \<Q> 1\<^sub>k (2 ^ card (\<Union> (QStateM_map \<Q> ` ?q))))))\<^sup>2 /
              (vec_norm (QStateM_vector \<Q>))\<^sup>2)"
   have "QStateM_wf (QStateM_unfold \<Q>)"
     using QStateM_wf by blast
@@ -1457,13 +1526,45 @@ proof-
        dim_vec:"dim_vec ?v = 2 ^ card ?v1 * 2 ^ card ?v2" and k:"k < 2 ^ card ?v1" and
        inter_12:"?v1 \<inter> ?v2 = {}" and v1_not_empty:"?v1 \<noteq> {}" and
        v2:"?v2 = Q_domain (QStateM_map \<Q>) - ?v1"
-    using domain_Q[of q \<sigma> \<Q> k qr vl, OF a1 a2 a3 a4 a6 a7] by auto 
-
+    using domain_Q [OF a1 a2 a3 a4 a6 a7] by auto 
+  
+  interpret ps2:partial_state2 "list_dims (?v1 \<union> ?v2)" ?v1 ?v2
+    apply standard by (auto simp add: v2 list_dims_def f1 f2 Q_domain a3 finite_Q_domain_var)
+    
   let ?L1 = "unit_vec (2^(card ?v1)) k" and
-      ?L2 = "vector_aij ?v1 ?v2 (QStateM_vector \<Q>) k"
+      ?L2 = "ps2.vector_aij  (QStateM_vector \<Q>) k"
+
   have delta:"\<delta>k = \<rho> q vl k ns'" and q'_vars:"QStateM_vars \<Q>' = ?v1 \<union> ?v2" and
-       q'_vector:"QStateM_vector \<Q>' = (1 / sqrt \<delta>k) \<cdot>\<^sub>v ptensor_vec ?v1 ?v2 ?L1 ?L2"
+       q'_vector:"QStateM_vector \<Q>' = (1 / \<rho>_m q vl k ns') \<cdot>\<^sub>v ptensor_vec ?v1 ?v2 ?L1 ?L2"
     using sound_prob_semant_proof[OF assms(1-14)] by auto
+
+  have conj_domain_vars_empty:"Q_domain_var (q \<sigma>) (QStateM_map \<Q>) \<inter> Q_domain_var (qr \<sigma>) (QStateM_map \<Q>) = {}"
+    using inter_12 by blast 
+  
+  have prob_not_zero: "1 / \<rho>_m q vl k ns'\<noteq>0"
+    using   a13 vec_norm_ptensor_eq_sum_norm_k[OF f1 f2 conj_domain_vars_empty k]  
+    unfolding  \<rho>_m_def Let_def
+    by (smt (verit, ccfv_SIG) \<rho>_def delta divide_eq_0_iff real_sqrt_eq_zero_cancel_iff sum.cong)  
+  
+  let ?V1 = "unit_vec (2 ^ card (Q_domain_var (q \<sigma>) (QStateM_map \<Q>))) k"
+  let ?V2 = "ps2.vector_aij (QStateM_vector \<Q>) k"
+ 
+  have "QStateM_vector \<Q>'\<noteq> 0\<^sub>v (2^card(?v1 \<union> ?v2))"
+    apply transfer
+    by (metis QState_rel3a' index_zero_vec(2))
+  then have  ptensor_not_zero:"complex_of_real (1 / \<rho>_m q vl k ns') \<cdot>\<^sub>v ps2.ptensor_vec (unit_vec (2 ^ card (Q_domain_var (q \<sigma>) (QStateM_map \<Q>))) k) (ps2.vector_aij (QStateM_vector \<Q>) k) \<noteq>
+       0\<^sub>v (2 ^ card (Q_domain_var (q \<sigma>) (QStateM_map \<Q>) \<union> Q_domain_var (qr \<sigma>) (QStateM_map \<Q>)))"
+    using q'_vector prob_not_zero by auto
+  then have ptensor_not_zeroa:"ps2.ptensor_vec (unit_vec (2 ^ card (Q_domain_var (q \<sigma>) (QStateM_map \<Q>))) k) (ps2.vector_aij (QStateM_vector \<Q>) k) \<noteq>
+       0\<^sub>v (2 ^ card (Q_domain_var (q \<sigma>) (QStateM_map \<Q>) \<union> Q_domain_var (qr \<sigma>) (QStateM_map \<Q>)))"
+    using s_product_not_zero_v_not_zero by auto
+  then have "?V1 \<noteq> 0\<^sub>v (2 ^ card (?v1))" and "?V2 \<noteq> 0\<^sub>v (2 ^ card (?v2))"   
+    using not_zero_tensor_product_comp_vectors
+     apply (metis k unit_vec_nonzero)
+    using not_zero_tensor_product_comp_vectors
+    by (metis ptensor_not_zeroa f1 f2 index_unit_vec(3) index_zero_vec(2) inter_12)
+    
+ 
   have QM_wf:"QStateM_wf (QStateM_unfold \<Q>')" and Q_wf:"QState_wf (QState_unfold (qstate \<Q>'))"
     apply (simp add: QStateM_rel1 QStateM_rel2)
     using QState_wf by blast
@@ -1471,15 +1572,14 @@ proof-
     unfolding  QState_wf_def
     unfolding qstate_def apply transfer' by auto
   then have len_L2:"\<exists>i< dim_vec ?L2. list_of_vec ?L2 ! i \<noteq> 0"  
-    using q'_vector not_zero_tensor_product_comp_index[of ?v1 ?v2 ?L1 ?L2]
-    by (metis Matrix.dim_vec QStateM_list_dim dim_vec_of_list f1 f2 index_smult_vec(1) 
-              index_zero_vec(1) index_zero_vec(2) inter_12 
-              list_of_vec_QStateM_vec list_of_vec_index mult_eq_0_iff 
-              q'_vars vector_aij_def)    
+    using q'_vector not_zero_tensor_product_comp_index[of ?v1 ?v2 ?L1 ?L2, OF conj_domain_vars_empty f1 f2 ptensor_not_zeroa] 
+    using q'_vars list_of_vec_QStateM_vec prob_not_zero
+    by (metis Matrix.dim_vec list_of_vec_index partial_state2.d2_def prod_list_replicate ps2.dims2_def ps2.partial_state2_axioms ps2.vector_aij_def) 
+
   let ?map_q = "fst (split_map (QStateM_map \<Q>) (q \<sigma>))" and
       ?map_qr = "snd (split_map (QStateM_map \<Q>) (q \<sigma>))" and 
        ?V1 = "list_of_vec (unit_vec (2^(card ?v1)) k)" and 
-       ?V2 = "list_of_vec ((1 / sqrt \<delta>k)\<cdot>\<^sub>v(vector_aij ?v1 ?v2 (QStateM_vector \<Q>) k))"
+       ?V2 = "list_of_vec ((1 / \<rho>_m q vl k ns')\<cdot>\<^sub>v(partial_state2.vector_aij ?v1 ?v2 (QStateM_vector \<Q>) k))"
   let ?Q1 = "QStateM(?map_q, QState(?v1, ?V1))"
   let ?Q2 = "QStateM(?map_qr, QState(?v2, ?V2))"
   have map_qr_cons:"?map_qr = constrain_map (QStateM_map \<Q>) (qr \<sigma>)" 
@@ -1493,18 +1593,23 @@ proof-
     using QStateM_wf1 QState_var_idem constrain_map_wf1 
       q_domain_split_eq_q_domain_var split_map_def by auto             
   have v2_q_wf:"QState_wf (?v2, ?V2)" 
-    using f2 a16 a3 a13 len_L2 unfolding  vector_aij_def Q_domain_var_def  QState_wf_def by auto
+    using f2  a3 a13 len_L2 prob_not_zero
+    unfolding 
+     QState_wf_def Q_domain_var_def 
+    apply (auto simp add: )
+    by (metis Matrix.dim_vec Q_domain_var_def prod_list_replicate ps2.d2_def 
+           ps2.dims2_def ps2.vector_aij_def) 
              
   then have v2_qm_wf:"QStateM_wf (?map_qr, QState(?v2, ?V2))"
     using QStateM_wf1 QState_var_idem constrain_map_wf1 
-      map_qr_cons q_domain_constrain_eq_q_domain_var    
-    by (metis fst_conv snd_conv)
+      map_qr_cons q_domain_constrain_eq_q_domain_var
+    by simp    
  
   have a00:"(1, \<sigma>', ?Q1) \<in> (q \<mapsto> local.unit_vecl ns' q k)" 
     using assest_unit[of \<Q> q \<sigma> qr, OF a3 a8 a9 f1 v1_not_empty a12] k
     by blast       
   moreover have a01:"(p, \<sigma>', ?Q2) \<in> (qr \<mapsto> vector_i ns' q vl k)"
-    using assest_vectori[of \<Q> q \<sigma> qr, OF a3 a8 a9 a10 a11 v1_not_empty f2 a12 _ _ map_qr_cons _ a16 _ a13 _ a6 a14 a15 v2_q_wf v2_qm_wf]
+    using assest_vectori[of \<Q> q \<sigma> qr, OF a3 a8 a9 a10 a11 v1_not_empty f2 a12 _ _ map_qr_cons _  _ a13 _ a6 a14 a4 v2_q_wf v2_qm_wf]
     by auto
   moreover have a03:"?Q1 ## ?Q2" 
   proof-    
@@ -1527,8 +1632,9 @@ proof-
       have a01:"QStateM_vars \<Q>' = Q_domain_var (q \<sigma>) (QStateM_map \<Q>) + Q_domain_var (qr \<sigma>) (QStateM_map \<Q>)"         
         by (simp add: q'_vars plus_set_def)
       have a02:"QStateM_vector \<Q>' = ptensor_vec ?v1 ?v2 (vec_of_list ?V1) (vec_of_list ?V2) " 
-        using q'_vector f1
-        by (simp add: pscalar_ptensor_2[OF inter_12 f1 f2] vec_list vector_aij_def) 
+        using q'_vector f1 pscalar_ptensor_2[OF inter_12 f1 f2] 
+        unfolding ps2.vector_aij_def ps2.d2_def ps2.dims2_def
+        by (smt (verit, best) Matrix.dim_vec index_unit_vec(3) prod_list_replicate  vec_list)
       show ?thesis 
         using QState_plus_intro[OF inter_12 v1_q_wf v2_q_wf] a01 a02 
         unfolding qstate_def apply transfer' by auto
@@ -1541,153 +1647,7 @@ proof-
 qed  
 
 
-lemma  Q_in_disjunction_conj_unit_vector2:
-  assumes a0:"(\<delta>k, \<Q>') = measure_vars' k (q \<sigma>) \<Q>" and 
-      a1:"(\<forall>e\<in>q \<sigma>. QStateM_map \<Q> e \<noteq> {})" and
-      a2:"k < 2 ^ card (\<Union> (QStateM_map \<Q> ` q \<sigma>))" and
-      a3:"QStateM_vars \<Q> = Q_domain_var (q \<sigma> \<union> qr \<sigma>) (QStateM_map \<Q>)" and
-      a4:"QStateM_list \<Q> = vl \<sigma>" and
-      a5:" QStateM_vars \<Q> \<noteq> {}" and
-      a6:"q \<sigma> \<inter> qr \<sigma>  = {}" and a7:"q \<sigma> \<noteq> {}" and 
-      a8:"ns' = (p * \<delta>k, \<sigma>', \<Q>')" and 
-      a9:"q \<sigma>' = q \<sigma> " and a10:"qr \<sigma>' = qr \<sigma>" and a11:"vl \<sigma>' = vl \<sigma>" and
-      a12:"QStateM_map \<Q>' = QStateM_map \<Q>" and
-      a13:"0 < \<delta>k" and a14:"\<delta>k = \<rho> q vl k ns'" and a15:"QStateM_list \<Q> = vl \<sigma> " and
-      a16:"QStateM_vars \<Q> = \<Union>((QStateM_map \<Q>) ` q \<sigma>)" 
-    shows "(p, \<sigma>', \<Q>') \<in> (q \<mapsto> local.unit_vecl ns' q k \<and>\<^sup>* qr \<mapsto> vector_i' ns' q vl k)"
-proof-
-  have vector_i':"vector_i' ns' q vl k = (\<lambda>st. [1])"
-    using vector_i_d2_empty a3 a16
-      unfolding get_stack_def get_qstate_def Q_domain_var_def apply auto
-      using domain_Q[of q \<sigma> \<Q> k qr vl, OF a1 a2 a3 a4 a6 a7]
-      by (simp add: a12 a8 a9)
-  let ?q = "q \<sigma>" and ?qr = "qr \<sigma>" and ?v = "vec_of_list (vl \<sigma>)" and
-      ?q' = "q \<sigma>'" and ?qr' = "qr \<sigma>'" and ?v' = "vl \<sigma>'" 
-  let ?v1 = "Q_domain_var ?q (QStateM_map \<Q>)" and ?v2 = "Q_domain_var ?qr (QStateM_map \<Q>)"
-  let ?M = "(1\<^sub>k (2 ^ card (\<Union> (QStateM_map \<Q> ` q \<sigma>))))"
-  let ?n = "Re ((vec_norm
-             (QStateM_vector
-               (matrix_sep ?q \<Q> 1\<^sub>k (2 ^ card (\<Union> (QStateM_map \<Q> ` ?q))))))\<^sup>2 /
-             (vec_norm (QStateM_vector \<Q>))\<^sup>2)"
-  have "QStateM_wf (QStateM_unfold \<Q>)"
-    using QStateM_wf by blast
-  then have QStateM_wf1:"(\<forall>x y. x\<noteq>y \<and> x\<in> domain (QStateM_map \<Q>) \<and> y \<in> domain (QStateM_map \<Q>) \<longrightarrow> 
-              QStateM_map \<Q> x \<inter> QStateM_map \<Q> y = {})"
-    by auto
-  have f1:"finite ?v1" and f2:"finite ?v2" and
-       Q_domain:"Q_domain (QStateM_map \<Q>) = QStateM_vars \<Q>" and
-       dim_vec:"dim_vec ?v = 2 ^ card ?v1 * 2 ^ card ?v2" and k:"k < 2 ^ card ?v1" and
-       inter_12:"?v1 \<inter> ?v2 = {}" and v1_not_empty:"?v1 \<noteq> {}" and
-       v2:"?v2 = {}"
-    using domain_Q[of q \<sigma> \<Q> k qr vl, OF a1 a2 a3 a4 a6 a7] a16        
-    by (auto simp add: Q_domain_var_def) 
-  have delta:"\<delta>k = \<rho> q vl k ns'" and q'_vars:"QStateM_vars \<Q>' = ?v1 \<union> ?v2" and
-       q'_vector:"QStateM_vector \<Q>' = unit_vec (2 ^ card (Q_domain_var (q \<sigma>) (QStateM_map \<Q>))) k"
-    using sound_prob_semant_proof2[OF assms(1-14) assms(17)] by auto
-  
-  let ?map_q = "fst (split_map (QStateM_map \<Q>) (q \<sigma>))" and
-      ?map_qr = "snd (split_map (QStateM_map \<Q>) (q \<sigma>))" and 
-       ?V1 = "list_of_vec (unit_vec (2^(card ?v1)) k)" and 
-       ?V2 = "[1]"
-  let ?Q1 = "QStateM(?map_q, QState(?v1, ?V1))"
-  let ?Q2 = "QStateM(?map_qr, QState(?v2, ?V2))"
-  have map_qr_cons:"?map_qr = constrain_map (QStateM_map \<Q>) (qr \<sigma>)" 
-    using split_q1_constrain_q2
-    by (simp add: QStateM_wf1 Q_domain a3 a6)
-  
-  have v1_q_wf:"QState_wf (?v1, ?V1)"
-    apply (simp add: f1 v1_not_empty  QState_wf_def)
-    using a2 unfolding Q_domain_var_def unit_vec_def by auto
-  then have v1_qm_wf:"QStateM_wf (?map_q, QState(?v1, ?V1))"
-    using QStateM_wf1 QState_var_idem constrain_map_wf1 
-      q_domain_split_eq_q_domain_var split_map_def by auto             
-  have v2_q_wf:"QState_wf (?v2, ?V2)" 
-    unfolding  QState_wf_def
-    using  a3 QStateM_wf1 v2   by auto         
-  then have v2_qm_wf:"QStateM_wf (?map_qr, QState(?v2, ?V2))"
-    using QStateM_wf1 QState_var_idem constrain_map_wf1 
-      map_qr_cons q_domain_constrain_eq_q_domain_var
-    by (metis fst_eqD snd_eqD)
- 
-  have a00:"(1, \<sigma>', ?Q1) \<in> (q \<mapsto> local.unit_vecl ns' q k)" 
-    using assest_unit[of \<Q> q \<sigma> qr, OF a3 a8 a9 f1 v1_not_empty a12 _ _ _ k]
-    by blast
-  moreover have a01:"(p, \<sigma>', ?Q2) \<in> (qr \<mapsto> vector_i' ns' q vl k)"
-    using assest_vectori_v2_empty[of \<Q> q \<sigma> qr, OF a3 a8 a9 a10 a12 _ _ _ a1 a6 a16]
-    by auto
-  moreover have a03:"?Q1 ## ?Q2" 
-  proof-    
-     have "?map_q ## ?map_qr" and "QState(?v1, ?V1) ## QState(?v2, ?V2)"
-      using local.a1 q_map_int apply blast 
-      unfolding sep_disj_QState disj_QState_def 
-      using v2_q_wf v1_q_wf inter_12 QState_var_idem
-      by blast       
-    then show ?thesis using v2_qm_wf v1_qm_wf
-      by (simp add: QStateM_wf_map QStateM_wf_qstate sep_disj_QStateM)      
-  qed    
-  ultimately have "(1*p, \<sigma>', ?Q1 + ?Q2) \<in> (q \<mapsto> local.unit_vecl ns' q k \<and>\<^sup>* qr \<mapsto> vector_i' ns' q vl k)"
-    by (fast intro: Q_sep_dis_set_intro)     
-  moreover have "?Q1 + ?Q2 = \<Q>'"
-  proof-
-    have "?map_q + ?map_qr = QStateM_map \<Q>'"
-      using a12 local.a1 q_map_split by auto    
-    moreover have "QState(?v1, ?V1) + QState(?v2, ?V2) = qstate \<Q>'"           
-    proof-      
-      have a01:"QStateM_vars \<Q>' = Q_domain_var (q \<sigma>) (QStateM_map \<Q>) + Q_domain_var (qr \<sigma>) (QStateM_map \<Q>)"         
-        by (simp add: q'_vars plus_set_def)
-      have a02:"QStateM_vector \<Q>' = ptensor_vec ?v1 ?v2 (vec_of_list ?V1) (vec_of_list ?V2) " 
-        using q'_vector f1 apply auto
-        by (simp add: idempoten_qstate v2 vec_list) 
-      show ?thesis 
-        using QState_plus_intro[OF inter_12 v1_q_wf v2_q_wf] a01 a02 
-        unfolding qstate_def apply transfer' by auto
-    qed
-    ultimately show ?thesis
-      using QStateM_wf_map QStateM_wf_qstate idem_QState 
-      plus_QStateM v1_qm_wf v2_qm_wf by auto
-  qed 
-  ultimately show ?thesis by auto
-qed  
 
-lemma  Q_in_disjunction_conj_unit_vectori':
-  assumes a0:"(\<delta>k, \<Q>') = measure_vars' k (q \<sigma>) \<Q>" and 
-      a1:"(\<forall>e\<in>q \<sigma>. QStateM_map \<Q> e \<noteq> {})" and
-      a2:"k < 2 ^ card (\<Union> (QStateM_map \<Q> ` q \<sigma>))" and
-      a3:"QStateM_vars \<Q> = Q_domain_var (q \<sigma> \<union> qr \<sigma>) (QStateM_map \<Q>)" and
-      a4:"QStateM_list \<Q> = vl \<sigma>" and
-      a5:" QStateM_vars \<Q> \<noteq> {}" and
-      a6:"q \<sigma> \<inter> qr \<sigma>  = {}" and a7:"q \<sigma> \<noteq> {}" and 
-      a8:"ns' = (p * \<delta>k, \<sigma>', \<Q>')" and 
-      a9:"q \<sigma>' = q \<sigma> " and a10:"qr \<sigma>' = qr \<sigma>" and a11:"vl \<sigma>' = vl \<sigma>" and
-      a12:"QStateM_map \<Q>' = QStateM_map \<Q>" and
-      a13:"0 < \<delta>k" and a14:"\<delta>k = \<rho> q vl k ns'" and a15:"QStateM_list \<Q> = vl \<sigma> "      
-    shows "(p, \<sigma>', \<Q>') \<in> (q \<mapsto> local.unit_vecl ns' q k \<and>\<^sup>* qr \<mapsto> vector_i' ns' q vl k)"
-  
-proof-
-  { assume a00:"QStateM_vars \<Q> \<noteq> \<Union>((QStateM_map \<Q>) ` q \<sigma>)"
-    moreover have "vector_i' ns' q vl k = vector_i ns' q vl k" 
-      using eq_vector_i a3 calculation
-      unfolding get_stack_def get_qstate_def Q_domain_var_def apply auto
-      using domain_Q[of q \<sigma> \<Q> k qr vl, OF a1 a2 a3 a4 a6 a7]
-      by (metis Diff_eq_empty_iff Q_domain_var_def UN_I a12 a8 a9 equals0D)
-    moreover have "measure_vars k (q \<sigma>) \<Q> = measure_vars' k (q \<sigma>) \<Q>"
-      using a00 measure_vars'_neq by presburger
-    ultimately have ?thesis  
-      using Q_in_disjunction_conj_unit_vector1[of \<delta>k \<Q>' k q \<sigma> \<Q> qr vl, OF _ assms(2-16)] a00 
-      by (simp add: a0)
-  }                                  
-  moreover {
-    assume a00:"QStateM_vars \<Q> = \<Union>((QStateM_map \<Q>) ` q \<sigma>)"
-    then have "vector_i' ns' q vl k = (\<lambda>st. [1])"
-    using vector_i_d2_empty a3 calculation
-      unfolding get_stack_def get_qstate_def Q_domain_var_def apply auto
-      using domain_Q[of q \<sigma> \<Q> k qr vl, OF a1 a2 a3 a4 a6 a7]
-      by (simp add: a12 a8 a9)
-    then have ?thesis using Q_in_disjunction_conj_unit_vector2[OF _ assms(2-16)]
-      using a0 a00 by linarith
-  }
-  ultimately show ?thesis by auto
-qed  
 
 lemma meassure_sound: 
   assumes a0:"v \<in> nat_vars" and a1:"not_access_v q v" and 
@@ -1695,7 +1655,7 @@ lemma meassure_sound:
   shows "\<Turnstile> (q\<cdot>qr \<mapsto> vl) v:=meassure q
             {s. s \<in> (\<Union>i\<in>{q}\<^sub>s. 
                        (v\<down>\<^sub>(from_nat i)) \<inter>
-                       ((q \<mapsto> local.unit_vecl s q i \<and>\<^sup>* qr \<mapsto> vector_i' s q vl i) \<smile>
+                       ((q \<mapsto> local.unit_vecl s q i \<and>\<^sup>* qr \<mapsto> vector_i s q vl i) \<smile>
                         \<rho> q vl i s))}"
 proof-
   { fix s s'
@@ -1710,7 +1670,7 @@ proof-
          where step:"s' = Normal ns' \<and> ns' = (p * \<delta>k, set_value \<sigma> v (from_nat k), \<Q>') \<and>
                  (\<forall>e\<in>q \<sigma>. QStateM_map \<Q> e \<noteq> {}) \<and> 
                  k < 2 ^ card (\<Union> (QStateM_map \<Q> ` q \<sigma>)) \<and>
-                (\<delta>k, \<Q>') = measure_vars' k (q \<sigma>) \<Q> \<and> 0 < \<delta>k"
+                (\<delta>k, \<Q>') = measure_vars k (q \<sigma>) \<Q> \<and> 0 < \<delta>k"
       by (rule QExec_Normal_elim_cases(8)[OF a00[simplified a01]], 
              auto intro: simp add: dest_assign)
     let ?\<sigma>' = "set_value \<sigma> v (from_nat k)"
@@ -1723,28 +1683,30 @@ proof-
       using from_nat_in_vdomain not_access_v_f_q_eq_set by blast
     have q_state_q_q':"QStateM_map \<Q> = QStateM_map \<Q>'"
       using q qr vl  dest_assign[simplified q qr vl]
-      measure_vars'_QStateM_map[of "q \<sigma>" \<Q>  \<delta>k \<Q>' k, simplified q qr vl] step  
+      measure_vars_QStateM_map[of "q \<sigma>" \<Q>  \<delta>k \<Q>' k, simplified q qr vl] step  
       by auto    
     have "\<delta>k = \<rho> q vl k ns'" 
       using step dest_assign q_state_q_q' q qr vl sound_prob_semant_proof_rho
       by (force intro:sound_prob_semant_proof_rho)
     have "ns' \<in> ((v\<down>\<^sub>(from_nat k)) \<inter>
-                 ((q \<mapsto> local.unit_vecl ns' q k \<and>\<^sup>* qr \<mapsto> vector_i' ns' q vl k) \<smile>
+                 ((q \<mapsto> local.unit_vecl ns' q k \<and>\<^sup>* qr \<mapsto> vector_i ns' q vl k) \<smile>
                  \<rho> q vl k ns'))" 
     proof-
-      obtain a b c where "ns' = (a,b,c)"
+      obtain a b c where a00:"ns' = (a,b,c)"
         using local.step by blast
-      have "(p, set_value \<sigma> v (from_nat k), \<Q>') \<in> (q \<mapsto> local.unit_vecl ns' q k \<and>\<^sup>* qr \<mapsto> vector_i' ns' q vl k)"         
-        apply (rule Q_in_disjunction_conj_unit_vectori'[of \<delta>k \<Q>' k q \<sigma> \<Q> qr vl ns' p ?\<sigma>'])
-        using local.step dest_assign q qr vl q_state_q_q' \<open>\<delta>k = \<rho> q vl k ns'\<close> 
-        by (auto intro: Q_in_disjunction_conj_unit_vectori'[of \<delta>k \<Q>' k q \<sigma> \<Q> qr vl ns' p ?\<sigma>'])
+   
+      have "(p, set_value \<sigma> v (from_nat k), \<Q>') \<in> (q \<mapsto> local.unit_vecl ns' q k \<and>\<^sup>* qr \<mapsto> vector_i ns' q vl k)"         
+        apply (rule Q_in_disjunction_conj_unit_vector1[of \<delta>k \<Q>' k q \<sigma> \<Q> qr vl ns' p ?\<sigma>'])
+        using local.step dest_assign q qr vl q_state_q_q' \<open>\<delta>k = \<rho> q vl k ns'\<close>
+        by auto
+
       moreover have "\<delta>k = \<rho> q vl k ns'" 
         using step dest_assign q_state_q_q' q qr vl sound_prob_semant_proof_rho      
         by (force intro:sound_prob_semant_proof_rho)
       
-      ultimately have "ns' \<in> (q \<mapsto> local.unit_vecl ns' q k \<and>\<^sup>* qr \<mapsto> vector_i' ns' q vl k) \<smile>
-                        \<rho> q vl k ns'"
-        using prob_assert_intro[of \<delta>k] step by fastforce               
+      ultimately have "ns' \<in> (q \<mapsto> local.unit_vecl ns' q k \<and>\<^sup>* qr \<mapsto> vector_i ns' q vl k) \<smile>
+                        \<rho> q vl k ns'" 
+        using prob_assert_intro[of \<delta>k] step a00   by fastforce               
       moreover have "ns' \<in> (v\<down>\<^sub>(from_nat k))"
         by (simp add: a4 get_set get_stack_def local.step set_value_def val_var_def)      
       ultimately show ?thesis by auto
@@ -1757,12 +1719,12 @@ proof-
       by auto
     ultimately have "ns' \<in> {s. s \<in> (\<Union>i\<in>{q}\<^sub>s.
                  (v\<down>\<^sub>(from_nat i)) \<inter>
-                 ((q \<mapsto> local.unit_vecl s q i \<and>\<^sup>* qr \<mapsto> vector_i' s q vl i) \<smile>
+                 ((q \<mapsto> local.unit_vecl s q i \<and>\<^sup>* qr \<mapsto> vector_i s q vl i) \<smile>
                  \<rho> q vl i s))}" 
       unfolding card_set_q_def Let_def Q_domain_set_def  by fast
     then have "s' \<in> Normal ` {s. s \<in> (\<Union>i\<in>{q}\<^sub>s.
                            (v\<down>\<^sub>(from_nat i)) \<inter>
-                           ((q \<mapsto> local.unit_vecl s q i \<and>\<^sup>* qr \<mapsto> vector_i' s q vl i) \<smile>
+                           ((q \<mapsto> local.unit_vecl s q i \<and>\<^sup>* qr \<mapsto> vector_i s q vl i) \<smile>
                            \<rho> q vl i s))}"
       using step by auto
   } thus ?thesis unfolding valid_def by auto
@@ -1833,7 +1795,8 @@ lemma tensor_product_1ma:
 proof-
   interpret ps2:partial_state2 "list_dims Q" q "Q - q"    
     apply standard  
-    unfolding list_dims_def using a0 a2 by (auto simp add:finite_subset)
+    unfolding list_dims_def using a0 a2 
+    by (auto simp add:finite_subset sup.absorb1 sup_commute)
 
   interpret ps_1:partial_state ps2.dims0 ps2.vars1' .
   have "dim_row (1\<^sub>m (2 ^ card Q)) =
@@ -1887,13 +1850,13 @@ proof-
   have eq4[simp]:"q_vars_q1 - q_vars_m \<union> (q_vars_q - q_vars_q1) = q_vars_q - q_vars_m"
     using a1 a2 by auto
   interpret ps2_m_q:partial_state2 "list_dims q_vars_q" q_vars_m  "q_vars_q - q_vars_m"
-    apply standard apply (auto simp add: list_dims_def) using a0 a1 a2
-     by (auto simp add: finite_subset)          
+    apply standard apply (auto simp add: list_dims_def) using a0 a1 a2 apply auto
+     by (auto simp add: finite_subset sup.absorb2 sup_commute)          
   interpret ps_m_q:partial_state ps2_m_q.dims0 ps2_m_q.vars1' . 
 
   interpret ps2_q1_q:partial_state2 "list_dims q_vars_q" q_vars_q1 "q_vars_q - q_vars_q1"
     apply standard apply (auto simp add: list_dims_def) using a0 a1 a2
-     by (auto simp add: finite_subset)
+     by (auto simp add: finite_subset  sup_absorb2)
 
   interpret ps_q1_q:partial_state ps2_q1_q.dims0 ps2_q1_q.vars1' .  
 
@@ -1903,9 +1866,9 @@ proof-
 
   interpret ps_m_q1: partial_state ps2_m_q1.dims0 ps2_m_q1.vars1' .
 
-  interpret ps2_q1_qa:partial_state2 "list_dims q_vars_q" "?rest" "?q2"   
-    apply standard apply (auto simp add: list_dims_def) using a0 a1 a2
-    by (auto simp add: finite_subset)
+  interpret ps2_q1_qa:partial_state2 "list_dims (?rest \<union> ?q2)" "?rest" "?q2"   
+    apply standard apply (auto simp add: list_dims_def) using a0 a1 a2 apply auto 
+    by (auto simp add: finite_subset  sup_absorb1)
   interpret ps_q1_qa:partial_state ps2_q1_q.dims0 ps2_q1_q.vars1' . 
  
   have f1:"?rest \<subseteq> q_vars_q - q_vars_m"
@@ -1941,7 +1904,7 @@ proof-
   let ?vec_mat_sep_q1_plus_q2 = "ptensor_mat ?sep_vars' ?var_r'
                                    (M::complex mat) (1\<^sub>m (2^(card ?var_r'))) *\<^sub>v 
                                    QStateM_vector  (Q1 + Q2)"
-  note h = a3[simplified matrix_sep_not_zero_def matrix_sep_var_def Let_def]
+  note h = a3[simplified matrix_sep_not_zero_def matrix_sep_def Let_def]
   
   have qvars_empty:"QStateM_vars Q1 \<inter> QStateM_vars Q2 = {}" using a0
     by (simp add: QStateM_vars.rep_eq disj_QState_def qstate_def sep_disj_QState sep_disj_QStateM)
@@ -1970,14 +1933,14 @@ proof-
   have "?sep_vars \<noteq> {}"
     using local.a1 a2 unfolding Q_domain_var_def by auto
   then have 
-    QStateM_map_Q1:"QStateM_map (matrix_sep q Q1 M) = QStateM_map Q1" and 
-    QStateM_vars_Q1:"QStateM_vars (matrix_sep q Q1 M) = QStateM_vars Q1" and
-    QStateM_list_Q1:"QStateM_list (matrix_sep q Q1 M) = 
+    QStateM_map_Q1:"QStateM_map (matrix_sep_QStateM q Q1 M) = QStateM_map Q1" and 
+    QStateM_vars_Q1:"QStateM_vars (matrix_sep_QStateM q Q1 M) = QStateM_vars Q1" and
+    QStateM_list_Q1:"QStateM_list (matrix_sep_QStateM q Q1 M) = 
          list_of_vec (ptensor_mat ?sep_vars ?var_r
                                (M::complex mat) (1\<^sub>m (2^(card ?var_r))) *\<^sub>v 
                       QStateM_vector Q1)"
     using matrix_sep_dest a3 by auto
-  then have QStateM_list_Q1_plus_Q2:"QStateM_list ((matrix_sep q Q1 M) + Q2) = 
+  then have QStateM_list_Q1_plus_Q2:"QStateM_list ((matrix_sep_QStateM q Q1 M) + Q2) = 
                                      list_of_vec ?vec_mat_sep_plus_q2"
     using QStateM_list_plus QStateM_vars_Q1
     by (metis QStateM_rel1 a0 disj_QState_def sep_disj_QState sep_disj_QStateM 
@@ -2000,7 +1963,7 @@ proof-
     apply (simp add: qvars_empty)
     apply (simp add: list_dims_def)
     apply (simp add: QStateM_vars.rep_eq QState_rel3')
-    using ps21.finite_v2 by blast
+    using ps21.finite_v2  by (auto simp add: qvars_empty list_dims_def QStateM_vars.rep_eq QState_rel3' )
   interpret ps:partial_state ps2.dims0 ps2.vars1' .  
 
   interpret ps22:partial_state2 "list_dims (?sep_vars \<union> ?var_r)" "?sep_vars" "?var_r"
@@ -2020,10 +1983,10 @@ proof-
        dim_vec_q2:"dim_vec (QStateM_vector Q2) = 2 ^ (card (QStateM_vars Q2))"
     using QStateM_list_dim vec_of_list_QStateM_list by auto
 
-  have "matrix_sep_var q (Q1 + Q2) M = 
+  have "matrix_sep q (Q1 + Q2) M = 
         ptensor_mat ?sep_vars' ?var_r'
                     (M::complex mat) (1\<^sub>m (2^(card ?var_r'))) *\<^sub>v QStateM_vector (Q1 + Q2)"
-    unfolding matrix_sep_var_def Let_def Q_domain_var_def
+    unfolding matrix_sep_def Let_def Q_domain_var_def
     by auto    
   also have "ptensor_mat ?sep_vars' ?var_r'
                     (M::complex mat) (1\<^sub>m (2^(card ?var_r'))) = 
@@ -2036,7 +1999,7 @@ proof-
   ptensor_vec ?var_d ?var_d2 ((ptensor_mat (Q_domain_var q (QStateM_map (Q1 + Q2))) (QStateM_vars Q1 - Q_domain_var q (QStateM_map Q1)) M
      (1\<^sub>m (2 ^ card (QStateM_vars Q1 - Q_domain_var q (QStateM_map Q1))))) *\<^sub>v QStateM_vector Q1)
      ((1\<^sub>m (2 ^ card (QStateM_vars Q2))) *\<^sub>v QStateM_vector Q2) =
-  matrix_sep_var q (Q1 + Q2) M"
+  matrix_sep q (Q1 + Q2) M"
     using qstate_vector_q1q2  
     unfolding ps2.ptensor_vec_def ps2.ptensor_mat_def apply auto
     apply (rule ps.tensor_mat_mult_vec[of "ps22.ptensor_mat M (1\<^sub>m (2 ^ card (QStateM_vars Q1 - Q_domain_var q (QStateM_map Q1))))" "1\<^sub>m (2 ^ card (QStateM_vars Q2))" "QStateM_vector Q1" "QStateM_vector Q2"])
@@ -2053,7 +2016,7 @@ proof-
     by (metis (no_types) QStateM_list.rep_eq QState_list.rep_eq QState_rel3 carrier_vec_dim_vec 
                dim_vec_q2 list_of_vec_QStateM_vec one_mult_mat_vec)
   ultimately show ?thesis using a3 
-    unfolding matrix_sep_not_zero_def  matrix_sep_var_def 
+    unfolding matrix_sep_not_zero_def  matrix_sep_def 
     by (metis QStateM_list.rep_eq QStateM_list_Q1_plus_Q2  QState_wf_def QState_wf carrier_vec_dim_vec dim_vec_q2 
          one_mult_mat_vec q_vars_map_q1q2_eq_map_q1 snd_conv)
 qed
@@ -2112,7 +2075,7 @@ proof-
     apply (simp add: qvars_empty)
     apply (simp add: list_dims_def)
     apply (simp add: QStateM_vars.rep_eq QState_rel3')
-    using ps21.finite_v2 by blast
+    using ps21.finite_v2  by (auto simp add: qvars_empty list_dims_def QStateM_vars.rep_eq QState_rel3' )
   interpret ps:partial_state ps2.dims0 ps2.vars1' .  
 
   interpret ps22:partial_state2 "list_dims (?sep_vars \<union> ?var_r)" "?sep_vars" "?var_r"
@@ -2132,10 +2095,10 @@ proof-
        dim_vec_q2:"dim_vec (QStateM_vector Q2) = 2 ^ (card (QStateM_vars Q2))"
     using QStateM_list_dim vec_of_list_QStateM_list by auto
 
-  have "matrix_sep_var q (Q1 + Q2) M = 
+  have "matrix_sep q (Q1 + Q2) M = 
         ptensor_mat ?sep_vars' ?var_r'
                     (M::complex mat) (1\<^sub>m (2^(card ?var_r'))) *\<^sub>v QStateM_vector (Q1 + Q2)"
-    unfolding matrix_sep_var_def Let_def Q_domain_var_def
+    unfolding matrix_sep_def Let_def Q_domain_var_def
     by auto    
   also have "ptensor_mat ?sep_vars' ?var_r'
                     (M::complex mat) (1\<^sub>m (2^(card ?var_r'))) = 
@@ -2146,7 +2109,7 @@ proof-
     by (metis QState_rel3' eq_QStateM_vars q_vars_in_Q_vars)
   finally have "
   ps2.ptensor_vec ?mat_sep_v ((1\<^sub>m (2 ^ card (QStateM_vars Q2))) *\<^sub>v QStateM_vector Q2) =
-  matrix_sep_var q (Q1 + Q2) M"
+  matrix_sep q (Q1 + Q2) M"
     using qstate_vector_q1q2  
     unfolding ps2.ptensor_vec_def ps2.ptensor_mat_def apply auto
     apply (rule ps.tensor_mat_mult_vec[of "ps22.ptensor_mat M (1\<^sub>m (2 ^ card (QStateM_vars Q1 - Q_domain_var q (QStateM_map Q1))))" "1\<^sub>m (2 ^ card (QStateM_vars Q2))" "QStateM_vector Q1" "QStateM_vector Q2"])
@@ -2158,7 +2121,7 @@ proof-
     unfolding  ps.d1_def ps.dims1_def  ps.d2_def ps.dims2_def
                ps2.dims1_def ps2.nths_vars1' ps2.nths_vars2' ps21.dims2_def
     by (auto simp add: dim_vec_q1 dim_vec_q2 carrier_vecI ) 
-  moreover have "matrix_sep_var  q (Q1 + Q2) M \<noteq> 0\<^sub>v (dim_vec (matrix_sep_var  q (Q1 + Q2) M))"    
+  moreover have "matrix_sep  q (Q1 + Q2) M \<noteq> 0\<^sub>v (dim_vec (matrix_sep  q (Q1 + Q2) M))"    
     using a3 zero_vec_list_eq unfolding matrix_sep_not_zero_def by auto  
   ultimately have "?mat_sep_v \<noteq> 0\<^sub>v (dim_vec ?mat_sep_v)"
     using qvars_empty ps2.finite_v1 ps21.finite_v2     
@@ -2166,7 +2129,7 @@ proof-
     by (auto dest: not_zero_tensor_product_comp_vectors(1)[of ?var_d ?var_d2 ?mat_sep_v "1\<^sub>m (2 ^ card (QStateM_vars Q2)) *\<^sub>v QStateM_vector Q2"]
              simp add: mult_mat_vec_def ps22.d0_def ps22.dims0_def ps22.vars0_def )
   then show ?thesis   
-    unfolding matrix_sep_not_zero_def matrix_sep_var_def
+    unfolding matrix_sep_not_zero_def matrix_sep_def
     by (metis Q_domain_var_def zero_vec_list)    
 qed
 
@@ -2179,7 +2142,7 @@ lemma matrix_sep_not_zero:
 lemma mat_sep_G:
   assumes a0:"Q1 ## Q2" and a1:"\<Inter> (QStateM_map Q1 ` q) \<noteq> {}" and a2:"q\<noteq>{}" and
           a3:"matrix_sep_not_zero q Q1 M"        
-  shows "matrix_sep q (Q1 + Q2) M = (matrix_sep q Q1 M) + Q2"
+  shows "matrix_sep_QStateM q (Q1 + Q2) M = (matrix_sep_QStateM q Q1 M) + Q2"
 proof-
   let ?sep_vars = "Q_domain_var q (QStateM_map Q1)" and
       ?var_d = "QStateM_vars Q1" and ?var_d2 = "QStateM_vars Q2" 
@@ -2224,14 +2187,14 @@ proof-
   have "?sep_vars \<noteq> {}"
     using local.a1 a2 unfolding Q_domain_var_def by auto
   then have 
-    QStateM_map_Q1:"QStateM_map (matrix_sep q Q1 M) = QStateM_map Q1" and 
-    QStateM_vars_Q1:"QStateM_vars (matrix_sep q Q1 M) = QStateM_vars Q1" and
-    QStateM_list_Q1:"QStateM_list (matrix_sep q Q1 M) = 
+    QStateM_map_Q1:"QStateM_map (matrix_sep_QStateM q Q1 M) = QStateM_map Q1" and 
+    QStateM_vars_Q1:"QStateM_vars (matrix_sep_QStateM q Q1 M) = QStateM_vars Q1" and
+    QStateM_list_Q1:"QStateM_list (matrix_sep_QStateM q Q1 M) = 
          list_of_vec (ptensor_mat ?sep_vars ?var_r
                                (M::complex mat) (1\<^sub>m (2^(card ?var_r))) *\<^sub>v 
                       QStateM_vector Q1)"
     using matrix_sep_dest a3 by auto
-  then have QStateM_list_Q1_plus_Q2:"QStateM_list ((matrix_sep q Q1 M) + Q2) = 
+  then have QStateM_list_Q1_plus_Q2:"QStateM_list ((matrix_sep_QStateM q Q1 M) + Q2) = 
                                      list_of_vec ?vec_mat_sep_plus_q2"
     using QStateM_list_plus QStateM_vars_Q1
     by (metis QStateM_rel1 a0 disj_QState_def sep_disj_QState sep_disj_QStateM 
@@ -2242,9 +2205,9 @@ proof-
     using \<open>Q_domain_var q (QStateM_map Q1) \<noteq> {}\<close>
     by (metis Inter_iff Q_domain_var_def a0 empty_iff eq_domain_var_plus equals0I imageI)  
   then have   
-     QStateM_map_Q12:"QStateM_map (matrix_sep q  (Q1 + Q2) M) = QStateM_map  (Q1 + Q2)" and
-     QStateM_vars_Q12:"QStateM_vars (matrix_sep q  (Q1 + Q2) M) = QStateM_vars  (Q1 + Q2)" and
-     QStateM_list_Q12:"QStateM_list (matrix_sep q  (Q1 + Q2) M) = 
+     QStateM_map_Q12:"QStateM_map (matrix_sep_QStateM q  (Q1 + Q2) M) = QStateM_map  (Q1 + Q2)" and
+     QStateM_vars_Q12:"QStateM_vars (matrix_sep_QStateM q  (Q1 + Q2) M) = QStateM_vars  (Q1 + Q2)" and
+     QStateM_list_Q12:"QStateM_list (matrix_sep_QStateM q  (Q1 + Q2) M) = 
          list_of_vec (ptensor_mat ?sep_vars' ?var_r'
                                (M::complex mat) (1\<^sub>m (2^(card ?var_r'))) *\<^sub>v 
                       QStateM_vector  (Q1 + Q2))"
@@ -2263,7 +2226,7 @@ proof-
     apply (simp add: qvars_empty)
     apply (simp add: list_dims_def)
     apply (simp add: QStateM_vars.rep_eq QState_rel3')
-    using ps21.finite_v2 by blast
+    using ps21.finite_v2  by (auto simp add: qvars_empty list_dims_def QStateM_vars.rep_eq QState_rel3' )
   interpret ps:partial_state ps2.dims0 ps2.vars1' .  
 
   interpret ps22:partial_state2 "list_dims (?sep_vars \<union> ?var_r)" "?sep_vars" "?var_r"
@@ -2308,12 +2271,12 @@ proof-
     using carrier_dim_vec
     by (metis QStateM_list_dim QStateM_vector one_mult_mat_vec 
               q_vars_map_q1q2_eq_map_q1 vec_of_list_QStateM_list)
-  moreover have "QStateM_map (matrix_sep q Q1 M + Q2) = QStateM_map Q1 + QStateM_map Q2"
+  moreover have "QStateM_map (matrix_sep_QStateM q Q1 M + Q2) = QStateM_map Q1 + QStateM_map Q2"
     using QStateM_map_Q1 QStateM_map_plus QStateM_vars.rep_eq 
           QStateM_vars_Q1 a0 disj_QState_def qstate_def 
             sep_disj_QState sep_disj_QStateM by auto
-  then have " QStateM_map Q1 + QStateM_map Q2 = QStateM_map (matrix_sep q (Q1 + Q2) M)" and
-            "QStateM_map (matrix_sep q (Q1 + Q2) M) = QStateM_map (matrix_sep q Q1 M + Q2)"       
+  then have " QStateM_map Q1 + QStateM_map Q2 = QStateM_map (matrix_sep_QStateM q (Q1 + Q2) M)" and
+            "QStateM_map (matrix_sep_QStateM q (Q1 + Q2) M) = QStateM_map (matrix_sep_QStateM q Q1 M + Q2)"       
     by (auto simp add: QStateM_map_Q12 QStateM_map_plus a0)             
   ultimately show ?thesis
     apply -  
@@ -2340,7 +2303,7 @@ qed
  lemma Q_upd_G:
   assumes 
    a0:"Q1##Q2" and a1:"\<Inter> (QStateM_map Q1 ` (i \<sigma>)) \<noteq> {}" and a2:"i \<sigma>\<noteq>{}" and
-   a3:"\<rho>1' = \<rho>1" and a4:"\<sigma> = \<sigma>'" and a5:"Q1' = matrix_sep (i \<sigma>) Q1 q" and
+   a3:"\<rho>1' = \<rho>1" and a4:"\<sigma> = \<sigma>'" and a5:"Q1' = matrix_sep_QStateM (i \<sigma>) Q1 q" and
    a6:"matrix_sep_not_zero (i \<sigma>) Q1 q"
  shows "\<turnstile> \<langle>QMod q i,Normal (\<rho>1 * \<rho>2, \<sigma>, Q1 + Q2)\<rangle> \<Rightarrow> Normal (\<rho>1' * \<rho>2, \<sigma>', Q1' + Q2)"
 proof-  
@@ -2360,7 +2323,7 @@ lemma Q_upd_Q1_dom_sep_Q2_dom:
   assumes 
    a0:"Q1##Q2" and a1:"\<Inter> (QStateM_map Q1 ` q) \<noteq> {}" and a2:"q\<noteq>{}" and
    a3:"matrix_sep_not_zero q Q1 M"
- shows "(matrix_sep q Q1 M) ## Q2"
+ shows "(matrix_sep_QStateM q Q1 M) ## Q2"
 proof-
    let ?sep_vars = "Q_domain_var q (QStateM_map Q1)" and
       ?var_d = "QStateM_vars Q1" 
@@ -2382,9 +2345,9 @@ proof-
   have "?sep_vars \<noteq> {}"
     using local.a1 a2 unfolding Q_domain_var_def by auto
   then have 
-    QStateM_map_Q1:"QStateM_map (matrix_sep q Q1 M) = QStateM_map Q1" and 
-    QStateM_vars_Q1:"QStateM_vars (matrix_sep q Q1 M) = QStateM_vars Q1" and
-    QStateM_list_Q1:"QStateM_list (matrix_sep q Q1 M) = 
+    QStateM_map_Q1:"QStateM_map (matrix_sep_QStateM q Q1 M) = QStateM_map Q1" and 
+    QStateM_vars_Q1:"QStateM_vars (matrix_sep_QStateM q Q1 M) = QStateM_vars Q1" and
+    QStateM_list_Q1:"QStateM_list (matrix_sep_QStateM q Q1 M) = 
          list_of_vec (ptensor_mat ?sep_vars ?var_r
                                (M::complex mat) (1\<^sub>m (2^(card ?var_r))) *\<^sub>v 
                       QStateM_vector Q1)"
@@ -2829,7 +2792,7 @@ lemma Plus_split_second:
         Plus_split_second_Q1''_empty[OF a0 a1 a2 a3 a4 a5 a6] 
         Plus_split_second_Q2_empty[OF a0 a1 a2 a3 a4 a5 a6] by blast
 
-lemma "vec_norm A"
+(* lemma "vec_norm A"
 
 lemma assumes a0:"(\<delta>k, \<Q>') = measure_vars' k vqs (Q1 + Q2)" and
       a1:"(\<delta>k', \<Q>'') = measure_vars' k vqs Q1" and 
@@ -2838,27 +2801,27 @@ lemma assumes a0:"(\<delta>k, \<Q>') = measure_vars' k vqs (Q1 + Q2)" and
     shows "\<delta>k = \<delta>k'"  
 proof-
 
-qed
+qed *)
 
 
 lemma measure_prob_q_in_tensor_Q1_eq_measure_prob_Q1:
-   assumes a0: "(\<delta>k, \<Q>') = measure_vars' k q (Q1+Q2)" and 
+   assumes a0: "(\<delta>k, \<Q>') = measure_vars k q (Q1+Q2)" and 
               "k < 2 ^ card (\<Union> (QStateM_map Q1 ` q))" and
               a1: "0<\<delta>k" and a2:"\<forall>e\<in>q. QStateM_map Q1 e \<noteq> {}" 
-     shows "fst (measure_vars' k q Q1) = \<delta>k"
+     shows "fst (measure_vars k q Q1) = \<delta>k"
 proof-
   have "q\<noteq>{}" sorry
   show ?thesis sorry
 qed
 
 lemma measure_vector_q_in_tensor_Q1_eq_tensor_measure_vector_q_in_Q1_Q2:
-  assumes a0: "(\<delta>k, \<Q>) = measure_vars' k q (\<Q>1+\<Q>2)" and
+  assumes a0: "(\<delta>k, \<Q>) = measure_vars k q (\<Q>1+\<Q>2)" and
               "k < 2 ^ card (\<Union> (QStateM_map \<Q>1 ` q))" and
               a1: "0<\<delta>k" and a2:"\<forall>e\<in>q. QStateM_map \<Q>1 e \<noteq> {}" 
-            shows "\<exists>\<Q>'. (\<delta>k, \<Q>') =  measure_vars' k q \<Q>1 \<and> \<Q> = \<Q>' + \<Q>2 \<and> Q' ## Q2"
+            shows "\<exists>\<Q>'. (\<delta>k, \<Q>') =  measure_vars k q \<Q>1 \<and> \<Q> = \<Q>' + \<Q>2 \<and> Q' ## Q2"
 proof-
   show ?thesis sorry
-qed
+qed 
 
 
 lemma Frame_execution:
@@ -2881,7 +2844,7 @@ next
   ultimately show ?case using SMod(2) by auto
 next
   case (QMod q i)   
-  have a00:"\<delta>' = \<delta>1*\<delta>2" and a01:"\<sigma> = \<sigma>'" and a02:"Q' = matrix_sep (i \<sigma>) (Q1 + Q2) q" and
+  have a00:"\<delta>' = \<delta>1*\<delta>2" and a01:"\<sigma> = \<sigma>'" and a02:"Q' = matrix_sep_QStateM (i \<sigma>) (Q1 + Q2) q" and
             a03:"\<Inter> (QStateM_map (Q1 + Q2) ` i \<sigma>) \<noteq> {}" and a04:"i \<sigma> \<noteq> {}" and 
             a05:"matrix_sep_not_zero (i \<sigma>) (Q1 + Q2) q"
     by (auto intro: QExec_Normal_elim_cases(4)[OF QMod(1)])
@@ -2889,7 +2852,7 @@ next
     using QMod.prems(3) QMod_F by blast 
   moreover have sep:"matrix_sep_not_zero (i \<sigma>) Q1 q"
     using QMod_F local.QMod(3) by blast
-  moreover have "\<turnstile> \<langle>QMod q i,Normal (\<delta>1, \<sigma>, Q1)\<rangle> \<Rightarrow> Normal (\<delta>1, \<sigma>, matrix_sep (i \<sigma>) Q1 q)"
+  moreover have "\<turnstile> \<langle>QMod q i,Normal (\<delta>1, \<sigma>, Q1)\<rangle> \<Rightarrow> Normal (\<delta>1, \<sigma>, matrix_sep_QStateM (i \<sigma>) Q1 q)"
     using QExec.QMod[of Q1 i \<sigma>, OF calculation(7) a04 _ sep]
     by blast  
   ultimately show ?case using
@@ -3043,13 +3006,13 @@ next
     step_tuple:"Normal (\<delta>', \<sigma>', Q') = Normal (\<delta> * \<delta>k, set_value \<sigma> v (from_nat k), \<Q>')" and
     qbits_not_empty:"\<forall>e\<in>q \<sigma>. QStateM_map \<Q> e \<noteq> {}" and
     valid_k:"k < 2 ^ card (\<Union> (QStateM_map \<Q> ` q \<sigma>))" and
-    measure:"(\<delta>k, \<Q>') = measure_vars' k (q \<sigma>) (Q1 + Q2)" and valid_prob:"0 < \<delta>k" and 
+    measure:"(\<delta>k, \<Q>') = measure_vars k (q \<sigma>) (Q1 + Q2)" and valid_prob:"0 < \<delta>k" and 
     sigma':"\<sigma>' = set_value \<sigma> v (from_nat k)"
     apply (rule  QExec_Normal_elim_cases(8)[OF Measure(1)])
     by fast+
   let ?addr = "\<Union>((QStateM_map Q1) ` (q \<sigma>))"
-  let ?\<delta>k = "fst (measure_vars' k (q \<sigma>) Q1)"
-  let ?Q' = "snd (measure_vars' k (q \<sigma>) Q1)"
+  let ?\<delta>k = "fst (measure_vars k (q \<sigma>) Q1)"
+  let ?Q' = "snd (measure_vars k (q \<sigma>) Q1)"
   
   have e_Q1:"\<forall>e \<in> (q \<sigma>). (QStateM_map Q1) e \<noteq> {}" using Measure(3)
     using Measure_F by blast
@@ -3059,8 +3022,8 @@ next
     by (metis Measure.prems(2) Pair_inject Q_domain_var_def eq_domain_var_plus init_tuple)
 
   have prob_measure_Q1_eq_\<delta>k:"\<delta>k = ?\<delta>k"
-    using measure_prob_q_in_tensor_Q1_eq_measure_prob_Q1[OF  measure] e_Q1
-    using eq_set valid_k valid_prob by presburger
+    by (metis e_Q1 eq_set measure measure_prob_q_in_tensor_Q1_eq_measure_prob_Q1 valid_k valid_prob)
+    
   have step:"\<turnstile> \<langle>Measure v q, Normal (\<delta>1,\<sigma>,Q1)\<rangle> \<Rightarrow> Normal (\<delta>1*?\<delta>k,\<sigma>', ?Q')"
     apply (rule QExec.Measure[of ?addr Q1 q \<sigma> k ?\<delta>k ?Q' _ \<delta>1 \<sigma>', OF _ e_Q1], 
                  auto simp add: eq_set valid_k sigma') 
@@ -3070,7 +3033,7 @@ next
   moreover have " Q' = ?Q' + Q2 " 
     using measure_vector_q_in_tensor_Q1_eq_tensor_measure_vector_q_in_Q1_Q2[OF measure] e_Q1
     by (metis XQState.simps(1) eq_set snd_conv step_tuple valid_k valid_prob)
-  moreover have "?Q' ## Q2" using measure_vector_q_in_tensor_Q1_eq_tensor_measure_vector_q_in_Q1_Q2[OF measure] e_Q1
+  moreover have "?Q' ## Q2"  using measure_vector_q_in_tensor_Q1_eq_tensor_measure_vector_q_in_Q1_Q2[OF measure] e_Q1
     by (metis eq_set valid_k valid_prob)
   ultimately show ?case by auto
 qed

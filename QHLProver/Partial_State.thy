@@ -1141,7 +1141,7 @@ locale partial_state2 = state_sig +
   fixes vars1 :: "nat set"
     and vars2 :: "nat set"
   assumes disjoint: "vars1 \<inter> vars2 = {}" and
-          dims_eq: "\<forall>i<length dims. dims ! i = 2" and
+          dims_eq: "\<forall>i<length dims. dims ! i = 2" and dims_vars1_2:"dims = replicate (card (vars1 \<union> vars2)) 2" and
           finite_v1:"finite vars1" and finite_v2:"finite vars2"
 
 begin
@@ -1479,7 +1479,8 @@ proof -
   interpret st1: partial_state2 ?dims vars1 vars2
     apply unfold_locales using assms by auto
   interpret st2: partial_state2 ?dims vars2 vars1
-    apply unfold_locales using assms by auto
+    apply unfold_locales using assms 
+    by (auto simp add: Un_commute)
 
   have eq1: "partial_state.encode1 st1.dims0 st1.vars1' = partial_state.encode2 st2.dims0 st2.vars1'"
     apply (subst st1.ptensor_encode1_encode2) 
@@ -1508,7 +1509,8 @@ proof -
   interpret st1: partial_state2 ?dims vars1 vars2
     apply unfold_locales using assms by auto
   interpret st2: partial_state2 ?dims vars2 vars1
-    apply unfold_locales using assms by auto
+    apply unfold_locales using assms
+    by (auto simp add: Un_commute) 
 
   have eq1: "partial_state.encode1 st1.dims0 st1.vars1' = partial_state.encode2 st2.dims0 st2.vars1'"
     apply (subst st1.ptensor_encode1_encode2) 
@@ -1536,18 +1538,20 @@ lemma ptensor_vec_assoc:
   shows "ptensor_vec (vars1 \<union> vars2) vars3 (ptensor_vec vars1 vars2 (v1::'a::comm_ring_1 vec) v2) v3 =
          ptensor_vec  vars1 (vars2 \<union> vars3) v1 (ptensor_vec vars2 vars3 v2 v3)"
 proof -
-  let ?dims = "replicate (card (vars1 \<union> vars2 \<union> vars3)) 2"
+  let ?dims = "replicate (card (vars1 \<union> vars2 \<union> vars3)) 2" and
+       ?dim12 = "replicate (card (vars1 \<union> vars2)) 2" and
+       ?dim23 = "replicate (card (vars2 \<union> vars3)) 2"
   have f_v1:"finite vars1" and f_v2:"finite vars2" and f_v3:"finite vars3"
     using assms
     using subset_eq_atLeast0_lessThan_finite by blast+
-  interpret a: partial_state2 ?dims vars1 vars2
+  interpret a: partial_state2 ?dim12 vars1 vars2
     apply unfold_locales using assms f_v1 f_v2 f_v3 by auto
   interpret b: partial_state2 ?dims "vars1 \<union> vars2" vars3
     apply unfold_locales using assms f_v1 f_v2 f_v3 by auto
-  interpret c: partial_state2 ?dims vars2 vars3
+  interpret c: partial_state2 ?dim23 vars2 vars3
     apply unfold_locales using assms f_v1 f_v2 f_v3 by auto
   interpret d: partial_state2 ?dims vars1 "vars2 \<union> vars3"
-    apply unfold_locales using assms f_v1 f_v2 f_v3 by auto
+    apply unfold_locales using assms f_v1 f_v2 f_v3 by (auto simp add: sup_assoc)
 
   have uassoc: "vars1 \<union> (vars2 \<union> vars3) = vars1 \<union> vars2 \<union> vars3"
     by auto
@@ -1711,18 +1715,20 @@ lemma ptensor_mat_assoc:
   shows "ptensor_mat  (vars1 \<union> vars2) vars3 (ptensor_mat vars1 vars2 m1 m2) m3 =
          ptensor_mat vars1 (vars2 \<union> vars3) m1 (ptensor_mat vars2 vars3 m2 m3)"
 proof -
-  let ?dims = "replicate (card (vars1 \<union> vars2 \<union> vars3)) 2"
+  let ?dims = "replicate (card (vars1 \<union> vars2 \<union> vars3)) 2" and
+      ?dim12 = "replicate (card (vars1 \<union> vars2)) 2" and
+      ?dim23 = "replicate (card (vars2 \<union> vars3)) 2"
   have f_v1:"finite vars1" and f_v2:"finite vars2" and f_v3:"finite vars3"
     using assms
     using subset_eq_atLeast0_lessThan_finite by blast+
-  interpret a: partial_state2 ?dims vars1 vars2
+  interpret a: partial_state2 ?dim12 vars1 vars2
     apply unfold_locales using assms f_v1 f_v2 f_v3 by auto
   interpret b: partial_state2 ?dims "vars1 \<union> vars2" vars3
     apply unfold_locales using assms f_v1 f_v2 f_v3 by auto
-  interpret c: partial_state2 ?dims vars2 vars3
+  interpret c: partial_state2 ?dim23 vars2 vars3
     apply unfold_locales using assms f_v1 f_v2 f_v3 by auto
   interpret d: partial_state2 ?dims vars1 "vars2 \<union> vars3"
-    apply unfold_locales using assms f_v1 f_v2 f_v3 by auto
+    apply unfold_locales using assms f_v1 f_v2 f_v3 by (auto simp add: sup_assoc)
 
   have uassoc: "vars1 \<union> (vars2 \<union> vars3) = vars1 \<union> vars2 \<union> vars3"
     by auto
@@ -1875,18 +1881,20 @@ lemma pmat_extension_assoc:
   shows "pmat_extension vars1 (vars2 \<union> vars3) m =
          pmat_extension (vars1 \<union> vars2) vars3 (pmat_extension  vars1 vars2 m)"
 proof -
-   let ?dims = "replicate (card (vars1 \<union> vars2 \<union> vars3)) 2"
+  let ?dims = "replicate (card (vars1 \<union> vars2 \<union> vars3)) 2" and
+      ?dim12 = "replicate (card (vars1 \<union> vars2)) 2" and
+      ?dim23 = "replicate (card (vars2 \<union> vars3)) 2"
    have f_v1:"finite vars1" and f_v2:"finite vars2" and f_v3:"finite vars3"
     using assms
     using subset_eq_atLeast0_lessThan_finite by blast+
-  interpret a: partial_state2 ?dims vars1 vars2
+  interpret a: partial_state2 ?dim12 vars1 vars2
     apply unfold_locales using assms f_v1 f_v2 f_v3 by auto
   interpret b: partial_state2 ?dims "vars1 \<union> vars2" vars3
     apply unfold_locales using assms f_v1 f_v2 f_v3 by auto
-  interpret c: partial_state2 ?dims vars2 vars3
+  interpret c: partial_state2 ?dim23 vars2 vars3
     apply unfold_locales using assms f_v1 f_v2 f_v3 by auto
   interpret d: partial_state2 ?dims vars1 "vars2 \<union> vars3"
-    apply unfold_locales using assms f_v1 f_v2 f_v3 by auto
+    apply unfold_locales using assms f_v1 f_v2 f_v3 by (auto simp add: Un_assoc)
   have "a.d2 = c.d1"
     by (simp add: c.d1_def a.d2_def c.dims1_def a.dims2_def)
   have "c.d0 = d.d2"

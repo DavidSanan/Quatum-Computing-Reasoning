@@ -490,6 +490,18 @@ definition empty_qstate::"QState"  ("|>")
 lemma uqstate_fst:"fst (uQState a) = QState_vars a" apply transfer' by auto
 lemma uqstate_snd:"snd (uQState a) = QState_list a" apply transfer' by auto
 
+
+lemma QState_rel2':"\<exists>i<length (QState_list (x::QState)). QState_list (x::QState)!i\<noteq>0"
+  by (transfer, auto)
+
+lemma QState_rel2a':"\<exists>i<dim_vec (QState_vector (x::QState)). QState_vector (x::QState)$i\<noteq>0"
+  using QState_rel2'
+  by (simp add: QState_list.rep_eq QState_vector.rep_eq vec_of_list_index)
+
+lemma QState_rel3a':"QState_vector (x::QState)\<noteq> 0\<^sub>v (dim_vec (QState_vector (x::QState)))"
+  using QState_rel2a'
+  by (simp add: list_of_vec_index zero_list_vec)
+
 lemma QState_rel3':"finite (QState_vars (x:: QState ))"
   by (transfer, auto)
 
@@ -597,7 +609,9 @@ lemma vector_element12_equiv:
   shows "partial_state2.pencode12 d1 (d - d1) (i,j) < dim_vec v"
 proof-
   interpret ps2:partial_state2 "(replicate (card d) (2::nat))" "d1" "(d - d1)" apply standard
-    using a2 a1 infinite_super by auto
+    using a2 a1 infinite_super apply auto
+    by (simp add: subset_Un_eq)
+    
   show ?thesis unfolding  ps2.pencode12_def                                      
     using a1 a0 a2 a3 partial_state.encode12_lt          
      apply auto
@@ -702,8 +716,7 @@ proof-
     by (smt disjoint_iff_not_equal image_iff ind_in_set_inj subset_eq 
           sup_commute sup_ge1)       
   interpret ps2:partial_state2 ds  d1 d2  apply standard using int_d1_d2 
-    using f1 f2 a0 a1 a5 f1 f2 unfolding list_dims_def
-    by auto    
+    using f1 f2 a0 a1 a2 a5 f1 f2 unfolding list_dims_def by auto   
  
    have "dim_vec v = prod_list ds"
     using a6  a5 a7 a2 unfolding ps2.ptensor_vec_def partial_state.tensor_vec_def   
@@ -1982,9 +1995,15 @@ typedef
   apply (rule exI[where x ="\<lambda>x. {}"], auto)
   by (rule exI[where x ="[1]"], auto)
 
+
 setup_lifting type_definition_QStateM
 
 lift_definition QStateM_map :: "QStateM \<Rightarrow> q_vars" is fst .
+
+lemma finite_Q_domain_var:"finite (Q_domain_var q (QStateM_map \<Q>))"
+  unfolding Q_domain_var_def apply transfer apply auto unfolding Q_domain_def 
+  using QState_rel3'
+  by (metis UNIV_I UN_Un UnCI finite_Un subsetI subset_antisym) 
 
 abbreviation empty_map::"q_vars" ("{}\<^sub>q")
   where "empty_map \<equiv> (\<lambda>n. {})"
