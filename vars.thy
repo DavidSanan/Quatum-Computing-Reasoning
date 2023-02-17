@@ -44,7 +44,7 @@ class real_abs= nat_list_abs+
 locale vars =  
   fixes variables :: "'v set"
   fixes types::"'t set"
-  fixes v_domain :: "'v \<Rightarrow> ('m::nat_list_abs) set"
+  fixes v_domain :: "'v \<Rightarrow> ('m::real_abs) set"
   fixes get_value :: "'s \<Rightarrow> 'v  \<Rightarrow> 'm"
   (* fixes set_value ::"'s \<Rightarrow> 'v \<Rightarrow> 'b \<Rightarrow> 's"  *)
   fixes conv::"('v \<Rightarrow> 'm) \<Rightarrow> 'v set \<Rightarrow> 's"  

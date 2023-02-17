@@ -1,4 +1,4 @@
-chapter AFP
+chapter Prover
 
 session "Actions" (AFP) = "Separata" +
 sessions "HOL-Eisbach"
