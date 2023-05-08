@@ -205,6 +205,14 @@ lemma digit_decode_vars:
             length_digit_encode length_replicate lessThan_iff nths_all 
             prod_list_replicate ind_in_set_id sup_bot.right_neutral)  
 
+lemma encode:
+   "i< (2::nat) ^ card (d1) \<Longrightarrow> finite (d1::nat set)  \<Longrightarrow>
+     digit_decode (nths (replicate (card (d1 \<union> {})) 2) (ind_in_set (d1 \<union> {}) ` d1))
+     (nths (digit_encode (replicate (card (d1 \<union> {})) 2) i) (ind_in_set (d1 \<union> {}) ` d1))   = i"
+  by (metis atLeast0LessThan digit_decode_encode_lt  
+            length_digit_encode length_replicate lessThan_iff nths_all 
+            prod_list_replicate ind_in_set_id sup_bot.right_neutral)  
+
 (* lemma digit_decode_vars2:
    "i< (2::nat) ^ card (d) \<Longrightarrow> finite (d::nat set)  \<Longrightarrow> d1 \<subseteq> d \<Longrightarrow>
      digit_decode (nths (replicate (card d) 2) (ind_in_set d ` d1))
@@ -2223,6 +2231,9 @@ lift_definition QStateM_vars::"QStateM \<Rightarrow> nat set" is "(\<lambda>s. Q
 lift_definition QStateM_list::"QStateM \<Rightarrow> complex list" is "(\<lambda>s. QState_list (snd s))" .
 lift_definition QStateM_vector::" QStateM \<Rightarrow> complex vec" is "(\<lambda>s. QState_vector (snd s))" .
 
+definition QStateM_QState::"QStateM \<Rightarrow> QState"
+  where "QStateM_QState q \<equiv> QState(QStateM_vars q, QStateM_list q)"
+
 lift_definition QStateM ::"q_vars \<times>  QState \<Rightarrow> QStateM" is
 "\<lambda>s. if QStateM_wf s then (fst s, snd s) else (\<lambda>s. {}, QState ({},[1]))"
   unfolding Q_domain_def by (auto simp add:  QState_vars_empty)
@@ -2398,6 +2409,13 @@ lemma Qstate_map_0_0:"QStateM_map (QStateM (0, 0)) = 0"
 lemma idem_QState:"QStateM (QStateM_map x, qstate x) = x"  
   unfolding qstate_def apply transfer by fastforce
 
+lemma QState_qstate_eq:"QState(QStateM_vars x, QStateM_list x) = qstate x"
+  unfolding qstate_def apply transfer' apply auto
+  using QState_refl by auto
+
+lemma idem_QState1:"QStateM (QStateM_map x, QState(QStateM_vars x, QStateM_list x)) = x"
+  using QState_qstate_eq idem_QState by auto
+ 
 
 lemma eq_QStateM_dest: "Q_domain vs \<noteq> {} \<Longrightarrow> 
        QStateM_wf (vs, v) \<Longrightarrow> 
@@ -2508,9 +2526,8 @@ lemma domain_qr:"q  \<inter> qr  = {} \<Longrightarrow>
   by (auto simp add: QStateM_vars.rep_eq qstate_def)
 
 lemma Q_domain_var_in_vars:
-  assumes a1:"\<Inter> (QStateM_map Q1 ` q) \<noteq> {}" and a2:"q\<noteq>{}" 
   shows "Q_domain_var q (QStateM_map Q1) \<subseteq> QStateM_vars Q1"
-    using QStateM_rel1 a1 a2 apply auto
+    using QStateM_rel1   apply auto
     unfolding Q_domain_def Q_domain_var_def qstate_def apply transfer
     using iso_tuple_UNIV_I by blast
 
