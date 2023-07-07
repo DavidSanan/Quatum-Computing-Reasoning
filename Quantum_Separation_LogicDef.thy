@@ -4101,7 +4101,7 @@ next
   case (While b c)
   then have "\<sigma> \<in> b"  using QExec_Fault_elim_cases(6) While.prems(1) by blast 
   thm QExec_Normal_elim_cases(6)[OF While(2)]
-  then show ?case sorry
+  then show ?case using While sorry
 next
   case (Seq c1 c2)
   then show ?case sorry
