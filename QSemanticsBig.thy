@@ -2590,7 +2590,6 @@ inductive QExec::"('v, 's) com \<Rightarrow> 's XQState \<Rightarrow> 's XQState
 | Fault_Prop:"\<turnstile> \<langle>C, Fault\<rangle> \<Rightarrow> Fault"
 
 
-
 inductive_cases QExec_elim_cases [cases set]:
  "\<turnstile>\<langle>c,Fault\<rangle> \<Rightarrow>  t"  
   "\<turnstile>\<langle>Skip,s\<rangle> \<Rightarrow>  t"

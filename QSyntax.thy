@@ -69,16 +69,30 @@ definition set_stack::"'s state \<Rightarrow> 's \<Rightarrow> 's state"
 
  
 
+\<comment>\<open>('a,'s) com defines the type of quantum programs. 
+  'a is the type of local variables, and 's is the type of the stack\<close>
 
 datatype ('a, 's) com = 
-    Skip
-  | SMod "'s \<Rightarrow> 's"
-  | QMod "complex Matrix.mat" "'s expr_q"
-  | IF "'s assn" "('a, 's) com" "('a, 's) com"
-  | While "'s assn" "('a, 's) com"
-  | Seq "('a, 's) com" "('a, 's) com"  ("_;;/ _" [60, 61] 60)
-  | Measure "'a"   "'s expr_q" ("_:=meassure / _" [60, 61] 60)
-  | Alloc "'a"   "('s,complex list) expr"  ("_:=alloc (_)" [61] 60)
+\<comment>\<open>Skip is language terminator\<close>
+    Skip 
+\<comment>\<open>SMod f modifies the stack according to function f\<close>
+    | SMod "'s \<Rightarrow> 's"
+\<comment>\<open>QMod M q modifies the quantum state by applying matrix M 
+          over the qbits resulting on evaluating expression q over the stack\<close>
+    | QMod "complex Matrix.mat" "'s expr_q"
+\<comment>\<open>IF b C1 C2 branches the execution to s1 or s2 according the evaluation of b over the stack\<close>
+    | IF "'s assn" "('a, 's) com" "('a, 's) com"
+\<comment>\<open>While b C iterates over C while the assertion b over the stack holds\<close>
+    | While "'s assn" "('a, 's) com"
+\<comment>\<open>Seq C1 C2 executes C1 then C2\<close>
+    | Seq "('a, 's) com" "('a, 's) com"  ("_;;/ _" [60, 61] 60)
+\<comment>\<open>Measure v exp measures the qubits resulting of evaluating exp 
+   over the stack and it stores the meassuring result in v\<close>
+    | Measure "'a"   "'s expr_q" ("_:=meassure / _" [60, 61] 60)
+\<comment>\<open>Alloc v expr allocates in the variable v as many qubits as necessary to allocate the expression given by expr\<close>
+    | Alloc "'a"   "('s,complex list) expr"  ("_:=alloc (_)" [61] 60)
+\<comment>\<open>Dispose v expr dispose the qubits in v resulting of evaluating expr. It requires
+that the qubits are set to zero\<close>
   | Dispose "'a" "('s,nat set) expr"
 
 
