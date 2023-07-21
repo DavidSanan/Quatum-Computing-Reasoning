@@ -727,7 +727,7 @@ definition card_set_q ::"'s expr_q \<Rightarrow> 's state \<Rightarrow> nat set"
     let st = get_stack s ; qv = fst (get_qstate s) in 
              {0..2^card(Q_domain_set q qv st)}"
 
-lemma unitary_times_v_zero:
+(* lemma unitary_times_v_zero:
   fixes P  :: "'a:: conjugatable_field mat"
   assumes uP: "unitary P" and  mul_zero:"P *\<^sub>v v = 0\<^sub>v (dim_vec v)"
         shows "v =  0\<^sub>v (dim_vec v)"
@@ -747,14 +747,14 @@ proof-
      using adjoint_dim det_mult  dim mult_cancel_right1 zero_neq_one
      by (metis (no_types, lifting) )     
  } thus ?thesis by auto
-qed
+qed *)
 
-lemma unitary_P_times_not_zero:
+(* lemma unitary_P_times_not_zero:
   fixes P  :: "'a:: conjugatable_field mat"
   assumes uP: "unitary P" and not_zero:"v \<noteq>  0\<^sub>v (dim_vec v)" 
         shows "P *\<^sub>v v \<noteq> 0\<^sub>v (dim_vec v)"
   using not_zero uP unitary_times_v_zero by blast
-
+*)
 (* lemma one_m_not_zero:
   assumes a0:"(v::('a:: conjugatable_field) vec) \<noteq>  0\<^sub>v (dim_vec v)"
   shows  "\<exists>i<length (list_of_vec (1\<^sub>m (dim_vec v) *\<^sub>v v)). 
@@ -762,7 +762,7 @@ lemma unitary_P_times_not_zero:
   by (metis assms carrier_vec_dim_vec one_mult_mat_vec zero_vec_list) *)
 
 
-lemma unitary_carrier_m_sep_not_zero:
+(* lemma unitary_carrier_m_sep_not_zero:
   assumes a0:"unitary M" and a1:"M \<in> carrier_mat (2^(card (\<Union> ((QStateM_map Q) ` q_ind)))) (2^(card (\<Union> ((QStateM_map Q) ` q_ind))))"
   shows "matrix_sep_not_zero  q_ind Q M"
 proof-
@@ -825,7 +825,7 @@ proof-
     using unitary_P_times_not_zero[OF M qnz] zero_vec_list[of ?v] unfolding Let_def using zero_vec_list
     by auto  
 qed
-
+*)
 lemma "1/((a::int)/b) = b/a" by auto
 
 inductive "hoarep"::"[('s state) assn,('v,'s) com, ('s state) assn] => bool"
@@ -1150,12 +1150,12 @@ lemma \<delta>k:
   by (auto simp add: Let_def)
 
 
-lemma matrix_sep_nz:
+(* lemma matrix_sep_nz:
   assumes a0:"(\<delta>k, \<Q>') = measure_vars k q \<Q>" and a1:"0 < \<delta>k "     
   shows "matrix_sep_not_zero q \<Q> 1\<^sub>k (2 ^ card (\<Union> (QStateM_map \<Q> ` q)))"
   unfolding matrix_sep_not_zero_def 
   using matrix_sep_var_not_zero 
-  by (metis a0 a1 measure_vars_dest prod.sel(1) zero_vec_list)
+  by (metis a0 a1 measure_vars_dest prod.sel(1) zero_vec_list) *)
 
 
 lemma Qv_ptensor:
@@ -1173,9 +1173,6 @@ proof-
   let ?v = "vec_of_list vl" and
        ?v1 = "Q_domain_var q (QStateM_map \<Q>)" and ?v2 = "Q_domain_var qr (QStateM_map \<Q>)"
   let ?M = "(1\<^sub>k (2 ^ card (\<Union> (QStateM_map \<Q> ` q))))"
-  have M:"M \<in> carrier_mat (2^(card ( \<Union> (QStateM_map \<Q> ` q)))) (2^(card (\<Union> (QStateM_map \<Q> ` q))))"
-    using a9 unfolding projection1_def
-    using dim_col_mat(1) dim_row_mat(1) by blast
 
   have f1:"finite ?v1" and f2:"finite ?v2" and
        Q_domain:"Q_domain (QStateM_map \<Q>) = QStateM_vars \<Q>" and
@@ -1303,8 +1300,8 @@ proof-
   ultimately have "QStateM_vector \<Q>' = (1 /  sqrt(\<rho> q vl k ns')) \<cdot>\<^sub>v (ptensor_mat ?v1 ?v2
                                (?M::complex mat) (1\<^sub>m (2^(card ?v2))) *\<^sub>v QStateM_vector \<Q>)"  
     using a13 \<delta>k[OF a0] Qv_ptensor 
-    using a5 matrix_sep_dest matrix_sep_nz[OF a0 a13] sca_mult_q_statem_qstate_vector v1_not_empty
-    by (metis Q_domain_var_def \<open>\<delta>k = \<rho> q vl k ns'\<close> a0 a1 a7 measure_vars_dest_QStateM prod.sel(2))  
+    using a5   sca_mult_q_statem_qstate_vector v1_not_empty
+    by (metis Q_domain_var_def \<open>\<delta>k = \<rho> q vl k ns'\<close> a0  measure_vars_dest_QStateM prod.sel(2))  
   moreover have "(1 /sqrt(\<rho> q vl k ns')) \<cdot>\<^sub>v ((ptensor_mat ?v1 ?v2 (?M::complex mat) (1\<^sub>m (2^(card ?v2))) *\<^sub>v QStateM_vector \<Q>)) = 
                  (1 / sqrt(\<rho> q vl k ns')) \<cdot>\<^sub>v ptensor_vec ?v1 ?v2 (unit_vec (2^(card ?v1)) k) (partial_state2.vector_aij ?v1 ?v2 (QStateM_vector \<Q>) k)"
     using v_scalar_mat_product_eq_ptensor[OF f1 f2 inter_12 k dim_vec]
@@ -2321,7 +2318,7 @@ qed *)
 
 
 lemma mat_sep_G:
-  assumes a0:"Q1 ## Q2" and a1:"\<forall>e \<in> q. QStateM_map Q1 e \<noteq> {}" and
+  assumes a0:"Q1 ## Q2" and a1:"\<forall>e \<in> q. QStateM_map Q1 e \<noteq> {}" and 
           a3:"unitary M" and 
           a4:"M \<in> carrier_mat (2^(card ( \<Union> (QStateM_map Q1 ` q)))) (2^(card (\<Union> (QStateM_map Q1 ` q))))"       
   shows "matrix_sep_QStateM q (Q1 + Q2) M = (matrix_sep_QStateM q Q1 M) + Q2"
@@ -2501,7 +2498,7 @@ qed *)
 
 lemma Q_upd_Q1_dom_sep_Q2_dom:
   assumes 
-   a0:"Q1##Q2" and a1:"\<forall>e \<in> q. QStateM_map Q1 e \<noteq> {}" and 
+   a0:"Q1##Q2" and 
    a3:"unitary M" and 
    a4: "M \<in> carrier_mat (2^(card ( \<Union> (QStateM_map Q1 ` q)))) (2^(card (\<Union> (QStateM_map Q1 ` q))))"
  shows "(matrix_sep_QStateM q Q1 M) ## Q2"
@@ -4247,9 +4244,21 @@ next
   case (QMod q \<sigma> \<Q> M \<Q>' \<delta>)
   then show ?case by auto
 next
-case (QMod_F q \<sigma> \<Q> M \<delta> Q1 Q2 \<sigma>' \<rho>1 \<rho>2)
+  case (QMod_F q \<sigma> \<Q> M \<delta> Q1 Q2 \<sigma>' \<rho>1 \<rho>2)
+  moreover { assume "\<exists>e. e \<in> q \<sigma> \<and> QStateM_map \<Q> e = {}"
+    have ?case sorry
+  }
+  moreover {
+    assume "\<not> unitary M"
+    then have ?case using QMod_F QExec.QMod_F  by presburger 
+  }
+  moreover {
+    assume "M \<notin> carrier_mat (2 ^ card (\<Union> (QStateM_map \<Q> ` q \<sigma>))) (2 ^ card (\<Union> (QStateM_map \<Q> ` q \<sigma>)))"
+    then have ?case using QMod_F QExec.QMod_F sorry
+  }
+  ultimately show ?case by auto
   then have "\<Q> = Q1 + Q2" by auto
-  
+  then have "\<exists>e. e \<in> q \<sigma> \<and> QStateM_map Q1 e = {} "
   then show ?case by auto
 next
   case (Alloc q' \<Q> v \<sigma> \<vv>' q'_addr \<sigma>' q \<delta>)

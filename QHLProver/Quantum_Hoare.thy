@@ -1,6 +1,6 @@
 section \<open>Partial and total correctness\<close>
 
-theory Quantum_Hoare
+theory Quantum_Hoare 
   imports Quantum_Program
 begin
 

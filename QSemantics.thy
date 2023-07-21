@@ -49,14 +49,12 @@ inductive step::"('v,'s) QConf \<Rightarrow> ('v,'s) QConf \<Rightarrow> bool"
 
  | QMod:"\<forall>e \<in> (q \<sigma>). (QStateM_map \<Q>) e \<noteq> {}  \<Longrightarrow> unitary M \<Longrightarrow>
          \<Q>' = matrix_sep_QStateM (q \<sigma>) \<Q> M \<Longrightarrow>  
-         M \<in> carrier_mat (2 ^ card (\<Union> (QStateM_map \<Q> ` (q \<sigma>))))  
-                         (2 ^ card (\<Union> (QStateM_map \<Q> ` (q \<sigma>)))) \<Longrightarrow>      
+         M \<in> carrier_mat m m  \<Longrightarrow>           
          \<turnstile> (QMod M q, Normal (\<delta>,\<sigma>, \<Q>)) \<rightarrow> (Skip,Normal (\<delta>, \<sigma>,  \<Q>'))"
 
 \<comment>\<open>QMod fails if the set of qubits to be modified is not included in the quantum state\<close>
  | QMod_F:"\<exists>e. e \<in> q \<sigma> \<and> (QStateM_map \<Q>) e = {}  \<or>  \<not> unitary M  \<or> 
-         M \<notin> carrier_mat (2 ^ card (\<Union> (QStateM_map \<Q> ` (q \<sigma>))))  
-                         (2 ^ card (\<Union> (QStateM_map \<Q> ` (q \<sigma>))))  \<Longrightarrow>        
+         M \<notin> carrier_mat m m   \<Longrightarrow>        
           \<turnstile> (QMod M q, Normal (\<delta>,\<sigma>, \<Q>)) \<rightarrow> (Skip, Fault)"
 
 \<comment>\<open>Alloc takes a normal variable "q" representing the variable where the index to the qubits is store
