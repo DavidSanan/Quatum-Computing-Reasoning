@@ -54,7 +54,7 @@ inductive step::"('v,'s) QConf \<Rightarrow> ('v,'s) QConf \<Rightarrow> bool"
 
 \<comment>\<open>QMod fails if the set of qubits to be modified is not included in the quantum state\<close>
  | QMod_F:"\<exists>e. e \<in> q \<sigma> \<and> (QStateM_map \<Q>) e = {}  \<or>  \<not> unitary M  \<or> 
-         M \<notin> carrier_mat m m   \<Longrightarrow>        
+         (\<forall>m. M \<notin> carrier_mat m m)   \<Longrightarrow>        
           \<turnstile> (QMod M q, Normal (\<delta>,\<sigma>, \<Q>)) \<rightarrow> (Skip, Fault)"
 
 \<comment>\<open>Alloc takes a normal variable "q" representing the variable where the index to the qubits is store
