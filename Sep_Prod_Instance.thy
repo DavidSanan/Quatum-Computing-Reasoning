@@ -27,7 +27,7 @@ USA
 theory Sep_Prod_Instance
 imports Separation_Algebra.Sep_Heap_Instance "Separata.Separata"
 begin
-section{* Product of Separation Algebras Instantiation *} 
+section "Product of Separation Algebras Instantiation" 
 
 instantiation prod::(sep_algebra,sep_algebra) sep_algebra
 begin                             

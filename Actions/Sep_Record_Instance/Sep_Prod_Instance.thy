@@ -25,7 +25,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
 USA
 *)
 theory Sep_Prod_Instance
-imports Sep_Algebra.Separation_Algebra "Separata.Separata"
+imports Separation_Algebra.Separation_Algebra "Separata.Separata"
 begin
 section{* Product of Separation Algebras Instantiation *} 
 

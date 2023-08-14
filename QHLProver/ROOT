@@ -1,9 +1,8 @@
-chapter AFP
+chapter Prover 
 
-session QHLProver (AFP) = Jordan_Normal_Form +
-  description {*
-    Formalization of quantum Hoare logic and applications.
-  *}
+session QHLProverSep = Jordan_Normal_Form +
+  description "Formalization of quantum Hoare logic and applications."
+  
   options [timeout = 600]
   sessions
     Deep_Learning

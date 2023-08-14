@@ -356,7 +356,7 @@ lemma uminus_mat:
   by auto
 
 ML_file "mat_alg.ML"
-method_setup mat_assoc = {* mat_assoc_method *}
+method_setup mat_assoc = mat_assoc_method 
   "Normalization of expressions on matrices"
 
 lemma mat_assoc_test:

@@ -1241,6 +1241,10 @@ locale partial_state2 =
   fixes vars1 :: "nat set"
     and vars2 :: "nat set"
   assumes disjoint: "vars1 \<inter> vars2 = {}" and
+<<<<<<< HEAD
+=======
+          dims_eq: "\<forall>i<length dims. dims ! i = 2" and dims_vars1_2:"dims = replicate (card (vars1 \<union> vars2)) 2" and
+>>>>>>> small-step-semantics
           finite_v1:"finite vars1" and finite_v2:"finite vars2"
 
 begin
@@ -1573,11 +1577,22 @@ lemma ptensor_vec_comm:
   assumes "vars1 \<inter> vars2 = {}" and  "finite vars1" and "finite vars2"
   shows "ptensor_vec  vars1 vars2 v1 v2 = ptensor_vec  vars2 vars1 v2 v1"  
 proof -
+<<<<<<< HEAD
  
   interpret st1: partial_state2 vars1 vars2
     apply unfold_locales using assms by auto
   interpret st2: partial_state2  vars2 vars1
     apply unfold_locales using assms by auto
+=======
+  let ?dims = "replicate (card (vars1 \<union> vars2)) 2"
+  have "\<forall>i<length ?dims. ?dims ! i = 2"
+    by simp 
+  interpret st1: partial_state2 ?dims vars1 vars2
+    apply unfold_locales using assms by auto
+  interpret st2: partial_state2 ?dims vars2 vars1
+    apply unfold_locales using assms 
+    by (auto simp add: Un_commute)
+>>>>>>> small-step-semantics
 
   have eq1: "partial_state.encode1 st1.dims0 st1.vars1' = partial_state.encode2 st2.dims0 st2.vars1'"
     apply (subst st1.ptensor_encode1_encode2) 
@@ -1601,11 +1616,21 @@ lemma ptensor_mat_comm:
   assumes "vars1 \<inter> vars2 = {}" and "finite vars1" and "finite vars2"
   shows "ptensor_mat vars1 vars2 m1 m2 = ptensor_mat vars2 vars1 m2 m1"  
 proof -
+<<<<<<< HEAD
+=======
+  let ?dims = "replicate (card (vars1 \<union> vars2)) 2"
+>>>>>>> small-step-semantics
   
   interpret st1: partial_state2 vars1 vars2
     apply unfold_locales using assms by auto
+<<<<<<< HEAD
   interpret st2: partial_state2 vars2 vars1
     apply unfold_locales using assms by auto
+=======
+  interpret st2: partial_state2 ?dims vars2 vars1
+    apply unfold_locales using assms
+    by (auto simp add: Un_commute) 
+>>>>>>> small-step-semantics
 
   have eq1: "partial_state.encode1 st1.dims0 st1.vars1' = partial_state.encode2 st2.dims0 st2.vars1'"
     apply (subst st1.ptensor_encode1_encode2) 
@@ -1633,18 +1658,35 @@ lemma ptensor_vec_assoc:
   shows "ptensor_vec (vars1 \<union> vars2) vars3 (ptensor_vec vars1 vars2 (v1::'a::comm_ring_1 vec) v2) v3 =
          ptensor_vec  vars1 (vars2 \<union> vars3) v1 (ptensor_vec vars2 vars3 v2 v3)"
 proof -
+<<<<<<< HEAD
   let ?dims = "replicate (card (vars1 \<union> vars2 \<union> vars3)) 2"
   have f_v1:"finite vars1" and f_v2:"finite vars2" and f_v3:"finite vars3"
     using assms
     using subset_eq_atLeast0_lessThan_finite by blast+
   interpret a: partial_state2  vars1 vars2
+=======
+  let ?dims = "replicate (card (vars1 \<union> vars2 \<union> vars3)) 2" and
+       ?dim12 = "replicate (card (vars1 \<union> vars2)) 2" and
+       ?dim23 = "replicate (card (vars2 \<union> vars3)) 2"
+  have f_v1:"finite vars1" and f_v2:"finite vars2" and f_v3:"finite vars3"
+    using assms
+    using subset_eq_atLeast0_lessThan_finite by blast+
+  interpret a: partial_state2 ?dim12 vars1 vars2
+>>>>>>> small-step-semantics
     apply unfold_locales using assms f_v1 f_v2 f_v3 by auto
   interpret b: partial_state2  "vars1 \<union> vars2" vars3
     apply unfold_locales using assms f_v1 f_v2 f_v3 by auto
+<<<<<<< HEAD
   interpret c: partial_state2  vars2 vars3
     apply unfold_locales using assms f_v1 f_v2 f_v3 by auto
   interpret d: partial_state2  vars1 "vars2 \<union> vars3"
     apply unfold_locales using assms f_v1 f_v2 f_v3 by auto
+=======
+  interpret c: partial_state2 ?dim23 vars2 vars3
+    apply unfold_locales using assms f_v1 f_v2 f_v3 by auto
+  interpret d: partial_state2 ?dims vars1 "vars2 \<union> vars3"
+    apply unfold_locales using assms f_v1 f_v2 f_v3 by (auto simp add: sup_assoc)
+>>>>>>> small-step-semantics
 
   have uassoc: "vars1 \<union> (vars2 \<union> vars3) = vars1 \<union> vars2 \<union> vars3"
     by auto
@@ -1790,6 +1832,7 @@ lemma tensor_mat_dim:
          carrier_mat (prod_list (replicate (card (vars1 \<union> vars2)) 2)) 
                      (prod_list (replicate (card (vars1 \<union> vars2)) 2))"
 proof-
+<<<<<<< HEAD
   have f_v1:"finite vars1" and f_v2:"finite vars2" 
     using assms
     using subset_eq_atLeast0_lessThan_finite by blast+
@@ -1797,6 +1840,18 @@ proof-
     apply unfold_locales using assms f_v1 f_v2  by auto
   show ?thesis using ps2.ptensor_mat_carrier
     using ps2.d0_def ps2.dims0_def ps2.vars0_def by auto
+=======
+  let ?dims = "replicate (card (vars1 \<union> vars2)) 2"
+  have f_v1:"finite vars1" and f_v2:"finite vars2" 
+    using assms
+    using subset_eq_atLeast0_lessThan_finite by blast+
+  interpret ps2: partial_state2 ?dims vars1 vars2
+    apply unfold_locales using assms f_v1 f_v2  by auto
+  have "ps2.d0 = prod_list ?dims" 
+    unfolding ps2.d0_def ps2.dims0_def ps2.vars0_def by auto    
+  then show ?thesis using ps2.ptensor_mat_carrier
+    by auto                             
+>>>>>>> small-step-semantics
 qed
 
 lemma ptensor_mat_assoc:
@@ -1805,18 +1860,35 @@ lemma ptensor_mat_assoc:
   shows "ptensor_mat  (vars1 \<union> vars2) vars3 (ptensor_mat vars1 vars2 m1 m2) m3 =
          ptensor_mat vars1 (vars2 \<union> vars3) m1 (ptensor_mat vars2 vars3 m2 m3)"
 proof -
+<<<<<<< HEAD
   let ?dims = "replicate (card (vars1 \<union> vars2 \<union> vars3)) 2"
   have f_v1:"finite vars1" and f_v2:"finite vars2" and f_v3:"finite vars3"
     using assms
     using subset_eq_atLeast0_lessThan_finite by blast+
   interpret a: partial_state2  vars1 vars2
+=======
+  let ?dims = "replicate (card (vars1 \<union> vars2 \<union> vars3)) 2" and
+      ?dim12 = "replicate (card (vars1 \<union> vars2)) 2" and
+      ?dim23 = "replicate (card (vars2 \<union> vars3)) 2"
+  have f_v1:"finite vars1" and f_v2:"finite vars2" and f_v3:"finite vars3"
+    using assms
+    using subset_eq_atLeast0_lessThan_finite by blast+
+  interpret a: partial_state2 ?dim12 vars1 vars2
+>>>>>>> small-step-semantics
     apply unfold_locales using assms f_v1 f_v2 f_v3 by auto
   interpret b: partial_state2  "vars1 \<union> vars2" vars3
     apply unfold_locales using assms f_v1 f_v2 f_v3 by auto
+<<<<<<< HEAD
   interpret c: partial_state2 vars2 vars3
     apply unfold_locales using assms f_v1 f_v2 f_v3 by auto
   interpret d: partial_state2 vars1 "vars2 \<union> vars3"
     apply unfold_locales using assms f_v1 f_v2 f_v3 by auto
+=======
+  interpret c: partial_state2 ?dim23 vars2 vars3
+    apply unfold_locales using assms f_v1 f_v2 f_v3 by auto
+  interpret d: partial_state2 ?dims vars1 "vars2 \<union> vars3"
+    apply unfold_locales using assms f_v1 f_v2 f_v3 by (auto simp add: sup_assoc)
+>>>>>>> small-step-semantics
 
   have uassoc: "vars1 \<union> (vars2 \<union> vars3) = vars1 \<union> vars2 \<union> vars3"
     by auto
@@ -1969,18 +2041,35 @@ lemma pmat_extension_assoc:
   shows "pmat_extension vars1 (vars2 \<union> vars3) m =
          pmat_extension (vars1 \<union> vars2) vars3 (pmat_extension  vars1 vars2 m)"
 proof -
+<<<<<<< HEAD
   
    have f_v1:"finite vars1" and f_v2:"finite vars2" and f_v3:"finite vars3"
     using assms
     using subset_eq_atLeast0_lessThan_finite by blast+
   interpret a: partial_state2 vars1 vars2
+=======
+  let ?dims = "replicate (card (vars1 \<union> vars2 \<union> vars3)) 2" and
+      ?dim12 = "replicate (card (vars1 \<union> vars2)) 2" and
+      ?dim23 = "replicate (card (vars2 \<union> vars3)) 2"
+   have f_v1:"finite vars1" and f_v2:"finite vars2" and f_v3:"finite vars3"
+    using assms
+    using subset_eq_atLeast0_lessThan_finite by blast+
+  interpret a: partial_state2 ?dim12 vars1 vars2
+>>>>>>> small-step-semantics
     apply unfold_locales using assms f_v1 f_v2 f_v3 by auto
   interpret b: partial_state2  "vars1 \<union> vars2" vars3
     apply unfold_locales using assms f_v1 f_v2 f_v3 by auto
+<<<<<<< HEAD
   interpret c: partial_state2 vars2 vars3
     apply unfold_locales using assms f_v1 f_v2 f_v3 by auto
   interpret d: partial_state2 vars1 "vars2 \<union> vars3"
     apply unfold_locales using assms f_v1 f_v2 f_v3 by auto
+=======
+  interpret c: partial_state2 ?dim23 vars2 vars3
+    apply unfold_locales using assms f_v1 f_v2 f_v3 by auto
+  interpret d: partial_state2 ?dims vars1 "vars2 \<union> vars3"
+    apply unfold_locales using assms f_v1 f_v2 f_v3 by (auto simp add: Un_assoc)
+>>>>>>> small-step-semantics
   have "a.d2 = c.d1"
     by (simp add: c.d1_def a.d2_def c.dims1_def a.dims2_def)
   have "c.d0 = d.d2"
@@ -2002,7 +2091,11 @@ lemma pscalar_ptensor_1:
 proof-
   let ?dims = "replicate (card (vs1 \<union> vs2)) 2"
   
+<<<<<<< HEAD
   interpret st1: partial_state2  vs1 vs2
+=======
+  interpret st1: partial_state2 ?dims vs1 vs2
+>>>>>>> small-step-semantics
     apply unfold_locales using assms by auto
   have st1len:"dim_vec (ptensor_vec vs1 vs2 v1 v2) = 2^(card st1.vars0)"
     by (simp add: st1.d0_def st1.dims0_def)
@@ -2027,11 +2120,20 @@ proof-
   moreover {
     fix i
     assume a00:"(i::nat) < 2^(card st1.vars0)"
+<<<<<<< HEAD
           
     have d1:"st1.d1 =  2^card vs1" unfolding st1.d1_def st1.dims1_def
       by (simp add: st1.d1_def st1.dims1_def)
     have "partial_state.encode1 st1.dims0 st1.vars1' i < dim_vec v1"
       using a00 a3 partial_state.encode1_lt  st1.nths_vars1'
+=======
+    have d:"st1.d = 2^(card st1.vars0)"
+      unfolding st1.d_def st1.vars0_def by auto       
+    have d1:"st1.d1 =  2^card vs1"
+      by (simp add: st1.d1_def st1.dims1_def)
+    have "partial_state.encode1 st1.dims0 st1.vars1' i < dim_vec v1"
+      using a00 d a3 partial_state.encode1_lt  st1.nths_vars1'
+>>>>>>> small-step-semantics
       unfolding partial_state.d1_def partial_state.dims1_def  st1.dims0_def st1.dims1_def state_sig.d_def
       apply auto
       by (metis prod_list_replicate)         
@@ -2051,6 +2153,7 @@ lemma pscalar_ptensor_2:
   assumes a0:"vs1 \<inter> vs2 = {}" and a1:"finite vs1" and a2:"finite vs2" and
   a3:"dim_vec v1 = 2^card vs1" and a4:"dim_vec v2 = 2^card vs2"
   shows "(a::'a::field) \<cdot>\<^sub>v (ptensor_vec vs1 vs2 v1 v2) =
+<<<<<<< HEAD
     ptensor_vec vs1 vs2 v1 (a \<cdot>\<^sub>v v2)"
   by (metis a0 a1 a2 a3 a4 inf_commute pscalar_ptensor_1 ptensor_vec_comm)  
 
@@ -2072,6 +2175,57 @@ proof -
     using f3 by (simp add: a0 a1 a2 a3 pscalar_ptensor_1)
   then show ?thesis
     using f4 f1 by presburger
+=======
+    ptensor_vec vs1 vs2 v1 (a \<cdot>\<^sub>v v2)"  
+proof-
+  let ?dims = "replicate (card (vs1 \<union> vs2)) 2"
+  
+  interpret st1: partial_state2 ?dims vs1 vs2
+    apply unfold_locales using assms by auto
+  have st1len:"dim_vec (ptensor_vec vs1 vs2 v1 v2) = 2^(card st1.vars0)"
+    by (simp add: st1.d0_def st1.dims0_def)
+  have decode_ptensor:"\<And>v1 v2. \<forall>i < 2^(card st1.vars0). 
+          (ptensor_vec vs1 vs2 v1 v2) $ i = 
+             v1 $ (partial_state.encode1 st1.dims0 st1.vars1' i) * 
+             v2 $ (partial_state.encode2 st1.dims0 st1.vars1' i)"
+     by (simp add: partial_state.tensor_vec_eval st1.dims0_def 
+                    st1.ptensor_vec_def state_sig.d_def)
+  {  
+    fix i
+    assume a00:"(i::nat) < 2^(card st1.vars0)"
+    then have "((a::'a::field) \<cdot>\<^sub>v (ptensor_vec vs1 vs2 v1 v2)) $ i = 
+                a * ((ptensor_vec vs1 vs2 v1 v2)$i)"
+      using st1len by (simp add:  a00)  
+    then have "((a::'a::field) \<cdot>\<^sub>v (ptensor_vec vs1 vs2 v1 v2)) $ i = 
+               a * (v1 $ (partial_state.encode1 st1.dims0 st1.vars1' i) * 
+                   v2 $ (partial_state.encode2 st1.dims0 st1.vars1' i))"
+      using  a00
+      by (simp add: decode_ptensor)
+  }
+  moreover {
+    fix i
+    assume a00:"(i::nat) < 2^(card st1.vars0)"
+    have d:"st1.d = 2^(card st1.vars0)"
+      unfolding st1.d_def st1.vars0_def by auto       
+    have d2:"st1.d2 =  2^card vs2"
+      by (simp add: st1.d2_def st1.dims2_def)
+    have "partial_state.encode2 st1.dims0 st1.vars1' i < dim_vec v2"
+      using a00 d a4 partial_state.encode2_lt  st1.nths_vars2' a0
+      unfolding partial_state.d2_def partial_state.dims2_def st1.dims0_def st1.dims2_def 
+               state_sig.d_def st1.vars0_def       
+      by (metis prod_list_replicate )         
+    then have "(a \<cdot>\<^sub>v v2) $ (partial_state.encode2 st1.dims0 st1.vars1' i) = a *(v2 $ (partial_state.encode2 st1.dims0 st1.vars1' i))"
+      by auto
+    then have "(ptensor_vec vs1 vs2 v1 (a \<cdot>\<^sub>v v2)) $ i = 
+                 a*(v1 $ (partial_state.encode1 st1.dims0 st1.vars1' i)) * 
+                   (v2 $ (partial_state.encode2 st1.dims0 st1.vars1' i))"
+      using  a00 
+      by (auto simp add: decode_ptensor)    
+      
+  } 
+  ultimately show ?thesis
+    using st1len by auto
+>>>>>>> small-step-semantics
 qed
 
 subsection \<open>Commands on subset of variables\<close>

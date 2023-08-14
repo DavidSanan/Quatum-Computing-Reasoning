@@ -1,4 +1,10 @@
+<<<<<<< HEAD
 session QAux = QHLProver +
+=======
+chapter QAux
+ 
+session QAux = QHLProverSep +
+>>>>>>> small-step-semantics
   options [timeout=600]
   sessions
    Jordan_Normal_Form
