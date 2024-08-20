@@ -426,7 +426,7 @@ lemma map_assnv_dest:
 definition prob_assert::" (('s state) set) \<Rightarrow>  real \<Rightarrow> (('s state) set)"
 (infixr "\<smile>" 60)
 where "prob_assert q p \<equiv> if p \<noteq> 0 then (\<lambda>s. (fst s * p, snd s)) ` q 
-                          else {}"
+                          else (\<lambda>s. (fst s * p, snd s)) ` UNIV"
 
 definition int_stack_ass::"('s,'a set) expr \<Rightarrow> ('s, 'a set) expr \<Rightarrow> (('s state) set)"
 (infixr "\<inter>\<^sub>{\<^sub>}" 35)
@@ -644,28 +644,13 @@ where
                     (Measure v q)   
                   ({s. s \<in> (\<Union>i\<in>{q}\<^sub>s. \<Psi> i)} \<inter> {s. \<Phi> s})" *)
 
-(* QMeasure: " v \<in> nat_vars \<Longrightarrow>
+QMeasure: " v \<in> nat_vars \<Longrightarrow>
            not_access_v q v \<Longrightarrow>  not_access_v vl v \<Longrightarrow> not_access_v qr v \<Longrightarrow>                                            
            \<turnstile> (q \<cdot> qr \<mapsto> vl)
                 (Measure v q)   
               {s. s \<in> (\<Union>i\<in>{q}\<^sub>s. (v\<down>\<^sub>(from_nat i)) \<inter> (((q \<mapsto> (unit_vecl s q i)) \<and>\<^sup>* 
-                                  (qr  \<mapsto> (vector_i s q vl i)))\<smile>(\<rho> q vl i s)))}" *)
-
-(* QMeasure: " v \<in> nat_vars \<Longrightarrow>
-           not_access_v q v \<Longrightarrow>  not_access_v vl v \<Longrightarrow> not_access_v qr v \<Longrightarrow>                                            
-           \<turnstile> (q \<cdot> qr \<mapsto> vl)
-                (Measure v q c)   
-              {s. s \<in> (\<Union>i\<in>{q}\<^sub>s. (v\<down>\<^sub>(from_nat i)) \<inter> (((q \<mapsto> (unit_vecl s q i)) \<and>\<^sup>* 
                                   (qr  \<mapsto> (vector_i s q vl i)))\<smile>(\<rho> q vl i s)))}" 
-| *)
- QMeasure: "v \<in> nat_vars \<Longrightarrow>
-           not_access_v q v \<Longrightarrow>  not_access_v vl v \<Longrightarrow> not_access_v qr v \<Longrightarrow>     
-           \<forall>s. \<exists>Q. length Q = card ({q}\<^sub>s) \<and> (\<forall>i. (i\<in>{q}\<^sub>s) \<longrightarrow> (Q!i) \<subseteq> Q'\<and>
-               (\<turnstile> ((v\<down>\<^sub>(from_nat i)) \<inter> (((q \<mapsto> (unit_vecl s q i)) \<and>\<^sup>* 
-               (qr  \<mapsto> (vector_i s q vl i)))\<smile>(\<rho> q vl i s))) c (Q!i)))  \<Longrightarrow>                                       
-           \<turnstile> (q \<cdot> qr \<mapsto> vl)
-                (Measure v q c)   
-             Q'"                                             
+                                             
 
 (*| Frame: "\<turnstile> P c Q \<Longrightarrow> not_access_v_set (\<lambda>s. s\<in>{b. \<exists>a c. (a,b,c)\<in>A}) (modify_locals c) \<Longrightarrow> {v. (\<exists>p q. access_v  (\<lambda>s. (p, (s,q)) \<in> A) v = True)} \<inter> 
                       modify_locals c = {} \<Longrightarrow> \<turnstile> (P \<and>\<^sup>* A) c (Q \<and>\<^sup>* A)" *)

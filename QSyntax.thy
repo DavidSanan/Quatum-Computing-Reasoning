@@ -86,12 +86,12 @@ datatype ('a, 's) com =
     | While "'s assn" "('a, 's) com"
 \<comment>\<open>Seq C1 C2 executes C1 then C2\<close>
     | Seq "('a, 's) com" "('a, 's) com"  ("_;;/ _" [60, 61] 60)
-(* \<comment>\<open>Measure v exp measures the qubits resulting of evaluating exp 
+ \<comment>\<open>Measure v exp measures the qubits resulting of evaluating exp 
    over the stack and it stores the meassuring result in v\<close>
-    | Measure "'a"   "'s expr_q" ("_:=meassure / _" [60, 61] 60) *)
+    | Measure "'a"   "'s expr_q" ("_:=meassure / _" [60, 61] 60) 
 \<comment>\<open>Measure v exp C measures the qubits resulting of evaluating exp 
    over the stack, it stores the meassuring result in v, and it executes the program C\<close>
-    | Measure "'a"   "'s expr_q" "('a, 's) com" ("_:=meassure/ _ _" [60, 61] 60)
+  (*  | Measure "'a"   "'s expr_q" "('a, 's) com" ("_:=meassure/ _ _" [60, 61] 60)*)
 \<comment>\<open>Alloc v expr allocates in the variable v as many qubits as necessary to allocate the expression given by expr\<close>
     | Alloc "'a"   "('s,complex list) expr"  ("_:=alloc (_)" [61] 60)
 \<comment>\<open>Dispose v expr dispose the qubits in v resulting of evaluating expr. It requires
