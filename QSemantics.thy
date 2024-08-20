@@ -20,7 +20,7 @@ where
 "redex (Seq c\<^sub>1 c\<^sub>2) = redex c\<^sub>1" |
 "redex (IF b c\<^sub>1 c\<^sub>2) = (IF b c\<^sub>1 c\<^sub>2)" |
 "redex (While b c) = (While b c)" |
-"redex (Measure v q) = Measure v q" |
+"redex (Measure v q c) = Measure v q c" |
 "redex (Alloc var v) = Alloc var v " |
 "redex (Dispose v q) = Dispose v q"
 
@@ -100,7 +100,7 @@ inductive step::"('v,'s) QConf \<Rightarrow> ('v,'s) QConf \<Rightarrow> bool"
               QStateM_vars \<Q>' \<noteq> {} \<Longrightarrow> Zero \<Q>' \<Longrightarrow>
               QStateM_vars \<Q>' = (Q_domain_var (the (var_set q i \<sigma>)) (QStateM_map \<Q>')) \<Longrightarrow>                                      
               \<forall>e \<in> (the (var_set q i \<sigma>)). (QStateM_map \<Q>') e \<noteq> {} \<Longrightarrow>
-             \<turnstile> (Dispose q i, Normal (\<delta>,\<sigma>,\<Q>)) \<rightarrow> (Skip, Normal (\<delta>,\<sigma>,  \<Q>''))"
+             \<turnstile> (Dispose q i, Normal (\<delta>,\<sigma>,\<Q>)) \<rightarrow> (Skip, Normal (\<delta>,\<sigma>,  \<Q>''))" 
 \<comment>\<open>Dispose dispose will fail if it is not possible to find such states \<qq>',  \<qq>''\<close>
 
 
@@ -113,17 +113,22 @@ inductive step::"('v,'s) QConf \<Rightarrow> ('v,'s) QConf \<Rightarrow> bool"
   the stack variable v. Similar to allocate, we will require that the construct is well formed
  and that the type of v is a real number\<close>
 
- | Measure: "addr1 = \<Union>((QStateM_map \<Q>) ` (q \<sigma>)) \<Longrightarrow> \<forall>e \<in> (q \<sigma>). (QStateM_map \<Q>) e \<noteq> {} \<Longrightarrow>                      
+ | (* Measure: "addr1 = \<Union>((QStateM_map \<Q>) ` (q \<sigma>)) \<Longrightarrow> \<forall>e \<in> (q \<sigma>). (QStateM_map \<Q>) e \<noteq> {} \<Longrightarrow>                      
             k \<in> {0..<2^(card addr1)} \<Longrightarrow>          
             (\<delta>k, \<Q>') = measure_vars k (q \<sigma>) \<Q> \<Longrightarrow>             
             \<delta>k > 0 \<Longrightarrow> \<delta>' = \<delta> * \<delta>k \<Longrightarrow> \<sigma>' = set_value \<sigma> v (from_nat k) \<Longrightarrow>
-            \<turnstile> (Measure v q, Normal (\<delta>,\<sigma>,\<Q>)) \<rightarrow> (Skip, Normal (\<delta>',\<sigma>', \<Q>'))"
+            \<turnstile> (Measure v q, Normal (\<delta>,\<sigma>,\<Q>)) \<rightarrow> (Skip, Normal (\<delta>',\<sigma>', \<Q>'))" *)
+Measure: "addr1 = \<Union>((QStateM_map \<Q>) ` (q \<sigma>)) \<Longrightarrow> \<forall>e \<in> (q \<sigma>). (QStateM_map \<Q>) e \<noteq> {} \<Longrightarrow>                      
+            k \<in> {0..<2^(card addr1)} \<Longrightarrow>          
+            (\<delta>k, \<Q>') = measure_vars k (q \<sigma>) \<Q> \<Longrightarrow>             
+            \<delta>k > 0 \<Longrightarrow> \<delta>' = \<delta> * \<delta>k \<Longrightarrow> \<sigma>' = set_value \<sigma> v (from_nat k) \<Longrightarrow>
+            \<turnstile> (Measure v q c, Normal (\<delta>,\<sigma>,\<Q>)) \<rightarrow> (c, Normal (\<delta>',\<sigma>', \<Q>'))"
 \<comment>\<open>Since Measure access to the values of the qubits given by q \<sigma> as QMod, 
   Measure will similarly fail if the set of qubits to be mesured does not
   belong to the set of allocated qubits\<close>
 
  | Measure_F: "\<exists>e. e \<in> q \<sigma> \<and> (QStateM_map \<Q>) e = {}  \<Longrightarrow> 
-              \<turnstile> (Measure v q, Normal (\<delta>,\<sigma>,\<Q>)) \<rightarrow> (Skip, Fault)" 
+              \<turnstile> (Measure v q c, Normal (\<delta>,\<sigma>,\<Q>)) \<rightarrow> (Skip, Fault)" 
 
 | Fault_Prop:"\<lbrakk>c\<noteq>Skip; redex c = c\<rbrakk> \<Longrightarrow>  \<turnstile> (c, Fault) \<rightarrow> (Skip, Fault)"
 
@@ -139,7 +144,7 @@ inductive_cases QStep_elim_cases [cases set]:
   "\<turnstile>(Seq c1 c2,s) \<rightarrow> t"
   "\<turnstile>(While b c,s) \<rightarrow>  t"
   "\<turnstile>(IF b c1 c2,s) \<rightarrow>  t"
-  "\<turnstile>(Measure v q,s) \<rightarrow>  t"
+  "\<turnstile>(Measure v q c,s) \<rightarrow>  t"
   "\<turnstile>(Alloc v  e,s) \<rightarrow>  t"
   "\<turnstile>(Dispose q i,s) \<rightarrow>  t"
 
@@ -151,7 +156,7 @@ inductive_cases QStep_Normal_elim_cases [cases set]:
   "\<turnstile>(Seq c1 c2,Normal s) \<rightarrow>  t"
   "\<turnstile>(While b c1,Normal s) \<rightarrow>  t"
   "\<turnstile>(IF b c1 c2,Normal s) \<rightarrow>  t"
-  "\<turnstile>(Measure v q,Normal s) \<rightarrow>  t"
+  "\<turnstile>(Measure v q c,Normal s) \<rightarrow>  t"
   "\<turnstile>(Alloc v  e,Normal s) \<rightarrow>  t"
   "\<turnstile>(Dispose q v,Normal s) \<rightarrow>  t"
 
@@ -163,7 +168,7 @@ inductive_cases QStep_Fault_elim_cases [cases set]:
   "\<turnstile>(Seq c1 c2,Normal s) \<rightarrow> (c', Fault)"
   "\<turnstile>(While b c1,Normal s) \<rightarrow> (c', Fault)"
   "\<turnstile>(IF b c1 c2,Normal s) \<rightarrow>  (c', Fault)"
-  "\<turnstile>(Measure v q,Normal s) \<rightarrow>  (c', Fault)"
+  "\<turnstile>(Measure v q c,Normal s) \<rightarrow>  (c', Fault)"
   "\<turnstile>(Alloc v  e,Normal s) \<rightarrow>  (c', Fault)"
   "\<turnstile>(Dispose q v,Normal s) \<rightarrow>  (c', Fault)"
 
@@ -305,6 +310,12 @@ next
   case (Fault_Prop C)
   then show ?case
     using steps_Fault by blast 
+next 
+  case (Measure addr1 \<Q> q \<sigma> k \<delta>1 \<Q>' \<delta>'  \<delta>  \<sigma>' v c t)
+  moreover have "\<turnstile> (Measure v q c, Normal (\<delta>,\<sigma>,\<Q>)) \<rightarrow> (c, Normal (\<delta>',\<sigma>', \<Q>'))"
+    using Measure.hyps(1) Measure.hyps(2) Measure.hyps(4) Measure.hyps(5) 
+          Measure.hyps(6) Measure.hyps(7) local.Measure(3) step.Measure by blast
+  ultimately show ?case by auto
 qed (auto simp add: r_into_rtranclp step.intros)
 
 corollary exec_impl_steps_Normal:
@@ -385,9 +396,9 @@ next
   then show ?case
     using QExec.Dispose_F exec_Fault_end by blast 
 next
-  case (Measure addr1 \<Q> q \<sigma> k \<delta>k \<Q>' \<delta>' \<delta> \<sigma>' v)
-  then show ?case
-    by (metis (mono_tags, lifting) QSemanticsBig.vars.QExec_Normal_elim_cases(2) vars.QExec.Measure vars_axioms) 
+  case (Measure addr1 \<Q> q \<sigma> k \<delta>k \<Q>' \<delta>' \<delta> \<sigma>' v c t)
+  then show ?case 
+    by (metis (mono_tags, lifting) vars.QExec.Measure vars_axioms) 
 next
   case (Measure_F q \<sigma> \<Q> v \<delta>)
   then show ?case

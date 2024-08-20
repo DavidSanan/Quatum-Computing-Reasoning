@@ -703,7 +703,7 @@ quotient_type (overloaded) QState_equiv = "QState" /
    apply (simp add: QState_list.rep_eq QState_rel1 QState_vars.rep_eq)
   apply transfer apply auto using  List.list_eq_iff_nth_eq by fastforce *)
 
-
+                                       
 lemma QState_list_inv: assumes a0:"QState_vars Q = {}"
   shows "inverse(QState_list Q ! 0) \<cdot>\<^sub>q Q = |>"
   unfolding empty_qstate_def sca_mult_qstate_def using a0 apply transfer' 

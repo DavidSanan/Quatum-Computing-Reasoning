@@ -2739,7 +2739,8 @@ inductive QExec::"('v, 's) com \<Rightarrow> 's XQState \<Rightarrow> 's XQState
             k \<in> {0..<2^(card addr1)} \<Longrightarrow>          
             (\<delta>k, \<Q>') = measure_vars k (q \<sigma>) \<Q> \<Longrightarrow>             
             \<delta>k > 0 \<Longrightarrow> \<delta>' = \<delta> * \<delta>k \<Longrightarrow> \<sigma>' = set_value \<sigma> v (from_nat k) \<Longrightarrow>
-            \<turnstile> \<langle>Measure v q, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Normal (\<delta>',\<sigma>', \<Q>')"
+            \<turnstile> \<langle>c, Normal (\<delta>',\<sigma>',\<Q>')\<rangle> \<Rightarrow> t \<Longrightarrow>
+            \<turnstile> \<langle>Measure v q c, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> t"
 \<comment>\<open>Since Measure access to the values of the qubits given by q \<sigma> as QMod, 
   Measure will similarly fail if the set of qubits to be mesured does not
   belong to the set of allocated qubits\<close>
@@ -2750,7 +2751,7 @@ inductive QExec::"('v, 's) com \<Rightarrow> 's XQState \<Rightarrow> 's XQState
 *)
 
 | Measure_F: "\<exists>e. e \<in> q \<sigma> \<and> (QStateM_map \<Q>) e = {}  \<Longrightarrow> 
-              \<turnstile> \<langle>Measure v q, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Fault" 
+              \<turnstile> \<langle>Measure v q c, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Fault" 
 
 | Fault_Prop:"\<turnstile> \<langle>C, Fault\<rangle> \<Rightarrow> Fault"
 
@@ -2763,7 +2764,7 @@ inductive_cases QExec_elim_cases [cases set]:
   "\<turnstile>\<langle>Seq c1 c2,s\<rangle> \<Rightarrow>  t"
   "\<turnstile>\<langle>While b c,s\<rangle> \<Rightarrow>  t"
   "\<turnstile>\<langle>IF b c1 c2,s\<rangle> \<Rightarrow>  t"
-  "\<turnstile>\<langle>Measure v q,s\<rangle> \<Rightarrow>  t"
+  "\<turnstile>\<langle>Measure v q c,s\<rangle> \<Rightarrow>  t"
   "\<turnstile>\<langle>Alloc v  e,s\<rangle> \<Rightarrow>  t"
   "\<turnstile>\<langle>Dispose q i,s\<rangle> \<Rightarrow>  t"
 
@@ -2782,7 +2783,7 @@ inductive_cases QExec_Normal_elim_cases [cases set]:
   "\<turnstile>\<langle>Seq c1 c2,Normal s\<rangle> \<Rightarrow>  t"
   "\<turnstile>\<langle>While b c1,Normal s\<rangle> \<Rightarrow>  t"
   "\<turnstile>\<langle>IF b c1 c2,Normal s\<rangle> \<Rightarrow>  t"
-  "\<turnstile>\<langle>Measure v q,Normal s\<rangle> \<Rightarrow>  t"
+  "\<turnstile>\<langle>Measure v q c,Normal s\<rangle> \<Rightarrow>  t"
   "\<turnstile>\<langle>Alloc v  e,Normal s\<rangle> \<Rightarrow>  t"
   "\<turnstile>\<langle>Dispose q v,Normal s\<rangle> \<Rightarrow>  t"
 
@@ -2794,7 +2795,7 @@ inductive_cases QExec_Fault_elim_cases [cases set]:
   "\<turnstile>\<langle>Seq c1 c2,Normal s\<rangle> \<Rightarrow>  Fault"
   "\<turnstile>\<langle>While b c1,Normal s\<rangle> \<Rightarrow>  Fault"
   "\<turnstile>\<langle>IF b c1 c2,Normal s\<rangle> \<Rightarrow>  Fault"
-  "\<turnstile>\<langle>Measure v q,Normal s\<rangle> \<Rightarrow>  Fault"
+  "\<turnstile>\<langle>Measure v q c,Normal s\<rangle> \<Rightarrow>  Fault"
   "\<turnstile>\<langle>Alloc v  e,Normal s\<rangle> \<Rightarrow>  Fault"
   "\<turnstile>\<langle>Dispose q v,Normal s\<rangle> \<Rightarrow>  Fault"
 
@@ -2805,7 +2806,7 @@ primrec modify_locals :: "('v, 's) com  \<Rightarrow> 'v set" where
 | "modify_locals (IF b c1 c2) = modify_locals c1 \<union> modify_locals c2"
 | "modify_locals (While b c) = modify_locals c"
 | "modify_locals (Seq c1 c2) = modify_locals c1 \<union> modify_locals c2"
-| "modify_locals (Measure v e) = {v}"
+| "modify_locals (Measure v e c) = {v} \<union> modify_locals c"
 | "modify_locals (Alloc v val) = {v}"
 | "modify_locals (Dispose q v) = {}"
 
