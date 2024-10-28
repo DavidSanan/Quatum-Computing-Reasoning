@@ -96,7 +96,9 @@ datatype ('a, 's) com =
     | Alloc "'a"   "('s,complex list) expr"  ("_:=alloc (_)" [61] 60)
 \<comment>\<open>Dispose v expr dispose the qubits in v resulting of evaluating expr. It requires
 that the qubits are set to zero\<close>
-  | Dispose "'a" "('s,nat set) expr"
+    | Dispose "'a" "('s,nat set) expr"
+\<comment>\<open>Initilize v exp be set to zero\<close>
+    | Init "'s expr_q" (" init _" 60)
 
 
 (* datatype 's XQState = NormalA "'s state" | FaultA

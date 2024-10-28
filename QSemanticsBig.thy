@@ -1244,7 +1244,6 @@ lemma empty_vars_ptensor_mat_1k_1m:"vars1 = {} \<Longrightarrow>
      (1\<^sub>m (2 ^ card vars2)) =  (1\<^sub>m (2 ^ card vars2))" 
   unfolding projection1_def
   using empty_vars_eq_ptensor_mat by force
-
 end
 (* lemma 
   assumes dims: "v \<in> carrier_vec n" "M \<in> carrier_mat n n"
@@ -2612,6 +2611,13 @@ lemma ZeroQ_vector_Zero_eq:"card (QStateM_vars Q) = n \<Longrightarrow> Zero Q =
 context vars
 begin
 
+\<comment>\<open>define the matrix for the initilization of qubits\<close>
+
+definition
+  init_matrix :: "complex vec \<Rightarrow> complex mat"
+  where "init_matrix v \<equiv>  
+          mat (length (list_of_vec v)) (length (list_of_vec v))
+               (\<lambda>(i, j). if i=0 then v$j else 0)"
 
 inductive QExec::"('v, 's) com \<Rightarrow> 's XQState \<Rightarrow> 's XQState \<Rightarrow> bool" 
   ("\<turnstile> \<langle>_,_\<rangle> \<Rightarrow> _"  [20,98,98] 89)  
@@ -2754,6 +2760,57 @@ inductive QExec::"('v, 's) com \<Rightarrow> 's XQState \<Rightarrow> 's XQState
 
 | Fault_Prop:"\<turnstile> \<langle>C, Fault\<rangle> \<Rightarrow> Fault"
 
+(*| Init_Prop:
+       "\<forall>e \<in> (q \<sigma>). (QStateM_map \<Q>) e \<noteq> {}  \<Longrightarrow>
+         \<Q>' = matrix_sep_QStateM (q \<sigma>) \<Q> R \<Longrightarrow>
+         sep_vars = \<Union>((QStateM_map \<Q>) ` (q \<sigma>)) \<Longrightarrow>
+         M = mat (2^(card sep_vars)) (2^(card sep_vars))
+                 (\<lambda>(i,j). if i = j then 1 else 0) \<Longrightarrow>
+         R = init_matrix ((matrix_sep (q \<sigma>) \<Q> M)) \<Longrightarrow>
+         \<Q>1' ## \<Q>2' \<Longrightarrow> \<Q>' = \<Q>1' + \<Q>2' \<Longrightarrow>
+         Zero \<Q>1' \<Longrightarrow>
+         QStateM_vars \<Q>1' = (Q_domain_var (q \<sigma>) (QStateM_map \<Q>1')) \<Longrightarrow> 
+         \<turnstile> \<langle>Init q, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Normal (\<delta>,\<sigma>,\<Q>')" *)
+| Init_Prop:
+           "addr1 = \<Union>((QStateM_map \<Q>) ` (q \<sigma>)) \<Longrightarrow>
+            \<forall>e \<in> (q \<sigma>). (QStateM_map \<Q>) e \<noteq> {} \<Longrightarrow>                      
+            k \<in> {0..<2^(card addr1)} \<Longrightarrow>   
+            \<delta>k > 0 \<Longrightarrow>       
+            (\<delta>k, \<Q>m) = measure_vars k (q \<sigma>) \<Q> \<Longrightarrow> 
+            \<Q>1 ## \<Q>2 \<Longrightarrow> \<Q>m = \<Q>1 + \<Q>2 \<Longrightarrow>
+            QStateM_vars \<Q>1 = (Q_domain_var (q \<sigma>) (QStateM_map \<Q>1)) \<Longrightarrow> 
+            R = init_matrix (QStateM_vector \<Q>1) \<Longrightarrow>
+            \<Q>' = matrix_sep_QStateM (q \<sigma>) \<Q> R \<Longrightarrow>
+            \<Q>' = \<Q>1' + \<Q>2' \<Longrightarrow>
+            Zero \<Q>1' \<Longrightarrow>
+            QStateM_vars \<Q>1' = (Q_domain_var (q \<sigma>) (QStateM_map \<Q>1')) \<Longrightarrow> 
+            \<turnstile> \<langle>Init q, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Normal (\<delta>,\<sigma>,\<Q>')"
+
+(*| Init_F: "(\<exists>e. e \<in> q \<sigma> \<and> (QStateM_map \<Q>) e = {})
+           \<or> (\<nexists>sep_vars M R \<Q>1' \<Q>2'.
+                 sep_vars = \<Union>((QStateM_map \<Q>) ` (q \<sigma>)) \<and>
+                 M = mat (2^(card sep_vars)) (2^(card sep_vars))
+                 (\<lambda>(i,j). if i = j then 1 else 0) \<and>
+                 R = init_matrix (matrix_sep (q \<sigma>) \<Q> M) \<and>
+                 \<Q>' = matrix_sep_QStateM (q \<sigma>) \<Q> R \<and>
+                 \<Q>' = \<Q>1' + \<Q>2' \<and> \<Q>1' ## \<Q>2' \<and> Zero \<Q>1' \<and>
+                 QStateM_vars \<Q>1' = (Q_domain_var (q \<sigma>) (QStateM_map \<Q>1')))  \<Longrightarrow>
+          \<turnstile> \<langle>Init q, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Fault" *)
+
+| Init_F: "(\<exists>e. e \<in> q \<sigma> \<and> (QStateM_map \<Q>) e = {})
+           \<or> (\<nexists>addr1 k \<Q>m \<Q>1 \<Q>2 R \<Q>' \<Q>1' \<Q>2'.
+               addr1 = \<Union>((QStateM_map \<Q>) ` (q \<sigma>))  \<and>
+               k \<in> {0..<2^(card addr1)}  \<and>   
+               \<delta>k > 0  \<and>    
+               (\<delta>k, \<Q>m) = measure_vars k (q \<sigma>) \<Q> \<and>
+               \<Q>1 ## \<Q>2 \<and> \<Q>m = \<Q>1 + \<Q>2  \<and>
+               QStateM_vars \<Q>1 = (Q_domain_var (q \<sigma>) (QStateM_map \<Q>1))  \<and> 
+               R = init_matrix (QStateM_vector \<Q>1)  \<and>
+               \<Q>' = matrix_sep_QStateM (q \<sigma>) \<Q> R \<and>
+               \<Q>' = \<Q>1' + \<Q>2'  \<and> Zero \<Q>1'  \<and>
+               QStateM_vars \<Q>1' = (Q_domain_var (q \<sigma>) (QStateM_map \<Q>1'))
+               ) \<Longrightarrow>
+          \<turnstile> \<langle>Init q, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Fault"
 
 inductive_cases QExec_elim_cases [cases set]:
  "\<turnstile>\<langle>c,Fault\<rangle> \<Rightarrow>  t"  
@@ -2766,6 +2823,7 @@ inductive_cases QExec_elim_cases [cases set]:
   "\<turnstile>\<langle>Measure v q,s\<rangle> \<Rightarrow>  t"
   "\<turnstile>\<langle>Alloc v  e,s\<rangle> \<Rightarrow>  t"
   "\<turnstile>\<langle>Dispose q i,s\<rangle> \<Rightarrow>  t"
+  "\<turnstile>\<langle>Init q,s\<rangle> \<Rightarrow>  t"
 
 thm QExec_elim_cases(10)
 (*lemma "s = Normal (\<delta>1, \<sigma>1, Plus T1' T1'') \<Longrightarrow>
@@ -2785,6 +2843,7 @@ inductive_cases QExec_Normal_elim_cases [cases set]:
   "\<turnstile>\<langle>Measure v q,Normal s\<rangle> \<Rightarrow>  t"
   "\<turnstile>\<langle>Alloc v  e,Normal s\<rangle> \<Rightarrow>  t"
   "\<turnstile>\<langle>Dispose q v,Normal s\<rangle> \<Rightarrow>  t"
+  "\<turnstile>\<langle>Init q,Normal s\<rangle> \<Rightarrow>  t"
 
 inductive_cases QExec_Fault_elim_cases [cases set]:
  "\<turnstile>\<langle>c,Fault\<rangle> \<Rightarrow>  Fault"  
@@ -2797,6 +2856,7 @@ inductive_cases QExec_Fault_elim_cases [cases set]:
   "\<turnstile>\<langle>Measure v q,Normal s\<rangle> \<Rightarrow>  Fault"
   "\<turnstile>\<langle>Alloc v  e,Normal s\<rangle> \<Rightarrow>  Fault"
   "\<turnstile>\<langle>Dispose q v,Normal s\<rangle> \<Rightarrow>  Fault"
+  "\<turnstile>\<langle>Init q,Normal s\<rangle> \<Rightarrow>  Fault"
 
 primrec modify_locals :: "('v, 's) com  \<Rightarrow> 'v set" where 
   "modify_locals  Skip = {}"
@@ -2808,6 +2868,7 @@ primrec modify_locals :: "('v, 's) com  \<Rightarrow> 'v set" where
 | "modify_locals (Measure v e) = {v}"
 | "modify_locals (Alloc v val) = {v}"
 | "modify_locals (Dispose q v) = {}"
+| "modify_locals (Init q) = {}"
 
 thm QExec_Normal_elim_cases
 
