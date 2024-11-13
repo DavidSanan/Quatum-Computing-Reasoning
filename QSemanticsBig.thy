@@ -2619,6 +2619,26 @@ definition
           mat (length (list_of_vec v)) (length (list_of_vec v))
                (\<lambda>(i, j). if i=0 then v$j else 0)"
 
+definition entangle :: "QStateM \<Rightarrow>  QStateM \<Rightarrow> bool" 
+  where "entangle Q1 Q2 \<equiv>
+  \<exists>heap_ind Q Q' Q1'.
+  (\<forall>e \<in> heap_ind. (QStateM_map Q) e \<noteq> {}) \<and>
+  QStateM_vars Q1 = (Q_domain_var heap_ind (QStateM_map Q)) \<and>
+  Q = Q1 + Q2 \<and>
+  Q' = matrix_sep_QStateM heap_ind Q (init_matrix (QStateM_vector Q1)) \<and>
+  QStateM_vars Q1' = (Q_domain_var heap_ind (QStateM_map Q')) \<and>
+  vec_norm (QStateM_vector Q1') \<noteq> 1"
+
+definition not_entangle :: "QStateM \<Rightarrow>  QStateM \<Rightarrow> bool" 
+  where "not_entangle Q1 Q2 \<equiv>
+  \<exists>heap_ind Q Q' Q1'.
+  (\<forall>e \<in> heap_ind. (QStateM_map Q) e \<noteq> {}) \<and>
+  QStateM_vars Q1 = (Q_domain_var heap_ind (QStateM_map Q)) \<and>
+  Q = Q1 + Q2 \<and>
+  Q' = matrix_sep_QStateM heap_ind Q (init_matrix (QStateM_vector Q1)) \<and>
+  QStateM_vars Q1' = (Q_domain_var heap_ind (QStateM_map Q')) \<and>
+  vec_norm (QStateM_vector Q1') = 1"
+
 inductive QExec::"('v, 's) com \<Rightarrow> 's XQState \<Rightarrow> 's XQState \<Rightarrow> bool" 
   ("\<turnstile> \<langle>_,_\<rangle> \<Rightarrow> _"  [20,98,98] 89)  
   where 
@@ -2771,6 +2791,7 @@ inductive QExec::"('v, 's) com \<Rightarrow> 's XQState \<Rightarrow> 's XQState
          Zero \<Q>1' \<Longrightarrow>
          QStateM_vars \<Q>1' = (Q_domain_var (q \<sigma>) (QStateM_map \<Q>1')) \<Longrightarrow> 
          \<turnstile> \<langle>Init q, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Normal (\<delta>,\<sigma>,\<Q>')" *)
+(*
 | Init_Prop:
            "addr1 = \<Union>((QStateM_map \<Q>) ` (q \<sigma>)) \<Longrightarrow>
             \<forall>e \<in> (q \<sigma>). (QStateM_map \<Q>) e \<noteq> {} \<Longrightarrow>                      
@@ -2778,12 +2799,63 @@ inductive QExec::"('v, 's) com \<Rightarrow> 's XQState \<Rightarrow> 's XQState
             \<delta>k > 0 \<Longrightarrow>       
             (\<delta>k, \<Q>m) = measure_vars k (q \<sigma>) \<Q> \<Longrightarrow> 
             \<Q>1 ## \<Q>2 \<Longrightarrow> \<Q>m = \<Q>1 + \<Q>2 \<Longrightarrow>
-            QStateM_vars \<Q>1 = (Q_domain_var (q \<sigma>) (QStateM_map \<Q>1)) \<Longrightarrow> 
+            QStateM_vars \<Q>1 = (Q_domain_var (q \<sigma>) (QStateM_map \<Q>)) \<Longrightarrow> 
+            R = init_matrix (QStateM_vector \<Q>1) \<Longrightarrow>
+            \<Q>' = matrix_sep_QStateM (q \<sigma>) \<Q>m R \<Longrightarrow>
+            \<Q>' = \<Q>1' + \<Q>2 \<Longrightarrow>
+            Zero \<Q>1' \<Longrightarrow>
+            \<turnstile> \<langle>Init q, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Normal (\<delta>,\<sigma>,\<Q>')"
+*)
+(*
+| Init_Prop:
+           "entangle \<Q>1 \<Q>2 \<Longrightarrow>
+            addr1 = \<Union>((QStateM_map \<Q>) ` (q \<sigma>)) \<Longrightarrow>
+            \<forall>e \<in> (q \<sigma>). (QStateM_map \<Q>) e \<noteq> {} \<Longrightarrow>                      
+            k \<in> {0..<2^(card addr1)} \<Longrightarrow>   
+            \<delta>k > 0 \<Longrightarrow>       
+            (\<delta>k, \<Q>m) = measure_vars k (q \<sigma>) \<Q> \<Longrightarrow> 
+            \<Q>m1 ## \<Q>m2 \<Longrightarrow> \<Q>m = \<Q>m1 + \<Q>m2 \<Longrightarrow>
+            QStateM_vars \<Q>m1 = (Q_domain_var (q \<sigma>) (QStateM_map \<Q>)) \<Longrightarrow> 
+            R = init_matrix (QStateM_vector \<Q>m1) \<Longrightarrow>
+            \<Q>' = matrix_sep_QStateM (q \<sigma>) \<Q>m R \<Longrightarrow>
+            \<Q>' = \<Q>1' + \<Q>2 \<Longrightarrow>
+            Zero \<Q>1' \<Longrightarrow>
+            \<turnstile> \<langle>Init q, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Normal (\<delta>,\<sigma>,\<Q>')"
+
+| Init_n_Prop:
+           "not_entangle \<Q>1 \<Q>2 \<Longrightarrow>
+            \<forall>e \<in> (q \<sigma>). (QStateM_map \<Q>) e \<noteq> {} \<Longrightarrow>                      
+            \<Q> = \<Q>1 + \<Q>2 \<Longrightarrow>
+            QStateM_vars \<Q>1 = (Q_domain_var (q \<sigma>) (QStateM_map \<Q>)) \<Longrightarrow> 
             R = init_matrix (QStateM_vector \<Q>1) \<Longrightarrow>
             \<Q>' = matrix_sep_QStateM (q \<sigma>) \<Q> R \<Longrightarrow>
-            \<Q>' = \<Q>1' + \<Q>2' \<Longrightarrow>
+            \<Q>' = \<Q>1' + \<Q>2 \<Longrightarrow>
             Zero \<Q>1' \<Longrightarrow>
-            QStateM_vars \<Q>1' = (Q_domain_var (q \<sigma>) (QStateM_map \<Q>1')) \<Longrightarrow> 
+            \<turnstile> \<langle>Init q, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Normal (\<delta>,\<sigma>,\<Q>')"
+*)
+| Init_Prop:
+           "\<forall>e \<in> (q \<sigma>). (QStateM_map \<Q>) e \<noteq> {} \<Longrightarrow>  
+            (\<exists>\<Q>1 \<Q>2 \<Q>m1 \<Q>m2 addr1 k \<delta>k \<Q>m R \<Q>1'.
+             entangle \<Q>1 \<Q>2 \<and> \<Q> = \<Q>1 + \<Q>2 \<and> 
+             QStateM_vars \<Q>1 = QStateM_vars \<Q>m1 \<and>
+             addr1 = \<Union>((QStateM_map \<Q>) ` (q \<sigma>)) \<and>               
+             k \<in> {0..<2^(card addr1)} \<and>
+             \<delta>k > 0 \<and>   
+             (\<delta>k, \<Q>m) = measure_vars k (q \<sigma>) \<Q> \<and>
+             \<Q>m1 ## \<Q>m2 \<and> \<Q>m = \<Q>m1 + \<Q>m2 \<and>
+             QStateM_vars \<Q>m1 = (Q_domain_var (q \<sigma>) (QStateM_map \<Q>)) \<and> 
+             R = init_matrix (QStateM_vector \<Q>m1) \<and>
+             \<Q>' = matrix_sep_QStateM (q \<sigma>) \<Q>m R \<and>
+             \<Q>' = \<Q>1' + \<Q>m2 \<and>
+             Zero \<Q>1')
+            \<or> (\<exists>\<Q>1 \<Q>2 R \<Q>1'. 
+               not_entangle \<Q>1 \<Q>2 \<and>                    
+               \<Q> = \<Q>1 + \<Q>2 \<and>
+               QStateM_vars \<Q>1 = (Q_domain_var (q \<sigma>) (QStateM_map \<Q>)) \<and>
+               R = init_matrix (QStateM_vector \<Q>1) \<and>
+               \<Q>' = matrix_sep_QStateM (q \<sigma>) \<Q> R \<and>
+               \<Q>' = \<Q>1' + \<Q>2 \<and>
+               Zero \<Q>1') \<Longrightarrow>
             \<turnstile> \<langle>Init q, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Normal (\<delta>,\<sigma>,\<Q>')"
 
 (*| Init_F: "(\<exists>e. e \<in> q \<sigma> \<and> (QStateM_map \<Q>) e = {})
@@ -2798,18 +2870,26 @@ inductive QExec::"('v, 's) com \<Rightarrow> 's XQState \<Rightarrow> 's XQState
           \<turnstile> \<langle>Init q, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Fault" *)
 
 | Init_F: "(\<exists>e. e \<in> q \<sigma> \<and> (QStateM_map \<Q>) e = {})
-           \<or> (\<nexists>addr1 k \<Q>m \<Q>1 \<Q>2 R \<Q>' \<Q>1' \<Q>2'.
-               addr1 = \<Union>((QStateM_map \<Q>) ` (q \<sigma>))  \<and>
-               k \<in> {0..<2^(card addr1)}  \<and>   
-               \<delta>k > 0  \<and>    
-               (\<delta>k, \<Q>m) = measure_vars k (q \<sigma>) \<Q> \<and>
-               \<Q>1 ## \<Q>2 \<and> \<Q>m = \<Q>1 + \<Q>2  \<and>
-               QStateM_vars \<Q>1 = (Q_domain_var (q \<sigma>) (QStateM_map \<Q>1))  \<and> 
-               R = init_matrix (QStateM_vector \<Q>1)  \<and>
+           \<or> (\<nexists>\<Q>1 \<Q>2 \<Q>m1 \<Q>m2 addr1 k \<delta>k \<Q>m R \<Q>1'.
+             entangle \<Q>1 \<Q>2 \<and> \<Q> = \<Q>1 + \<Q>2 \<and> 
+             QStateM_vars \<Q>1 = QStateM_vars \<Q>m1 \<and>
+             addr1 = \<Union>((QStateM_map \<Q>) ` (q \<sigma>)) \<and>               
+             k \<in> {0..<2^(card addr1)} \<and>
+             \<delta>k > 0 \<and>   
+             (\<delta>k, \<Q>m) = measure_vars k (q \<sigma>) \<Q> \<and>
+             \<Q>m1 ## \<Q>m2 \<and> \<Q>m = \<Q>m1 + \<Q>m2 \<and>
+             QStateM_vars \<Q>m1 = (Q_domain_var (q \<sigma>) (QStateM_map \<Q>)) \<and> 
+             R = init_matrix (QStateM_vector \<Q>m1) \<and>
+             \<Q>' = matrix_sep_QStateM (q \<sigma>) \<Q>m R \<and>
+             \<Q>' = \<Q>1' + \<Q>m2 \<and> Zero \<Q>1'
+               )
+           \<or> (\<nexists>\<Q>1 \<Q>2 R \<Q>' \<Q>1'. 
+               not_entangle \<Q>1 \<Q>2 \<and>                    
+               \<Q> = \<Q>1 + \<Q>2 \<and>
+               QStateM_vars \<Q>1 = (Q_domain_var (q \<sigma>) (QStateM_map \<Q>)) \<and>
+               R = init_matrix (QStateM_vector \<Q>1) \<and>
                \<Q>' = matrix_sep_QStateM (q \<sigma>) \<Q> R \<and>
-               \<Q>' = \<Q>1' + \<Q>2'  \<and> Zero \<Q>1'  \<and>
-               QStateM_vars \<Q>1' = (Q_domain_var (q \<sigma>) (QStateM_map \<Q>1'))
-               ) \<Longrightarrow>
+               \<Q>' = \<Q>1' + \<Q>2 \<and> Zero \<Q>1') \<Longrightarrow>
           \<turnstile> \<langle>Init q, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Fault"
 
 inductive_cases QExec_elim_cases [cases set]:

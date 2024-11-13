@@ -143,7 +143,7 @@ Measure: "addr1 = \<Union>((QStateM_map \<Q>) ` (q \<sigma>)) \<Longrightarrow> 
          Zero \<Q>1' \<Longrightarrow>
          QStateM_vars \<Q>1' = (Q_domain_var (q \<sigma>) (QStateM_map \<Q>1')) \<Longrightarrow> 
         \<turnstile> (Init q, Normal (\<delta>,\<sigma>,\<Q>)) \<rightarrow> (Skip, Normal (\<delta>,\<sigma>, \<Q>'))"*)
-
+(*
 | Init_Prop:
        "addr1 = \<Union>((QStateM_map \<Q>) ` (q \<sigma>)) \<Longrightarrow>
         \<forall>e \<in> (q \<sigma>). (QStateM_map \<Q>) e \<noteq> {} \<Longrightarrow>                      
@@ -158,6 +158,31 @@ Measure: "addr1 = \<Union>((QStateM_map \<Q>) ` (q \<sigma>)) \<Longrightarrow> 
         Zero \<Q>1' \<Longrightarrow>
         QStateM_vars \<Q>1' = (Q_domain_var (q \<sigma>) (QStateM_map \<Q>1')) \<Longrightarrow>
         \<turnstile> (Init q, Normal (\<delta>,\<sigma>,\<Q>)) \<rightarrow> (Skip, Normal (\<delta>,\<sigma>, \<Q>'))"
+*)
+| Init_Prop:
+           "\<forall>e \<in> (q \<sigma>). (QStateM_map \<Q>) e \<noteq> {} \<Longrightarrow>  
+            (\<exists>\<Q>1 \<Q>2 \<Q>m1 \<Q>m2 addr1 k \<delta>k \<Q>m R \<Q>1'.
+             entangle \<Q>1 \<Q>2 \<and> \<Q> = \<Q>1 + \<Q>2 \<and> 
+             QStateM_vars \<Q>1 = QStateM_vars \<Q>m1 \<and>
+             addr1 = \<Union>((QStateM_map \<Q>) ` (q \<sigma>)) \<and>               
+             k \<in> {0..<2^(card addr1)} \<and>
+             \<delta>k > 0 \<and>   
+             (\<delta>k, \<Q>m) = measure_vars k (q \<sigma>) \<Q> \<and>
+             \<Q>m1 ## \<Q>m2 \<and> \<Q>m = \<Q>m1 + \<Q>m2 \<and>
+             QStateM_vars \<Q>m1 = (Q_domain_var (q \<sigma>) (QStateM_map \<Q>)) \<and> 
+             R = init_matrix (QStateM_vector \<Q>m1) \<and>
+             \<Q>' = matrix_sep_QStateM (q \<sigma>) \<Q>m R \<and>
+             \<Q>' = \<Q>1' + \<Q>m2 \<and>
+             Zero \<Q>1')
+            \<or> (\<exists>\<Q>1 \<Q>2 R \<Q>1'. 
+               not_entangle \<Q>1 \<Q>2 \<and>                    
+               \<Q> = \<Q>1 + \<Q>2 \<and>
+               QStateM_vars \<Q>1 = (Q_domain_var (q \<sigma>) (QStateM_map \<Q>)) \<and>
+               R = init_matrix (QStateM_vector \<Q>1) \<and>
+               \<Q>' = matrix_sep_QStateM (q \<sigma>) \<Q> R \<and>
+               \<Q>' = \<Q>1' + \<Q>2 \<and>
+               Zero \<Q>1') \<Longrightarrow>
+            \<turnstile> (Init q, Normal (\<delta>,\<sigma>,\<Q>)) \<rightarrow> (Skip, Normal (\<delta>,\<sigma>, \<Q>'))"
 
 (*| Init_F: "(\<exists>e. e \<in> q \<sigma> \<and> (QStateM_map \<Q>) e = {})
            \<or> (\<nexists>sep_vars M R \<Q>1' \<Q>2'.
@@ -169,7 +194,7 @@ Measure: "addr1 = \<Union>((QStateM_map \<Q>) ` (q \<sigma>)) \<Longrightarrow> 
                  \<Q>' = \<Q>1' + \<Q>2' \<and> \<Q>1' ## \<Q>2' \<and> Zero \<Q>1' \<and>
                  QStateM_vars \<Q>1' = (Q_domain_var (q \<sigma>) (QStateM_map \<Q>1')))  \<Longrightarrow>
           \<turnstile> (Init q, Normal (\<delta>,\<sigma>,\<Q>)) \<rightarrow> (Skip, Fault)"*)
-
+(*
 | Init_F: "(\<exists>e. e \<in> q \<sigma> \<and> (QStateM_map \<Q>) e = {})
            \<or> (\<nexists>addr1 k \<Q>m \<Q>1 \<Q>2 R \<Q>' \<Q>1' \<Q>2'.
                addr1 = \<Union>((QStateM_map \<Q>) ` (q \<sigma>))  \<and>
@@ -183,6 +208,29 @@ Measure: "addr1 = \<Union>((QStateM_map \<Q>) ` (q \<sigma>)) \<Longrightarrow> 
                \<Q>' = \<Q>1' + \<Q>2'  \<and> Zero \<Q>1'  \<and>
                QStateM_vars \<Q>1' = (Q_domain_var (q \<sigma>) (QStateM_map \<Q>1'))
                )  \<Longrightarrow>
+          \<turnstile> (Init q, Normal (\<delta>,\<sigma>,\<Q>)) \<rightarrow> (Skip, Fault)"
+*)
+| Init_F: "(\<exists>e. e \<in> q \<sigma> \<and> (QStateM_map \<Q>) e = {})
+           \<or> (\<nexists>\<Q>1 \<Q>2 \<Q>m1 \<Q>m2 addr1 k \<delta>k \<Q>m R \<Q>1'.
+             entangle \<Q>1 \<Q>2 \<and> \<Q> = \<Q>1 + \<Q>2 \<and> 
+             QStateM_vars \<Q>1 = QStateM_vars \<Q>m1 \<and>
+             addr1 = \<Union>((QStateM_map \<Q>) ` (q \<sigma>)) \<and>               
+             k \<in> {0..<2^(card addr1)} \<and>
+             \<delta>k > 0 \<and>   
+             (\<delta>k, \<Q>m) = measure_vars k (q \<sigma>) \<Q> \<and>
+             \<Q>m1 ## \<Q>m2 \<and> \<Q>m = \<Q>m1 + \<Q>m2 \<and>
+             QStateM_vars \<Q>m1 = (Q_domain_var (q \<sigma>) (QStateM_map \<Q>)) \<and> 
+             R = init_matrix (QStateM_vector \<Q>m1) \<and>
+             \<Q>' = matrix_sep_QStateM (q \<sigma>) \<Q>m R \<and>
+             \<Q>' = \<Q>1' + \<Q>m2 \<and> Zero \<Q>1'
+               )
+           \<or> (\<nexists>\<Q>1 \<Q>2 R \<Q>' \<Q>1'. 
+               not_entangle \<Q>1 \<Q>2 \<and>                    
+               \<Q> = \<Q>1 + \<Q>2 \<and>
+               QStateM_vars \<Q>1 = (Q_domain_var (q \<sigma>) (QStateM_map \<Q>)) \<and>
+               R = init_matrix (QStateM_vector \<Q>1) \<and>
+               \<Q>' = matrix_sep_QStateM (q \<sigma>) \<Q> R \<and>
+               \<Q>' = \<Q>1' + \<Q>2 \<and> Zero \<Q>1') \<Longrightarrow>
           \<turnstile> (Init q, Normal (\<delta>,\<sigma>,\<Q>)) \<rightarrow> (Skip, Fault)"
 
 thm step.intros
@@ -374,17 +422,22 @@ next
   ultimately show ?case by auto
 (* new add *)
 next
-  case (Init_Prop addr1 \<Q> q \<sigma> k \<delta>k \<Q>m \<Q>1 \<Q>2 R \<Q>' \<Q>1' \<Q>2' \<delta>)
+  case (Init_Prop q \<sigma> \<Q> \<Q>' \<delta>)
+  moreover have "\<turnstile> (Init q, Normal (\<delta>,\<sigma>,\<Q>)) \<rightarrow> (Skip, Normal (\<delta>,\<sigma>, \<Q>'))"
+    using Init_Prop.hyps(1) Init_Prop.hyps(2)
+          step.Init_Prop by auto
+  ultimately show ?case by auto
+  (*case (Init_Prop addr1 \<Q> q \<sigma> k \<delta>k \<Q>m \<Q>1 \<Q>2 R \<Q>' \<Q>1' \<Q>2' \<delta>)
   moreover have "\<turnstile> (Init q, Normal (\<delta>,\<sigma>,\<Q>)) \<rightarrow> (Skip, Normal (\<delta>,\<sigma>, \<Q>'))"
     using Init_Prop.hyps(1) Init_Prop.hyps(2) Init_Prop.hyps(3) Init_Prop.hyps(4)
           Init_Prop.hyps(5) Init_Prop.hyps(6) Init_Prop.hyps(7) Init_Prop.hyps(8) 
           Init_Prop.hyps(9) Init_Prop.hyps(10) Init_Prop.hyps(11) Init_Prop.hyps(12)
           Init_Prop.hyps(13) step.Init_Prop by blast
-  ultimately show ?case by auto
+  ultimately show ?case by auto*)
 next
   case (Init_F q \<sigma> \<Q> \<Q>' \<delta>)
   moreover have "\<turnstile> (Init q, Normal (\<delta>,\<sigma>,\<Q>)) \<rightarrow> (Skip, Fault)"
-    using Init_F.hyps(1) step.Init_F by blast
+    using Init_F.hyps(1) step.Init_F by auto
  ultimately show ?case by auto
 qed (auto simp add: r_into_rtranclp step.intros)
 
@@ -479,9 +532,11 @@ next
     using QExec.Fault_Prop exec_Fault_end by blast
 (* new add *)
 next
-  case (Init_Prop q \<sigma> \<Q> \<Q>' R sep_vars M \<Q>1' \<Q>2' \<delta>)
-  then show ?case
-    by (metis QExec.Init_Prop QExec_Normal_elim_cases(2))
+  case (Init_Prop q \<sigma> \<Q> \<Q>' (*R sep_vars M \<Q>1' \<Q>2'*) \<delta>)
+  then moreover have init_imp: " \<turnstile> \<langle> init q,Normal (\<delta>, \<sigma>, \<Q>)\<rangle> \<Rightarrow> Normal (\<delta>, \<sigma>, \<Q>')"
+    using Init_Prop.hyps(1) Init_Prop.hyps(2) QExec.Init_Prop by auto
+  ultimately show ?case
+    by (metis QExec_Normal_elim_cases(2))
 next
   case (Init_F q \<sigma> \<Q> \<Q>' \<delta>)
   then moreover have "t = Fault"
