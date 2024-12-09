@@ -161,9 +161,8 @@ Measure: "addr1 = \<Union>((QStateM_map \<Q>) ` (q \<sigma>)) \<Longrightarrow> 
 *)
 | Init_Prop:
            "\<forall>e \<in> (q \<sigma>). (QStateM_map \<Q>) e \<noteq> {} \<Longrightarrow>  
-            (\<exists>\<Q>1 \<Q>2 \<Q>m1 \<Q>m2 addr1 k \<delta>k \<Q>m R \<Q>1'.
-             entangle \<Q>1 \<Q>2 \<and> \<Q> = \<Q>1 + \<Q>2 \<and> 
-             QStateM_vars \<Q>1 = QStateM_vars \<Q>m1 \<and>
+            (\<exists> \<Q>m1 \<Q>m2 addr1 k \<delta>k \<Q>m R \<Q>1'.
+             entangle \<Q> (q \<sigma>) \<and>
              addr1 = \<Union>((QStateM_map \<Q>) ` (q \<sigma>)) \<and>               
              k \<in> {0..<2^(card addr1)} \<and>
              \<delta>k > 0 \<and>   
@@ -172,16 +171,14 @@ Measure: "addr1 = \<Union>((QStateM_map \<Q>) ` (q \<sigma>)) \<Longrightarrow> 
              QStateM_vars \<Q>m1 = (Q_domain_var (q \<sigma>) (QStateM_map \<Q>)) \<and> 
              R = init_matrix (QStateM_vector \<Q>m1) \<and>
              \<Q>' = matrix_sep_QStateM (q \<sigma>) \<Q>m R \<and>
-             \<Q>' = \<Q>1' + \<Q>m2 \<and>
-             Zero \<Q>1')
+             \<Q>' = \<Q>1' + \<Q>m2 \<and>  Zero \<Q>1')
             \<or> (\<exists>\<Q>1 \<Q>2 R \<Q>1'. 
-               not_entangle \<Q>1 \<Q>2 \<and>                    
+               not_entangle \<Q> (q \<sigma>) \<and>                    
                \<Q> = \<Q>1 + \<Q>2 \<and>
                QStateM_vars \<Q>1 = (Q_domain_var (q \<sigma>) (QStateM_map \<Q>)) \<and>
                R = init_matrix (QStateM_vector \<Q>1) \<and>
                \<Q>' = matrix_sep_QStateM (q \<sigma>) \<Q> R \<and>
-               \<Q>' = \<Q>1' + \<Q>2 \<and>
-               Zero \<Q>1') \<Longrightarrow>
+               \<Q>' = \<Q>1' + \<Q>2 \<and> Zero \<Q>1') \<Longrightarrow>
             \<turnstile> (Init q, Normal (\<delta>,\<sigma>,\<Q>)) \<rightarrow> (Skip, Normal (\<delta>,\<sigma>, \<Q>'))"
 
 (*| Init_F: "(\<exists>e. e \<in> q \<sigma> \<and> (QStateM_map \<Q>) e = {})
@@ -211,26 +208,24 @@ Measure: "addr1 = \<Union>((QStateM_map \<Q>) ` (q \<sigma>)) \<Longrightarrow> 
           \<turnstile> (Init q, Normal (\<delta>,\<sigma>,\<Q>)) \<rightarrow> (Skip, Fault)"
 *)
 | Init_F: "(\<exists>e. e \<in> q \<sigma> \<and> (QStateM_map \<Q>) e = {})
-           \<or> (\<nexists>\<Q>1 \<Q>2 \<Q>m1 \<Q>m2 addr1 k \<delta>k \<Q>m R \<Q>1'.
-             entangle \<Q>1 \<Q>2 \<and> \<Q> = \<Q>1 + \<Q>2 \<and> 
-             QStateM_vars \<Q>1 = QStateM_vars \<Q>m1 \<and>
-             addr1 = \<Union>((QStateM_map \<Q>) ` (q \<sigma>)) \<and>               
-             k \<in> {0..<2^(card addr1)} \<and>
-             \<delta>k > 0 \<and>   
-             (\<delta>k, \<Q>m) = measure_vars k (q \<sigma>) \<Q> \<and>
-             \<Q>m1 ## \<Q>m2 \<and> \<Q>m = \<Q>m1 + \<Q>m2 \<and>
-             QStateM_vars \<Q>m1 = (Q_domain_var (q \<sigma>) (QStateM_map \<Q>)) \<and> 
-             R = init_matrix (QStateM_vector \<Q>m1) \<and>
-             \<Q>' = matrix_sep_QStateM (q \<sigma>) \<Q>m R \<and>
-             \<Q>' = \<Q>1' + \<Q>m2 \<and> Zero \<Q>1'
-               )
-           \<or> (\<nexists>\<Q>1 \<Q>2 R \<Q>' \<Q>1'. 
-               not_entangle \<Q>1 \<Q>2 \<and>                    
-               \<Q> = \<Q>1 + \<Q>2 \<and>
-               QStateM_vars \<Q>1 = (Q_domain_var (q \<sigma>) (QStateM_map \<Q>)) \<and>
-               R = init_matrix (QStateM_vector \<Q>1) \<and>
-               \<Q>' = matrix_sep_QStateM (q \<sigma>) \<Q> R \<and>
-               \<Q>' = \<Q>1' + \<Q>2 \<and> Zero \<Q>1') \<Longrightarrow>
+           \<or> (\<not>(\<exists> \<Q>m1 \<Q>m2 addr1 k \<delta>k \<Q>m R \<Q>1'.
+                   entangle \<Q> (q \<sigma>)  \<and>
+                   addr1 = \<Union>((QStateM_map \<Q>) ` (q \<sigma>)) \<and>               
+                   k \<in> {0..<2^(card addr1)} \<and>
+                   \<delta>k > 0 \<and>   
+                   (\<delta>k, \<Q>m) = measure_vars k (q \<sigma>) \<Q> \<and>
+                   \<Q>m1 ## \<Q>m2 \<and> \<Q>m = \<Q>m1 + \<Q>m2 \<and>
+                   QStateM_vars \<Q>m1 = (Q_domain_var (q \<sigma>) (QStateM_map \<Q>)) \<and> 
+                   R = init_matrix (QStateM_vector \<Q>m1) \<and>
+                   \<Q>' = matrix_sep_QStateM (q \<sigma>) \<Q>m R \<and>
+                   \<Q>' = \<Q>1' + \<Q>m2 \<and> Zero \<Q>1')
+              \<and> \<not>(\<exists>\<Q>1 \<Q>2 R \<Q>' \<Q>1'. 
+                    not_entangle \<Q> (q \<sigma>) \<and>                    
+                    \<Q> = \<Q>1 + \<Q>2 \<and>
+                    QStateM_vars \<Q>1 = (Q_domain_var (q \<sigma>) (QStateM_map \<Q>)) \<and>
+                    R = init_matrix (QStateM_vector \<Q>1) \<and>
+                    \<Q>' = matrix_sep_QStateM (q \<sigma>) \<Q> R \<and>
+                    \<Q>' = \<Q>1' + \<Q>2 \<and> Zero \<Q>1')) \<Longrightarrow>
           \<turnstile> (Init q, Normal (\<delta>,\<sigma>,\<Q>)) \<rightarrow> (Skip, Fault)"
 
 thm step.intros

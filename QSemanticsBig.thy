@@ -2619,6 +2619,7 @@ definition
           mat (length (list_of_vec v)) (length (list_of_vec v))
                (\<lambda>(i, j). if i=0 then v$j else 0)"
 
+(*
 definition entangle :: "QStateM \<Rightarrow>  QStateM \<Rightarrow> bool" 
   where "entangle Q1 Q2 \<equiv>
   \<exists>heap_ind Q Q' Q1'.
@@ -2638,6 +2639,43 @@ definition not_entangle :: "QStateM \<Rightarrow>  QStateM \<Rightarrow> bool"
   Q' = matrix_sep_QStateM heap_ind Q (init_matrix (QStateM_vector Q1)) \<and>
   QStateM_vars Q1' = (Q_domain_var heap_ind (QStateM_map Q')) \<and>
   vec_norm (QStateM_vector Q1') = 1"
+*)
+ 
+definition entangle :: "QStateM \<Rightarrow> nat set \<Rightarrow> bool" 
+  where "entangle Q heap_ind \<equiv>
+  \<exists>Qm \<delta>k k addr1.
+   (\<forall>e \<in> heap_ind. (QStateM_map Q) e \<noteq> {}) \<and>
+   addr1 = \<Union>((QStateM_map Q) ` heap_ind) \<and>               
+   k \<in> {0..<2^(card addr1)} \<and>
+   \<delta>k > 0 \<and>   
+   (\<delta>k, Qm) = measure_vars k heap_ind Q \<and>
+   vec_norm (QStateM_vector Qm) \<noteq> 1"
+
+definition not_entangle :: "QStateM \<Rightarrow> nat set \<Rightarrow> bool" 
+  where "not_entangle Q heap_ind \<equiv>
+  \<forall>Qm \<delta>k k addr1.
+  \<not>(\<forall>e \<in> heap_ind. (QStateM_map Q) e \<noteq> {}) \<or>
+   addr1 \<noteq> \<Union>((QStateM_map Q) ` heap_ind) \<or>         
+   k \<notin> {0..<2^(card addr1)} \<or>
+   \<not>(\<delta>k > 0) \<or>
+   (\<delta>k, Qm) \<noteq> measure_vars k heap_ind Q \<or>
+   vec_norm (QStateM_vector Qm) = 1"
+
+(*
+vec_norm of Q1 \not_eq 1
+R = [q1 q2 ... qn]
+    [0 0  0]
+apply R on (Q1 + Q2)
+Q1' = |0> when Q1 and Q2 not entangled
+
+ (\<delta>k, \<Q>m) = measure_vars k (q \<sigma>) \<Q> \<and>
+have qubits (q sigma)
+subset of Q 
+(1) use measure\<rightarrow> check the norm , if entangle then the norm will not equal to 1
+    need normalized
+
+
+*)
 
 inductive QExec::"('v, 's) com \<Rightarrow> 's XQState \<Rightarrow> 's XQState \<Rightarrow> bool" 
   ("\<turnstile> \<langle>_,_\<rangle> \<Rightarrow> _"  [20,98,98] 89)  
@@ -2835,9 +2873,8 @@ inductive QExec::"('v, 's) com \<Rightarrow> 's XQState \<Rightarrow> 's XQState
 *)
 | Init_Prop:
            "\<forall>e \<in> (q \<sigma>). (QStateM_map \<Q>) e \<noteq> {} \<Longrightarrow>  
-            (\<exists>\<Q>1 \<Q>2 \<Q>m1 \<Q>m2 addr1 k \<delta>k \<Q>m R \<Q>1'.
-             entangle \<Q>1 \<Q>2 \<and> \<Q> = \<Q>1 + \<Q>2 \<and> 
-             QStateM_vars \<Q>1 = QStateM_vars \<Q>m1 \<and>
+            (\<exists> \<Q>m1 \<Q>m2 addr1 k \<delta>k \<Q>m R \<Q>1'.
+             entangle \<Q> (q \<sigma>)  \<and>
              addr1 = \<Union>((QStateM_map \<Q>) ` (q \<sigma>)) \<and>               
              k \<in> {0..<2^(card addr1)} \<and>
              \<delta>k > 0 \<and>   
@@ -2846,16 +2883,14 @@ inductive QExec::"('v, 's) com \<Rightarrow> 's XQState \<Rightarrow> 's XQState
              QStateM_vars \<Q>m1 = (Q_domain_var (q \<sigma>) (QStateM_map \<Q>)) \<and> 
              R = init_matrix (QStateM_vector \<Q>m1) \<and>
              \<Q>' = matrix_sep_QStateM (q \<sigma>) \<Q>m R \<and>
-             \<Q>' = \<Q>1' + \<Q>m2 \<and>
-             Zero \<Q>1')
+             \<Q>' = \<Q>1' + \<Q>m2 \<and> Zero \<Q>1')
             \<or> (\<exists>\<Q>1 \<Q>2 R \<Q>1'. 
-               not_entangle \<Q>1 \<Q>2 \<and>                    
+               not_entangle \<Q> (q \<sigma>) \<and>                    
                \<Q> = \<Q>1 + \<Q>2 \<and>
                QStateM_vars \<Q>1 = (Q_domain_var (q \<sigma>) (QStateM_map \<Q>)) \<and>
                R = init_matrix (QStateM_vector \<Q>1) \<and>
                \<Q>' = matrix_sep_QStateM (q \<sigma>) \<Q> R \<and>
-               \<Q>' = \<Q>1' + \<Q>2 \<and>
-               Zero \<Q>1') \<Longrightarrow>
+               \<Q>' = \<Q>1' + \<Q>2 \<and> Zero \<Q>1') \<Longrightarrow>
             \<turnstile> \<langle>Init q, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Normal (\<delta>,\<sigma>,\<Q>')"
 
 (*| Init_F: "(\<exists>e. e \<in> q \<sigma> \<and> (QStateM_map \<Q>) e = {})
@@ -2870,26 +2905,24 @@ inductive QExec::"('v, 's) com \<Rightarrow> 's XQState \<Rightarrow> 's XQState
           \<turnstile> \<langle>Init q, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Fault" *)
 
 | Init_F: "(\<exists>e. e \<in> q \<sigma> \<and> (QStateM_map \<Q>) e = {})
-           \<or> (\<nexists>\<Q>1 \<Q>2 \<Q>m1 \<Q>m2 addr1 k \<delta>k \<Q>m R \<Q>1'.
-             entangle \<Q>1 \<Q>2 \<and> \<Q> = \<Q>1 + \<Q>2 \<and> 
-             QStateM_vars \<Q>1 = QStateM_vars \<Q>m1 \<and>
-             addr1 = \<Union>((QStateM_map \<Q>) ` (q \<sigma>)) \<and>               
-             k \<in> {0..<2^(card addr1)} \<and>
-             \<delta>k > 0 \<and>   
-             (\<delta>k, \<Q>m) = measure_vars k (q \<sigma>) \<Q> \<and>
-             \<Q>m1 ## \<Q>m2 \<and> \<Q>m = \<Q>m1 + \<Q>m2 \<and>
-             QStateM_vars \<Q>m1 = (Q_domain_var (q \<sigma>) (QStateM_map \<Q>)) \<and> 
-             R = init_matrix (QStateM_vector \<Q>m1) \<and>
-             \<Q>' = matrix_sep_QStateM (q \<sigma>) \<Q>m R \<and>
-             \<Q>' = \<Q>1' + \<Q>m2 \<and> Zero \<Q>1'
-               )
-           \<or> (\<nexists>\<Q>1 \<Q>2 R \<Q>' \<Q>1'. 
-               not_entangle \<Q>1 \<Q>2 \<and>                    
-               \<Q> = \<Q>1 + \<Q>2 \<and>
-               QStateM_vars \<Q>1 = (Q_domain_var (q \<sigma>) (QStateM_map \<Q>)) \<and>
-               R = init_matrix (QStateM_vector \<Q>1) \<and>
-               \<Q>' = matrix_sep_QStateM (q \<sigma>) \<Q> R \<and>
-               \<Q>' = \<Q>1' + \<Q>2 \<and> Zero \<Q>1') \<Longrightarrow>
+           \<or> (\<not>(\<exists> \<Q>m1 \<Q>m2 addr1 k \<delta>k \<Q>m R \<Q>1'.
+                   entangle \<Q> (q \<sigma>)  \<and>
+                   addr1 = \<Union>((QStateM_map \<Q>) ` (q \<sigma>)) \<and>               
+                   k \<in> {0..<2^(card addr1)} \<and>
+                   \<delta>k > 0 \<and>   
+                   (\<delta>k, \<Q>m) = measure_vars k (q \<sigma>) \<Q> \<and>
+                   \<Q>m1 ## \<Q>m2 \<and> \<Q>m = \<Q>m1 + \<Q>m2 \<and>
+                   QStateM_vars \<Q>m1 = (Q_domain_var (q \<sigma>) (QStateM_map \<Q>)) \<and> 
+                   R = init_matrix (QStateM_vector \<Q>m1) \<and>
+                   \<Q>' = matrix_sep_QStateM (q \<sigma>) \<Q>m R \<and>
+                   \<Q>' = \<Q>1' + \<Q>m2 \<and> Zero \<Q>1')
+              \<and> \<not>(\<exists>\<Q>1 \<Q>2 R \<Q>' \<Q>1'. 
+                    not_entangle \<Q> (q \<sigma>) \<and>                    
+                    \<Q> = \<Q>1 + \<Q>2 \<and>
+                    QStateM_vars \<Q>1 = (Q_domain_var (q \<sigma>) (QStateM_map \<Q>)) \<and>
+                    R = init_matrix (QStateM_vector \<Q>1) \<and>
+                    \<Q>' = matrix_sep_QStateM (q \<sigma>) \<Q> R \<and>
+                    \<Q>' = \<Q>1' + \<Q>2 \<and> Zero \<Q>1')) \<Longrightarrow>
           \<turnstile> \<langle>Init q, Normal (\<delta>,\<sigma>,\<Q>)\<rangle> \<Rightarrow> Fault"
 
 inductive_cases QExec_elim_cases [cases set]:
